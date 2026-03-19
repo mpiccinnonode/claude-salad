@@ -72,10 +72,10 @@ Comparison of Anthropic's agent-writing best practices against the config-doctor
 | 2 | **7.2** Concrete output example | Full markdown template (lines 73-125) with realistic structure | Good. This is the model other agents should follow. | — |
 | 3 | **8.1** Self-check with concrete criteria | Self-Verification (lines 139-145) with 6 concrete, falsifiable checks | Excellent. "No story exceeds 8 SP" and "MVP achievable in 4 sprints or fewer" are exactly the right kind of verification. | — |
 | 4 | **1.1** Natural language | Clean, direct tone throughout. No superlatives. | Good. | — |
-| 5 | **4.2** Explicit out-of-scope | No out-of-scope section | Missing. The agent doesn't state what happens if asked for non-SCRUM planning (e.g., Kanban, OKRs). Should redirect to appropriate methodology or decline. | P2 |
+| 5 | **4.2** Explicit out-of-scope | Out-of-Scope section added (lines 149-158) | **RESOLVED.** The agent now explicitly handles non-SCRUM requests with redirect suggestions. | — |
 | 6 | **5.1** Description as routing signal | 4 examples in description | One too many — examples 1 and 4 are close (idea → roadmap vs. notes → roadmap). Drop one. Three is the sweet spot. | P3 |
 
-**Summary:** 0 × P1, 1 × P2, 1 × P3. Cleanest user-scoped agent. Good model for output format and self-verification.
+**Summary:** 0 × P1, 0 × P2, 1 × P3. Cleanest user-scoped agent. Good model for output format and self-verification. (Previously 1 × P2 for missing out-of-scope — now resolved.)
 
 ---
 
@@ -87,7 +87,7 @@ Comparison of Anthropic's agent-writing best practices against the config-doctor
 |---|---|---|
 | Concrete self-verification criteria | scrum-architect (falsifiable checks) | All agents have this — good |
 | Output format template | memory-optimizer, scrum-architect | agent-architect (Creation Mode only) |
-| Explicit scope boundary | agent-architect, skill-evaluator | scrum-architect |
+| Explicit scope boundary | agent-architect, skill-evaluator, scrum-architect | — |
 | Rationale behind rules | skill-evaluator (Cross-Cutting Principles) | memory-optimizer guardrails |
 | Natural, non-aggressive tone | scrum-architect, memory-optimizer | agent-architect, code-quality-scouter |
 
@@ -111,7 +111,7 @@ Comparison of Anthropic's agent-writing best practices against the config-doctor
 | 4 | Deduplicate self-verification checklist from evaluation rubric | agent-architect | P2 |
 | 5 | Add rationale ("why") to memory-optimizer guardrails | memory-optimizer | P2 |
 | 6 | Merge overlapping steps in code-quality-scouter (steps 4+6) | code-quality-scouter | P2 |
-| 7 | Add out-of-scope handling to scrum-architect | scrum-architect | P2 |
+| 7 | ~~Add out-of-scope handling to scrum-architect~~ | scrum-architect | ~~P2~~ RESOLVED |
 | 8 | Extract Serena boilerplate to CLAUDE.md shared convention | all plugin agents | P3 |
 | 9 | Add one worked example with real numbers to memory-optimizer template | memory-optimizer | P3 |
 | 10 | Trim scrum-architect description from 4 to 3 examples | scrum-architect | P3 |

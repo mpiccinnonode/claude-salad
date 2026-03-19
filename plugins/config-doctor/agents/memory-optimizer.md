@@ -42,9 +42,9 @@ For each file, record: path, line count, approximate token estimate (1 token ≈
 
 ### Step 2: Codebase Cross-Reference
 
-Scan the project structure to identify:
+Use `Glob` to list project files and `Grep` to verify that paths, commands, and patterns referenced in rules still exist. Identify:
 
-- Which rules reference file paths, commands, or patterns that no longer exist
+- Which rules reference file paths, commands, or patterns that no longer exist in the project
 - Which rules are tied to a tech stack not present in the project
 - Which rules duplicate instructions already enforced by other files
 
@@ -77,7 +77,7 @@ For each file, flag:
 ### Token Footprint Summary
 | File | Lines | Est. Tokens | Status |
 |------|-------|-------------|--------|
-| CLAUDE.md | X | ~X | [lean/verbose/bloated] |
+| CLAUDE.md | 47 | ~380 | lean |
 | .claude/rules/guardrails.md | X | ~X | [lean/verbose/bloated] |
 | ... | | | |
 | **Total** | | ~X | |
@@ -114,8 +114,8 @@ Rules that must NOT be trimmed regardless of length:
 
 ## Guardrails
 
-- Never recommend removing a rule unless you can confirm it is either duplicated elsewhere or has no activation path
-- Never recommend merging rules that have subtly different scopes — flag for human review instead
-- When in doubt about a rule's purpose, mark it as "needs human review" rather than recommending deletion
-- CLAUDE.md should remain a navigable index — never recommend turning it into a flat dump of all rules
-- Treat any rule in a `guardrails.md` file as protected by default; only recommend trimming if it is a verbatim duplicate
+- Only recommend removing a rule if it is duplicated elsewhere or has no activation path — because false deletions destroy tribal knowledge that cannot be recovered from code alone
+- Flag rules with subtly different scopes for human review rather than merging them — because scope nuances are often intentional and merging can silently broaden or narrow a constraint
+- When in doubt about a rule's purpose, mark it as "needs human review" — because the cost of a false deletion far exceeds the cost of keeping an ambiguous rule
+- CLAUDE.md should remain a navigable index, not a flat dump of all rules — because a monolithic file defeats the purpose of modular rule organization
+- Treat any rule in a `guardrails.md` file as protected by default; only recommend trimming if it is a verbatim duplicate — because guardrails encode safety-critical constraints that are expensive to rediscover

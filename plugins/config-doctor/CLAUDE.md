@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-config-doctor is a Claude Code plugin. No build step or test suite — content is markdown files executed by Claude Code.
+config-doctor is a Claude Code plugin for deep-scanning and auditing Claude configurations.
 
 ## Repository structure
 
@@ -31,4 +31,3 @@ Subagents use native Claude Code tools (`Read`, `Glob`, `Grep`) by default. If t
 - **Skill frontmatter**: `skills/audit/SKILL.md` requires `name:`, `description:`, `version:`, and `allowed-tools:`. The `argument-hint:` field controls slash command autocomplete.
 - **`$ARGUMENTS`**: the skill receives user flags (`--report-only`, `--apply-safe`, `--apply-all`, `--phase=<names>`, `--skip-agents`, `--skip-skills`, `--skip-tooling`, `--skip-memory`, or a path) via the `$ARGUMENTS` placeholder at the end of `SKILL.md`. `--phase` accepts comma-separated phase names (`agents`, `skills`, `tooling`, `memory`) and takes priority over `--skip-*` flags if both are present.
 - **Version sync**: `plugin.json` and `SKILL.md` both declare a `version` field. Keep them in sync — `plugin.json` is the source of truth.
-- **No build artifacts**: do not introduce package managers, build tools, or compiled assets. This plugin is pure markdown.

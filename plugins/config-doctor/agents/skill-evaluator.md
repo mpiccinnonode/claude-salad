@@ -1,6 +1,21 @@
 ---
 name: skill-evaluator
-description: "Use this agent when you need to evaluate existing skill files for quality, correctness, and adherence to best practices.\n\n<example>\nContext: User wants a skill reviewed.\nuser: \"Can you review my deploy skill and tell me if it's well-structured?\"\nassistant: \"I'll use the skill-evaluator to assess your skill's quality.\"\n<commentary>Use the Agent tool to launch skill-evaluator for skill quality review.</commentary>\n</example>\n\n<example>\nContext: Audit is evaluating project skills.\nuser: \"Run the config-doctor audit on my project.\"\nassistant: \"Phase 2 launches the skill-evaluator to assess all skill files.\"\n<commentary>The audit skill dispatches skill-evaluator as part of Phase 2.</commentary>\n</example>"
+description: |
+  Use this agent when you need to evaluate existing skill files for quality, correctness, and adherence to best practices.
+
+  <example>
+  Context: User wants a skill reviewed.
+  user: "Can you review my deploy skill and tell me if it's well-structured?"
+  assistant: "I'll use the skill-evaluator to assess your skill's quality."
+  <commentary>Use the Agent tool to launch skill-evaluator for skill quality review.</commentary>
+  </example>
+
+  <example>
+  Context: Audit is evaluating project skills.
+  user: "Run the config-doctor audit on my project."
+  assistant: "Phase 2 launches the skill-evaluator to assess all skill files."
+  <commentary>The audit skill dispatches skill-evaluator as part of Phase 2.</commentary>
+  </example>
 model: sonnet
 ---
 
@@ -15,7 +30,7 @@ Use native Claude Code tools for all file exploration:
 | Search content across files | `Grep` |
 | Find a file by name | `Glob` |
 
-If the user has Serena MCP tools available (e.g. `mcp__serena__*`), prefer them — they return structured results at lower token cost.
+See the plugin CLAUDE.md for Serena MCP tool conventions (prefer Serena when available).
 
 ---
 

@@ -1,6 +1,34 @@
 ---
 name: scrum-architect
-description: "Use this agent when you need to transform a project idea, vision statement, product brief, feature list, or set of requirements into a complete SCRUM-based project roadmap with epics, user stories, sprint plans, and release milestones.\n\n<example>\nContext: The user has a new project idea and wants a structured plan to execute it.\nuser: \"I have a concept for a real-time collaboration platform. Can you create a project roadmap for it?\"\nassistant: \"I'll use the scrum-architect agent to produce a full SCRUM roadmap from your project concept.\"\n<commentary>\nDirect project idea that needs SCRUM decomposition. Launch scrum-architect for discovery, backlog creation, and sprint planning.\n</commentary>\n</example>\n\n<example>\nContext: The user has a PRD or design specification and wants it turned into a sprint-ready backlog.\nuser: \"Here's our product requirements document. Can you break this down into sprints and user stories?\"\nassistant: \"I'll launch the scrum-architect agent to decompose your PRD into epics, stories, and a sprint plan.\"\n<commentary>\nExisting requirements document that needs SCRUM decomposition. Launch scrum-architect to map requirements to epics, stories, and sprint assignments.\n</commentary>\n</example>\n\n<example>\nContext: The user has stakeholder notes or a conversation transcript and wants a roadmap extracted from it.\nuser: \"I recorded a brainstorm session with the team. Can you turn these notes into a project plan?\"\nassistant: \"I'll have the scrum-architect agent extract requirements from your notes and build a complete SCRUM roadmap.\"\n<commentary>\nUnstructured input that needs distillation into a roadmap. Launch scrum-architect for discovery, requirement extraction, and planning.\n</commentary>\n</example>"
+description: |
+  Use this agent when you need to transform a project idea, vision statement, product brief, feature list, or set of requirements into a complete SCRUM-based project roadmap with epics, user stories, sprint plans, and release milestones.
+
+  <example>
+  Context: The user has a new project idea and wants a structured plan to execute it.
+  user: "I have a concept for a real-time collaboration platform. Can you create a project roadmap for it?"
+  assistant: "I'll use the scrum-architect agent to produce a full SCRUM roadmap from your project concept."
+  <commentary>
+  Direct project idea that needs SCRUM decomposition. Launch scrum-architect for discovery, backlog creation, and sprint planning.
+  </commentary>
+  </example>
+
+  <example>
+  Context: The user has a PRD or design specification and wants it turned into a sprint-ready backlog.
+  user: "Here's our product requirements document. Can you break this down into sprints and user stories?"
+  assistant: "I'll launch the scrum-architect agent to decompose your PRD into epics, stories, and a sprint plan."
+  <commentary>
+  Existing requirements document that needs SCRUM decomposition. Launch scrum-architect to map requirements to epics, stories, and sprint assignments.
+  </commentary>
+  </example>
+
+  <example>
+  Context: The user has stakeholder notes or a conversation transcript and wants a roadmap extracted from it.
+  user: "I recorded a brainstorm session with the team. Can you turn these notes into a project plan?"
+  assistant: "I'll have the scrum-architect agent extract requirements from your notes and build a complete SCRUM roadmap."
+  <commentary>
+  Unstructured input that needs distillation into a roadmap. Launch scrum-architect for discovery, requirement extraction, and planning.
+  </commentary>
+  </example>
 model: sonnet
 ---
 

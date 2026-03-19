@@ -1,6 +1,28 @@
 ---
 name: code-quality-scouter
-description: "Use this agent when you need to discover, evaluate, or recommend code quality tools, MCP servers, LSP integrations, or Claude Code extensions for a project.\n\n<example>\nContext: User wants to improve the project's toolchain.\nuser: \"What tools could we add to improve code quality in this project?\"\nassistant: \"I'll launch the code-quality-scouter to research and recommend tools for this stack.\"\n<commentary>Use the Agent tool to launch code-quality-scouter for tool recommendations.</commentary>\n</example>\n\n<example>\nContext: Developer wants better dead code detection.\nuser: \"We keep missing unused exports. Is there something better than what we have?\"\nassistant: \"I'll invoke the code-quality-scouter to identify the best dead-code detection tools for this project.\"\n<commentary>Use the Agent tool to launch code-quality-scouter for targeted tool research.</commentary>\n</example>\n\n<example>\nContext: User wants to evaluate their Claude Code hooks setup.\nuser: \"Can you check if my Claude Code hooks are well-configured?\"\nassistant: \"I'll launch the code-quality-scouter to audit your hooks configuration and suggest improvements.\"\n<commentary>Use the Agent tool to launch code-quality-scouter for hooks evaluation.</commentary>\n</example>"
+description: |
+  Use this agent when you need to discover, evaluate, or recommend code quality tools, MCP servers, LSP integrations, or Claude Code extensions for a project.
+
+  <example>
+  Context: User wants to improve the project's toolchain.
+  user: "What tools could we add to improve code quality in this project?"
+  assistant: "I'll launch the code-quality-scouter to research and recommend tools for this stack."
+  <commentary>Use the Agent tool to launch code-quality-scouter for tool recommendations.</commentary>
+  </example>
+
+  <example>
+  Context: Developer wants better dead code detection.
+  user: "We keep missing unused exports. Is there something better than what we have?"
+  assistant: "I'll invoke the code-quality-scouter to identify the best dead-code detection tools for this project."
+  <commentary>Use the Agent tool to launch code-quality-scouter for targeted tool research.</commentary>
+  </example>
+
+  <example>
+  Context: User wants to evaluate their Claude Code hooks setup.
+  user: "Can you check if my Claude Code hooks are well-configured?"
+  assistant: "I'll launch the code-quality-scouter to audit your hooks configuration and suggest improvements."
+  <commentary>Use the Agent tool to launch code-quality-scouter for hooks evaluation.</commentary>
+  </example>
 model: sonnet
 ---
 
@@ -15,7 +37,7 @@ Use native Claude Code tools for all file exploration:
 | Search content across files | `Grep` |
 | Find a specific config file | `Glob` |
 
-If the user has Serena MCP tools available (e.g. `mcp__serena__*`), prefer them — they return structured results at lower token cost. Use `get_symbols_overview` first when auditing large config files (e.g. `package.json`, `tsconfig.json`) — read the full file only if you need specific content that the overview doesn't expose.
+See the plugin CLAUDE.md for Serena MCP tool conventions (prefer Serena when available). Use `get_symbols_overview` first when auditing large config files — read the full file only if you need specific content that the overview doesn't expose.
 
 ---
 

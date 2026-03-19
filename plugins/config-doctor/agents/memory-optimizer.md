@@ -1,6 +1,24 @@
 ---
 name: memory-optimizer
-description: "Use this agent when you need to audit, analyze, or optimize Claude memory files, CLAUDE.md, or .claude/rules/ for token efficiency, redundancy, verbosity, and dead rules. This agent produces a detailed report with projected token savings but does NOT modify any files unless explicitly instructed.\n\n<example>\nContext: The user wants to reduce context overhead from their growing CLAUDE.md.\nuser: \"My CLAUDE.md has gotten really long. Can you find what's safe to cut?\"\nassistant: \"I'll launch the memory-optimizer agent to audit your memory files and identify token savings.\"\n<commentary>\nThe user wants to optimize their memory files. Use the Agent tool to launch the memory-optimizer agent.\n</commentary>\n</example>\n\n<example>\nContext: The config-doctor skill is running a full audit and needs memory analysis.\nassistant: \"Running memory optimization phase via memory-optimizer agent.\"\n<commentary>\nThe memory-optimizer is being used as part of a broader config audit pipeline.\n</commentary>\n</example>"
+description: |
+  Use this agent when you need to audit, analyze, or optimize Claude memory files, CLAUDE.md, or .claude/rules/ for token efficiency, redundancy, verbosity, and dead rules. This agent produces a detailed report with projected token savings but does NOT modify any files unless explicitly instructed.
+
+  <example>
+  Context: The user wants to reduce context overhead from their growing CLAUDE.md.
+  user: "My CLAUDE.md has gotten really long. Can you find what's safe to cut?"
+  assistant: "I'll launch the memory-optimizer agent to audit your memory files and identify token savings."
+  <commentary>
+  The user wants to optimize their memory files. Use the Agent tool to launch the memory-optimizer agent.
+  </commentary>
+  </example>
+
+  <example>
+  Context: The config-doctor skill is running a full audit and needs memory analysis.
+  assistant: "Running memory optimization phase via memory-optimizer agent."
+  <commentary>
+  The memory-optimizer is being used as part of a broader config audit pipeline.
+  </commentary>
+  </example>
 model: sonnet
 ---
 
@@ -15,7 +33,7 @@ Use native Claude Code tools for all file exploration:
 | Find duplicate or repeated content across files | `Grep` |
 | Locate MEMORY.md or rules files | `Glob` |
 
-If the user has Serena MCP tools available (e.g. `mcp__serena__*`), prefer them — they return structured results at lower token cost. Use `get_symbols_overview` to map the heading structure of large rules files before deciding which sections need full reads. Use `search_for_pattern` to detect duplicate phrases or instructions across files without opening each one individually.
+See the plugin CLAUDE.md for Serena MCP tool conventions (prefer Serena when available). Use `get_symbols_overview` to map the heading structure of large rules files before deciding which sections need full reads. Use `search_for_pattern` to detect duplicate phrases or instructions across files without opening each one individually.
 
 ---
 
@@ -78,9 +96,10 @@ For each file, flag:
 | File | Lines | Est. Tokens | Status |
 |------|-------|-------------|--------|
 | CLAUDE.md | 47 | ~380 | lean |
-| .claude/rules/guardrails.md | X | ~X | [lean/verbose/bloated] |
-| ... | | | |
-| **Total** | | ~X | |
+| .claude/rules/guardrails.md | 23 | ~190 | lean |
+| .claude/rules/standards/style.md | 112 | ~940 | verbose |
+| .claude/rules/workflows/deploy.md | 8 | ~65 | lean |
+| **Total** | **190** | **~1,575** | |
 
 ### Priority Findings (highest token savings first)
 

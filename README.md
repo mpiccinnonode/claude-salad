@@ -5,7 +5,7 @@ Claude Code plugins by mpiccinnonode -- config auditing, SCRUM planning, and mor
 ## Plugins
 
 | Plugin | Version | Description |
-|--------|---------|-------------|
+| --- | --- | --- |
 | [config-doctor](plugins/config-doctor/) | 1.1.0 | Deep-scan and audit a project's Claude configuration |
 | [scrum-toolkit](plugins/scrum-toolkit/) | 0.1.0 | Transform project ideas into SCRUM roadmaps with epics, stories, and sprint plans |
 

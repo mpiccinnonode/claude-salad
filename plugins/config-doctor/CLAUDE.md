@@ -14,6 +14,10 @@ agents/              # Bundled subagents — deployed to the user's .claude/agen
   memory-optimizer.md     # Audits memory files for token waste and redundancy (sonnet)
   skill-evaluator.md      # Evaluates skill files for quality via a 0-50 rubric (sonnet)
 
+references/          # Reference docs read by agents at runtime (NOT agents themselves)
+  agent-best-practices.md # Best practices for writing agent configs
+  agent-example.md        # Annotated structural example for agent creation
+
 skills/audit/
   SKILL.md           # The full multi-phase audit orchestration logic (7 phases, dual Phase 2 dispatch)
 

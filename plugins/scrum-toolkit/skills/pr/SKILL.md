@@ -54,16 +54,37 @@ gh pr list --limit 5 --json title,body --jq '.[] | "## " + .title + "\n" + .body
 Note the patterns: does the repo use a PR template? What sections are
 expected? Are story references included? How are changes summarized?
 
-Also gather the branch context:
+Also gather the branch context. First, detect the correct base branch — do
+**not** hardcode `main`. Run these git commands individually (no shell scripts):
 
 ```bash
 git branch --show-current
-git log main..HEAD --oneline
-git diff main..HEAD --stat
 ```
 
-If the branch has no commits ahead of `main`, inform the user and ask how to
-proceed.
+```bash
+git merge-base main HEAD
+```
+
+```bash
+git merge-base develop HEAD
+```
+
+Compare the two merge-base results. The base branch whose merge-base is
+**closer** to HEAD (more recent common ancestor) is the correct base. If
+`develop` does not exist, use `main`. Store the chosen base as `$BASE`.
+
+Then run:
+
+```bash
+git log $BASE..HEAD --oneline
+```
+
+```bash
+git diff $BASE..HEAD --stat
+```
+
+If the branch has no commits ahead of the base branch, inform the user and ask
+how to proceed.
 
 ---
 
@@ -85,11 +106,12 @@ You are drafting a pull request title and body. The user provided this context:
 
 <branch-context>
 Branch: {current branch name}
+Base: {detected base branch}
 Commits:
-{output of git log main..HEAD --oneline}
+{output of git log <base>..HEAD --oneline}
 
 Changed files:
-{output of git diff main..HEAD --stat}
+{output of git diff <base>..HEAD --stat}
 </branch-context>
 
 <reference>

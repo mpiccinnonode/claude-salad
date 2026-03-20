@@ -1,28 +1,49 @@
 # scrum-toolkit
 
-A Claude Code plugin that transforms project ideas, vision statements, product briefs, or feature lists into complete SCRUM-based project roadmaps with epics, user stories, sprint plans, and release milestones.
+A Claude Code plugin for the full SCRUM lifecycle — from project planning and backlog management through ceremonies, PM/PO authoring, and DevOps actions with GitHub integration.
 
-## Bundled agents
+## Skills
+
+### Ceremonies
+
+| Skill | Purpose |
+| --- | --- |
+| `/plan` | Sprint planning, backlog grooming, or full SCRUM roadmap generation |
+| `/standup` | Daily standup report from git activity, PRs, and assigned issues |
+| `/retro` | Sprint retrospective from git history and merged PRs |
+| `/sprint-review` | Sprint review and demo summary for stakeholders |
+
+### PM/PO Authoring
+
+| Skill | Purpose |
+| --- | --- |
+| `/user-story` | Create user stories with acceptance criteria, optionally as GitHub issues |
+| `/epic` | Create epics with feature breakdown and story stubs, optionally as GitHub milestones |
+| `/milestone` | Define release milestones with goals and sprint ranges |
+
+### DevOps
+
+| Skill | Purpose |
+| --- | --- |
+| `/commit` | Stage and commit with SCRUM-aware conventional commit messages |
+| `/pr` | Create pull requests with story references and changelog generation |
+| `/branch` | Create feature branches following repo naming conventions |
+| `/gh-board` | Initialize, sync, or check status of a GitHub project board |
+
+## Agent
 
 | Agent | Purpose |
-| ------- | --------- |
-| `scrum-architect` | Transforms raw project input into a structured SCRUM roadmap |
+| --- | --- |
+| `scrum-architect` | Phase-agnostic SCRUM expert dispatched by skills for domain reasoning |
 
-## What scrum-architect does
+## Quick start
 
-Given a project idea, PRD, feature list, or stakeholder notes, scrum-architect:
-
-1. **Discovery** -- identifies vision, personas, requirements, and open questions
-2. **Epic & Feature Mapping** -- groups requirements into epics, features, and user stories with acceptance criteria
-3. **Estimation** -- assigns story points, maps dependencies, flags risks
-4. **Sprint Planning** -- sequences stories into sprints respecting dependencies and velocity
-5. **Governance** -- recommends Definition of Done, ceremonies, and tracking metrics
-
-Output is saved as `docs/project-roadmap.md` in the target project.
-
-## Usage
-
-The scrum-architect agent is dispatched automatically when you ask Claude to create a project roadmap, break down requirements into sprints, or plan a SCRUM project.
+```text
+/plan --full "Build a task management app with user auth and real-time updates"
+/user-story "Add SSO login support" --gh-issue
+/commit ST-42 --log
+/gh-board init
+```
 
 ## Installation
 

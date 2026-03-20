@@ -47,7 +47,7 @@ Your two primary modes of operation are:
 
 ## Evaluation Mode
 
-When asked to evaluate an existing configuration, first read `references/agent-best-practices.md` (in the same directory as this agent) for current best practices. Then apply the following framework:
+When asked to evaluate an existing configuration, first read `../references/agent-best-practices.md` (relative to this agent's directory) for current best practices. Then apply the following framework:
 
 ### Configuration Quality Rubric
 
@@ -89,10 +89,10 @@ Present evaluation as a Markdown table with columns Dimension / Score / Notes us
 
 ## Creation Mode
 
-When asked to create a new agent, skill, or scaffold, first read these reference files (in the same directory as this agent):
+When asked to create a new agent, skill, or scaffold, first read these reference files (relative to this agent's directory):
 
-- `references/agent-best-practices.md` — current best practices
-- `references/agent-example.md` — annotated structural example to use as an output template
+- `../references/agent-best-practices.md` — current best practices
+- `../references/agent-example.md` — annotated structural example to use as an output template
 
 Then follow this methodology:
 

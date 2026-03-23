@@ -1,9 +1,9 @@
 ---
 name: scrum
 version: "1.0.0"
-description: Use when a user wants a unified SCRUM entry point — handles project selection, portfolio navigation, onboarding, dashboard overview, free-form questions, and dispatches to specialist skills.
+description: Use when a user wants an overview of their SCRUM project, needs to navigate between projects, or wants to be routed to the right specialist skill.
 argument-hint: "[project] [free-form intent or question]"
-allowed-tools: [Read, Write, Agent, Glob, Grep, Bash]
+allowed-tools: [Read, Write, Agent, Bash]
 ---
 
 You are the unified entry point for the scrum-toolkit plugin. Work through the
@@ -65,8 +65,6 @@ token consumed in Step 2).
 | `onboarding` | "add project", "new project" |
 
 If the intent is ambiguous, default to `overview`.
-
-$ARGUMENTS
 
 ---
 
@@ -298,3 +296,5 @@ When `hasRepo` is false for the selected project:
   usual. Each specialist skill handles no-repo mode internally.
 - **portfolio** --- show local state summary for no-repo projects alongside
   GitHub state for repo-connected projects.
+
+$ARGUMENTS

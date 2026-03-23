@@ -3,7 +3,7 @@ name: epic
 version: "1.0.0"
 description: Use when a user needs to create an epic with feature breakdown and story stubs, optionally publishing to GitHub as a milestone with issues.
 argument-hint: "<description> [--roadmap=<path>] [--gh-milestone]"
-allowed-tools: [Read, Write, Agent, Glob, Grep, Bash]
+allowed-tools: [Read, Write, Agent, Bash]
 ---
 
 You are orchestrating epic creation with feature breakdown and story stubs.
@@ -16,28 +16,8 @@ phase-specific context.
 ## Step 1 --- Bootstrap
 
 JIT-read `plugins/scrum-toolkit/references/bootstrap.md` and execute the
-full bootstrap sequence:
-
-1. **Derive the project slug** from the git remote (or fall back to the
-   directory name).
-2. **Read `~/.scrum-toolkit/portfolio.json`** --- find the matching project
-   entry. If the file or entry is missing, trigger onboarding first.
-3. **Read `~/.scrum-toolkit/projects/<slug>.json`** --- extract conventions,
-   velocity history, team size, and sprint duration.
-4. **Resolve the user role** --- use the project-level `userRole` if set,
-   otherwise fall back to `defaults.userRole` from `portfolio.json`.
-5. **Resolve GitHub field IDs** (when `hasRepo` is true) --- resolve the
-   project board ID from `projectNumber`, then query custom field IDs for
-   Story Points, Priority, Status, and Sprint. Identify the current sprint
-   iteration.
-6. **No-repo projects** (when `repo` is null) --- skip all GitHub API
-   steps; the skill will operate against local JSON fallback.
-
-If bootstrap triggers onboarding, complete onboarding before proceeding.
-
-Produce the **project context object** (slug, name, repo, projectNumber,
-userRole, conventions, velocityHistory, hasRepo, and GitHub field IDs when
-applicable) for use in subsequent steps.
+full bootstrap sequence. If bootstrap triggers onboarding, complete onboarding
+before proceeding. Produce the **project context object** for subsequent steps.
 
 ---
 
@@ -205,7 +185,9 @@ For each story stub from the epic output, use `gh issue create` with:
 Check for issue templates in `.github/ISSUE_TEMPLATE/`. If a story template
 exists, adapt the issue body to match it.
 
-Capture each issue URL and number from the output.
+Capture each issue URL and number from the output. If any `gh issue create`
+call fails, continue with the remaining story stubs. Collect all failures and
+include them in the Step 6 summary for manual retry.
 
 #### 5c --- Add issues to project board and set custom fields
 

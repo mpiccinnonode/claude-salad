@@ -1,9 +1,9 @@
 ---
 name: gh-board
 version: "1.0.0"
-description: "Use when a user wants to initialize, sync, or check the status of a GitHub project board. Manages GitHub Projects v2 custom fields (Story Points, Priority, Status, Sprint) and bridges local planning artifacts to GitHub via a sync workflow."
+description: Use when a user wants to initialize a GitHub project board, check board status, or sync local planning artifacts to GitHub Projects v2.
 argument-hint: "<init|sync|status> [--project=<name>] [--sprint=<N>]"
-allowed-tools: [Read, Write, Agent, Glob, Grep, Bash]
+allowed-tools: [Read, Write, Agent, Bash]
 ---
 
 You are orchestrating GitHub project board management for SCRUM workflows.
@@ -16,28 +16,8 @@ subcommand-specific context.
 ## Step 1 --- Bootstrap
 
 JIT-read `plugins/scrum-toolkit/references/bootstrap.md` and execute the
-full bootstrap sequence:
-
-1. **Derive the project slug** from the git remote (or fall back to the
-   directory name).
-2. **Read `~/.scrum-toolkit/portfolio.json`** --- find the matching project
-   entry. If the file or entry is missing, trigger onboarding first.
-3. **Read `~/.scrum-toolkit/projects/<slug>.json`** --- extract conventions,
-   velocity history, team size, and sprint duration.
-4. **Resolve the user role** --- use the project-level `userRole` if set,
-   otherwise fall back to `defaults.userRole` from `portfolio.json`.
-5. **Resolve GitHub field IDs** (when `hasRepo` is true) --- resolve the
-   project board ID from `projectNumber`, then query custom field IDs for
-   Story Points, Priority, Status, and Sprint. Identify the current sprint
-   iteration.
-6. **No-repo projects** (when `repo` is null) --- skip all GitHub API
-   steps; skills will operate against local JSON fallback.
-
-If bootstrap triggers onboarding, complete onboarding before proceeding.
-
-Produce the **project context object** (slug, name, repo, projectNumber,
-userRole, conventions, velocityHistory, hasRepo, and GitHub field IDs when
-applicable) for use in subsequent steps.
+full bootstrap sequence. If bootstrap triggers onboarding, complete onboarding
+before proceeding. Produce the **project context object** for subsequent steps.
 
 ---
 

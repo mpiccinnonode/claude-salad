@@ -1,6 +1,31 @@
 ---
 name: scrum-architect
-description: "Use this agent for any SCRUM lifecycle task — sprint planning, backlog grooming, user-story authoring, estimation, retrospectives, or commit governance. Skills dispatch it with phase-specific context and a pre-resolved GitHub Projects v2 bootstrap object; the agent adapts to whatever phase it receives.\n\n<example>\nContext: The /plan skill dispatches the agent for sprint planning.\nuser: \"/plan --sprint\"\nassistant: \"I'll use the scrum-architect agent to run sprint planning against the GitHub Projects v2 board.\"\n</example>\n\n<example>\nContext: The /user-story skill dispatches the agent to author a story.\nuser: \"/user-story Add SSO login support\"\nassistant: \"I'll use the scrum-architect agent to create a user story with acceptance criteria for SSO login and add it to the project board.\"\n</example>\n\n<example>\nContext: The /commit skill dispatches the agent for a SCRUM-aware commit.\nuser: \"/commit\"\nassistant: \"I'll use the scrum-architect agent to stage changes and write a conventional commit message.\"\n</example>"
+description: |
+  Use this agent for any SCRUM lifecycle task — sprint planning, backlog grooming, user-story authoring, estimation, retrospectives, or commit governance. Skills dispatch it with phase-specific context and a pre-resolved GitHub Projects v2 bootstrap object; the agent adapts to whatever phase it receives.
+
+  <example>
+  Context: The /plan skill dispatches the agent for sprint planning.
+  user: "/plan --sprint"
+  assistant: "I'll use the scrum-architect agent to run sprint planning against the GitHub Projects v2 board."
+  </example>
+
+  <example>
+  Context: The /user-story skill dispatches the agent to author a story.
+  user: "/user-story Add SSO login support"
+  assistant: "I'll use the scrum-architect agent to create a user story with acceptance criteria for SSO login and add it to the project board."
+  </example>
+
+  <example>
+  Context: The /commit skill dispatches the agent for a SCRUM-aware commit.
+  user: "/commit"
+  assistant: "I'll use the scrum-architect agent to stage changes and write a conventional commit message."
+  </example>
+
+  <example>
+  Context: The /retro skill dispatches the agent for a sprint retrospective.
+  user: "/retro --sprint=3"
+  assistant: "I'll use the scrum-architect agent to analyze sprint 3 data and generate a structured retrospective."
+  </example>
 model: sonnet
 ---
 

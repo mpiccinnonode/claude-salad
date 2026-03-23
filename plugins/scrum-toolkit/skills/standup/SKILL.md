@@ -3,7 +3,7 @@ name: standup
 version: "1.0.0"
 description: Use when a user wants to generate a daily standup status report from their current git activity, open PRs, and work in progress.
 argument-hint: "[--since=<date>] [--format=slack|markdown|plain]"
-allowed-tools: [Read, Write, Agent, Glob, Grep, Bash]
+allowed-tools: [Read, Write, Agent, Bash]
 ---
 
 You are orchestrating a daily standup report. Bootstrap the project context,
@@ -15,28 +15,8 @@ board, then dispatch the scrum-architect agent to generate a formatted standup.
 ## Step 1 --- Bootstrap
 
 JIT-read `plugins/scrum-toolkit/references/bootstrap.md` and execute the
-full bootstrap sequence:
-
-1. **Derive the project slug** from the git remote (or fall back to the
-   directory name).
-2. **Read `~/.scrum-toolkit/portfolio.json`** --- find the matching project
-   entry. If the file or entry is missing, trigger onboarding first.
-3. **Read `~/.scrum-toolkit/projects/<slug>.json`** --- extract conventions,
-   velocity history, team size, and sprint duration.
-4. **Resolve the user role** --- use the project-level `userRole` if set,
-   otherwise fall back to `defaults.userRole` from `portfolio.json`.
-5. **Resolve GitHub field IDs** (when `hasRepo` is true) --- resolve the
-   project board ID from `projectNumber`, then query custom field IDs for
-   Story Points, Priority, Status, and Sprint. Identify the current sprint
-   iteration.
-6. **No-repo projects** (when `repo` is null) --- skip all GitHub API
-   steps; the skill will operate against git activity only.
-
-If bootstrap triggers onboarding, complete onboarding before proceeding.
-
-Produce the **project context object** (slug, name, repo, projectNumber,
-userRole, conventions, velocityHistory, hasRepo, and GitHub field IDs when
-applicable) for use in subsequent steps.
+full bootstrap sequence. If bootstrap triggers onboarding, complete onboarding
+before proceeding. Produce the **project context object** for subsequent steps.
 
 ---
 
@@ -49,8 +29,6 @@ Extract options from `$ARGUMENTS`:
   (default: `markdown`).
 
 If neither flag is present, use the defaults.
-
-$ARGUMENTS
 
 ---
 
@@ -230,3 +208,5 @@ user:
   retried in a loop.
 
 If any check fails, correct the issue before delivering the final output.
+
+$ARGUMENTS

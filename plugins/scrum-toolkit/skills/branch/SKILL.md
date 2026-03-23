@@ -3,7 +3,7 @@ name: branch
 version: "1.0.0"
 description: "Use when a user wants to create a feature branch following the repository's naming conventions, optionally linked to a story or epic."
 argument-hint: "<description or story ref> [--from=<base>]"
-allowed-tools: [Read, Write, Agent, Glob, Grep, Bash]
+allowed-tools: [Read, Agent, Bash]
 ---
 
 You are orchestrating SCRUM-aware branch creation. Bootstrap the project
@@ -154,7 +154,5 @@ Before reporting completion, confirm all of the following:
 - [ ] The user approved the branch name before creation
 
 ---
-
-## User Arguments
 
 $ARGUMENTS

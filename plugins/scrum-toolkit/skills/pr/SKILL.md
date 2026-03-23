@@ -3,7 +3,7 @@ name: pr
 version: "1.0.0"
 description: "Use when a user wants to create a pull request with SCRUM story references, optionally generating a changelog entry."
 argument-hint: "[story ref] [--changelog] [--draft]"
-allowed-tools: [Read, Write, Agent, Glob, Grep, Bash]
+allowed-tools: [Read, Write, Agent, Bash]
 ---
 
 You are orchestrating SCRUM-aware pull request creation. Bootstrap the
@@ -90,12 +90,13 @@ git merge-base main HEAD
 ```
 
 ```bash
-git merge-base develop HEAD
+git merge-base develop HEAD 2>/dev/null
 ```
 
 Compare the two merge-base results. The base branch whose merge-base is
 **closer** to HEAD (more recent common ancestor) is the correct base. If
-`develop` does not exist, use `main`. Store the chosen base as `$BASE`.
+`git merge-base develop HEAD 2>/dev/null` fails or returns nothing, `develop`
+does not exist — use `main`. Store the chosen base as `$BASE`.
 
 Then run:
 
@@ -252,7 +253,5 @@ Before reporting completion, confirm all of the following:
 - [ ] If `--changelog` was passed: changelog entry was generated
 
 ---
-
-## User Arguments
 
 $ARGUMENTS

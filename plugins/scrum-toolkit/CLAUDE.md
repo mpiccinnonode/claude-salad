@@ -34,7 +34,7 @@ skills/
 
 ## Key conventions when editing this plugin
 
-- **Agent frontmatter**: the agent file requires `name:`, `description:` (with `<example>` blocks), and `model:` fields. The `description:` field must use an inline `\n`-escaped quoted string, not a YAML block scalar (`|`). scrum-architect runs on `sonnet`.
+- **Agent frontmatter**: the agent file requires `name:`, `description:` (with `<example>` blocks), and `model:` fields. The `description:` field must use a YAML block scalar (`|`). scrum-architect runs on `sonnet`.
 - **Skill frontmatter**: every SKILL.md requires `name:`, `version:`, `description:`, `argument-hint:`, and `allowed-tools:` fields. Version must match `plugin.json`.
 - **Version sync**: keep `plugin.json` version in sync with the marketplace `marketplace.json` entry and all skill `version:` fields — `plugin.json` is the source of truth.
 - **Bootstrap requirement**: all skills that interact with GitHub or local config must JIT-read `references/bootstrap.md` and execute the bootstrap sequence before their main logic.

@@ -3,7 +3,7 @@ name: retro
 version: "1.0.0"
 description: Use when a user wants to facilitate a sprint retrospective by analyzing the sprint's git history, merged PRs, GitHub Projects v2 board data, and velocity metrics to generate a structured retro document.
 argument-hint: "[--sprint=<range>] [--since=<date>] [--until=<date>]"
-allowed-tools: [Read, Write, Agent, Glob, Grep, Bash]
+allowed-tools: [Read, Write, Agent, Bash]
 ---
 
 You are orchestrating a sprint retrospective. Bootstrap the project context,
@@ -16,29 +16,8 @@ update the `goalMet` field in the local velocity history.
 ## Step 1 --- Bootstrap
 
 JIT-read `plugins/scrum-toolkit/references/bootstrap.md` and execute the
-full bootstrap sequence:
-
-1. **Derive the project slug** from the git remote (or fall back to the
-   directory name).
-2. **Read `~/.scrum-toolkit/portfolio.json`** --- find the matching project
-   entry. If the file or entry is missing, trigger onboarding first.
-3. **Read `~/.scrum-toolkit/projects/<slug>.json`** --- extract conventions,
-   velocity history, team size, and sprint duration.
-4. **Resolve the user role** --- use the project-level `userRole` if set,
-   otherwise fall back to `defaults.userRole` from `portfolio.json`.
-5. **Resolve GitHub field IDs** (when `hasRepo` is true) --- resolve the
-   project board ID from `projectNumber`, then query custom field IDs for
-   Story Points, Priority, Status, and Sprint. Identify the current sprint
-   iteration.
-6. **No-repo projects** (when `repo` is null) --- skip all GitHub API
-   steps; the skill will operate against local JSON data and git activity
-   only.
-
-If bootstrap triggers onboarding, complete onboarding before proceeding.
-
-Produce the **project context object** (slug, name, repo, projectNumber,
-userRole, conventions, velocityHistory, hasRepo, and GitHub field IDs when
-applicable) for use in subsequent steps.
+full bootstrap sequence. If bootstrap triggers onboarding, complete onboarding
+before proceeding. Produce the **project context object** for subsequent steps.
 
 ---
 
@@ -53,8 +32,6 @@ Extract options from `$ARGUMENTS`:
 
 If no dates or sprint are provided, default to the last two weeks
 (`--since="2 weeks ago"`).
-
-$ARGUMENTS
 
 ---
 
@@ -318,3 +295,5 @@ user:
   retried in a loop.
 
 If any check fails, correct the issue before delivering the final output.
+
+$ARGUMENTS

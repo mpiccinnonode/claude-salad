@@ -3,7 +3,7 @@ name: commit
 version: "1.0.0"
 description: "Use when a user wants to stage and commit changes with a SCRUM-aware conventional commit message."
 argument-hint: "[story ref]"
-allowed-tools: [Read, Write, Agent, Glob, Grep, Bash]
+allowed-tools: [Read, Agent, Bash]
 ---
 
 You are orchestrating a SCRUM-aware git commit. Bootstrap the project
@@ -132,7 +132,5 @@ Before reporting completion, confirm all of the following:
 - [ ] No sprint log or GitHub API calls were made
 
 ---
-
-## User Arguments
 
 $ARGUMENTS

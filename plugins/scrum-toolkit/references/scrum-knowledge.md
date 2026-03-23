@@ -162,19 +162,30 @@ Pre-release: append `-alpha.1`, `-beta.1`, `-rc.1`.
 
 ## GitHub Mapping
 
-SCRUM artifacts map to GitHub primitives as follows:
+SCRUM artifacts map to GitHub Projects v2 custom fields and primitives:
 
-| SCRUM Artifact | GitHub Primitive | Notes |
+| SCRUM Concept | GitHub Mechanism | Notes |
 | --- | --- | --- |
+| Story Points | Custom number field `Story Points` on Project board | Numeric field for velocity tracking — no labels |
+| Priority | Custom single-select field `Priority` (Must / Should / Could / Won't) | MoSCoW values; supplementary `priority:*` labels for outside-board filtering |
+| Status | Custom single-select field `Status` (Sprint Backlog / In Progress / In Review / Done) | Drives board columns |
+| Sprint | Custom iteration field `Sprint` | One iteration = one Sprint |
+| Sprint Goal | Iteration title or description | Set when creating/editing the iteration |
 | Epic | Milestone | Group related stories under one milestone |
 | User Story | Issue | Use story template with As-a/I-want/So-that |
-| Sprint Backlog | Project Board iteration | One iteration = one Sprint |
-| Story Points | Labels (`sp:1`, `sp:2`, `sp:3`, `sp:5`, `sp:8`, `sp:13`) | Numeric labels for velocity tracking |
 | Acceptance Criteria | Issue checklist (`- [ ]`) | Checkboxes in issue body |
-| Sprint Goal | Iteration description | Set in Project Board iteration field |
 | Definition of Done | PR checklist template | Enforced via branch protection + template |
-| Bug | Issue with `bug` label | Separate from stories for metric clarity |
-| Impediment | Issue with `blocker` label | Assign to Scrum Master for triage |
+| Assignee | Issue assignee | Unchanged from default GitHub behavior |
+| Blockers | Label `blocked` + linked issue | Link the blocking issue for traceability |
+
+Custom fields (`Story Points`, `Priority`, `Status`, `Sprint`) are created
+during board initialization via `gh-board init`.
+
+**Supplementary repo labels** (also created by `gh-board init`):
+
+- Priority: `priority:must`, `priority:should`, `priority:could`, `priority:wont`
+- Type: `story`, `bug`, `spike`, `epic`
+- Blocker: `blocked`
 
 Workflow: PO creates Issues (stories) -> assigns to Milestone (epic) ->
 team pulls into Project Board iteration (sprint) -> PRs link to Issues ->

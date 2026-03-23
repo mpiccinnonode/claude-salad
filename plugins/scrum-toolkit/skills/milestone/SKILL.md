@@ -6,11 +6,41 @@ argument-hint: "<goals> [--sprints=<range>] [--gh-milestone]"
 allowed-tools: [Read, Write, Agent, Glob, Grep, Bash]
 ---
 
-You are orchestrating release milestone definition. Follow the steps below in order.
+You are orchestrating release milestone definition. Bootstrap the project
+context, parse the user's arguments, load relevant reference material, then
+dispatch the scrum-architect agent with phase-specific context.
 
 ---
 
-## Step 1 --- Parse Arguments
+## Step 1 --- Bootstrap
+
+JIT-read `plugins/scrum-toolkit/references/bootstrap.md` and execute the
+full bootstrap sequence:
+
+1. **Derive the project slug** from the git remote (or fall back to the
+   directory name).
+2. **Read `~/.scrum-toolkit/portfolio.json`** --- find the matching project
+   entry. If the file or entry is missing, trigger onboarding first.
+3. **Read `~/.scrum-toolkit/projects/<slug>.json`** --- extract conventions,
+   velocity history, team size, and sprint duration.
+4. **Resolve the user role** --- use the project-level `userRole` if set,
+   otherwise fall back to `defaults.userRole` from `portfolio.json`.
+5. **Resolve GitHub field IDs** (when `hasRepo` is true) --- resolve the
+   project board ID from `projectNumber`, then query custom field IDs for
+   Story Points, Priority, Status, and Sprint. Identify the current sprint
+   iteration.
+6. **No-repo projects** (when `repo` is null) --- skip all GitHub API
+   steps; the skill will operate against local JSON fallback.
+
+If bootstrap triggers onboarding, complete onboarding before proceeding.
+
+Produce the **project context object** (slug, name, repo, projectNumber,
+userRole, conventions, velocityHistory, hasRepo, and GitHub field IDs when
+applicable) for use in subsequent steps.
+
+---
+
+## Step 2 --- Parse Arguments
 
 Extract the following from `$ARGUMENTS`:
 
@@ -25,7 +55,7 @@ If no goals are provided, ask the user for them before proceeding.
 
 ---
 
-## Step 2 --- JIT-Read Reference Material
+## Step 3 --- JIT-Read Reference Material
 
 Read the following sections from `plugins/scrum-toolkit/references/scrum-knowledge.md`
 (relative to the plugin root):
@@ -33,17 +63,22 @@ Read the following sections from `plugins/scrum-toolkit/references/scrum-knowled
 - **Artifacts** section --- for epic structure, increment definition, and
   Definition of Done template
 
-If the `--gh-milestone` flag is present, also read:
+If the `--gh-milestone` flag is present AND `hasRepo` is true, also read:
 
 - **GitHub Mapping** section --- for milestone conventions, iteration mapping,
   and project board workflow
 
+If `--gh-milestone` is present AND `hasRepo` is true, also JIT-read the
+**"Milestone Operations"** section from
+`plugins/scrum-toolkit/references/github-api-patterns.md`. This provides
+REST templates needed for milestone creation and listing.
+
 ---
 
-## Step 3 --- Dispatch to scrum-architect
+## Step 4 --- Dispatch to scrum-architect
 
 Use the **Agent** tool to dispatch the **scrum-architect** agent with the
-following prompt (fill in the bracketed values from Steps 1-2):
+following prompt (fill in the bracketed values from Steps 1-3):
 
 ````text
 ## Phase: Milestone Definition
@@ -52,10 +87,28 @@ following prompt (fill in the bracketed values from Steps 1-2):
 
 - **Goals:** [goals from arguments]
 - **Sprint range:** [sprint range if provided, otherwise "not specified"]
+- **Bootstrap context:** [the full project context object from Step 1]
 
 ### Reference Knowledge
 
-[Paste the Artifacts section content read in Step 2]
+[Paste the Artifacts section content read in Step 3]
+
+### Sprint Date Calculation
+
+Use `sprintDurationDays` from the bootstrap context (sourced from
+`~/.scrum-toolkit/projects/<slug>.json`) to calculate milestone due dates:
+
+1. If a sprint range is provided (e.g., "3-5"), identify the last sprint
+   number in the range.
+2. If GitHub iteration metadata is available (from bootstrap field IDs and
+   the current sprint iteration), use iteration start dates and
+   `sprintDurationDays` to calculate the end date of the last sprint in the
+   range.
+3. If no iteration metadata is available, use `sprintDurationDays` and the
+   current date to estimate:
+   `due_date = today + (sprints_remaining * sprintDurationDays)`
+4. If no sprint range is provided and no dates are determinable, set
+   estimated dates to "TBD".
 
 ### Instructions
 
@@ -66,8 +119,8 @@ following prompt (fill in the bracketed values from Steps 1-2):
 4. Specify the sprint range (use the provided range, or suggest one if not given).
 5. List key deliverables --- the concrete outputs expected by milestone completion.
    Group by feature area if there are more than 5.
-6. If sprint dates or cadence can be inferred from the repository (e.g., existing
-   milestones, project board iterations), include estimated start and end dates.
+6. Calculate estimated start and end dates using the sprint date calculation
+   logic above.
 
 ### Output Format
 
@@ -78,7 +131,8 @@ following prompt (fill in the bracketed values from Steps 1-2):
 
 **Sprint Range:** [e.g., Sprint 3 -- Sprint 5 (6 weeks)]
 
-**Estimated Dates:** [start -- end, if determinable, otherwise "TBD"]
+**Estimated Dates:** [start -- end, calculated from sprint duration and iteration
+metadata, or "TBD" if not determinable]
 
 ---
 
@@ -105,47 +159,49 @@ Display the agent's output to the user.
 
 ---
 
-## Step 4 --- GitHub Milestone (if --gh-milestone)
+## Step 5 --- GitHub Milestone (if --gh-milestone)
 
-If the `--gh-milestone` flag was **not** provided, skip to Step 5.
+If the `--gh-milestone` flag was **not** provided, skip to Step 6.
 
-If `--gh-milestone` is present, dispatch the **scrum-architect** agent with the
-following prompt:
+### No-Repo Guard
 
-````text
-## Phase: GitHub Milestone Creation
+If `--gh-milestone` is present but `hasRepo` is **false**, warn the user:
 
-### Instructions
+> **Warning:** This project is not connected to a GitHub repository.
+> The `--gh-milestone` flag requires a linked repo. Skipping GitHub milestone
+> creation. To connect this project, run `/scrum onboard` and configure a
+> repository.
+
+Skip to Step 6 after displaying the warning.
+
+### GitHub Milestone Creation (hasRepo is true)
+
+When `--gh-milestone` is present AND `hasRepo` is true, create the milestone
+directly using the bootstrap context and milestone output from Step 4.
 
 Detect repository conventions first. Inspect existing milestones and their naming
 patterns before creating anything.
 
 1. Determine the due date:
-   - If sprint dates are known (from existing milestones, project board iterations,
-     or user input), calculate the due date from the last sprint in the range.
-   - If no dates are determinable, omit the due_on field.
+   - Use the estimated dates from Step 4 (calculated from `sprintDurationDays`
+     and iteration metadata).
+   - If dates were "TBD", omit the `due_on` field.
 
-2. Create the GitHub milestone via `gh api`:
-   ```bash
-   gh api repos/{owner}/{repo}/milestones \
-     -f title="[Milestone Name]" \
-     -f description="[Goal statement and success criteria]" \
-     -f state="open" \
-     -f due_on="[YYYY-MM-DDT00:00:00Z if known]"
+2. Create the GitHub milestone via `gh api` (see github-api-patterns.md
+   "Milestone Operations"):
+
+   ```text
+   gh api repos/<OWNER>/<REPO>/milestones -X POST \
+     -f title="<Milestone Name>" \
+     -f description="<Goal statement and success criteria>" \
+     -f due_on="<YYYY-MM-DD>T00:00:00Z"
    ```
 
 3. Report the milestone URL and details to the user.
 
-### Milestone Content
-
-[Paste the milestone output from Step 3]
-````
-
-Report the created milestone URL to the user.
-
 ---
 
-## Step 5 --- Summary
+## Step 6 --- Summary
 
 Present a brief summary:
 
@@ -155,6 +211,29 @@ Present a brief summary:
 - Whether a GitHub milestone was created (with URL if applicable)
 - Suggested next steps (e.g., "Create epics for this milestone with `/epic`"
   or "Plan the first sprint with `/plan`")
+
+---
+
+## Self-Verification
+
+After the agent completes, verify the output before presenting it to the
+user:
+
+- [ ] Bootstrap was executed and produced a valid project context object.
+- [ ] Milestone has a clear name and goal statement.
+- [ ] 3-5 measurable success criteria are defined.
+- [ ] Key deliverables are listed with target sprints.
+- [ ] Sprint dates were calculated using `sprintDurationDays` from local JSON
+  and iteration metadata (when available), not hardcoded.
+- [ ] If `--gh-milestone` AND `hasRepo`: milestone was created via `gh api`
+  using patterns from github-api-patterns.md.
+- [ ] If `--gh-milestone` AND `hasRepo`: existing milestones were inspected
+  for naming conventions before creating.
+- [ ] If `--gh-milestone` AND NOT `hasRepo`: a warning was displayed and
+  GitHub milestone creation was skipped.
+- [ ] All output follows markdown formatting conventions.
+
+If any check fails, correct the issue before delivering the final output.
 
 ---
 

@@ -7,11 +7,41 @@ allowed-tools: [Read, Write, Agent, Glob, Grep, Bash]
 ---
 
 You are orchestrating epic creation with feature breakdown and story stubs.
-Follow the steps below in order.
+Bootstrap the project context, parse the user's arguments, load relevant
+reference material, then dispatch the scrum-architect agent with
+phase-specific context.
 
 ---
 
-## Step 1 --- Parse Arguments
+## Step 1 --- Bootstrap
+
+JIT-read `plugins/scrum-toolkit/references/bootstrap.md` and execute the
+full bootstrap sequence:
+
+1. **Derive the project slug** from the git remote (or fall back to the
+   directory name).
+2. **Read `~/.scrum-toolkit/portfolio.json`** --- find the matching project
+   entry. If the file or entry is missing, trigger onboarding first.
+3. **Read `~/.scrum-toolkit/projects/<slug>.json`** --- extract conventions,
+   velocity history, team size, and sprint duration.
+4. **Resolve the user role** --- use the project-level `userRole` if set,
+   otherwise fall back to `defaults.userRole` from `portfolio.json`.
+5. **Resolve GitHub field IDs** (when `hasRepo` is true) --- resolve the
+   project board ID from `projectNumber`, then query custom field IDs for
+   Story Points, Priority, Status, and Sprint. Identify the current sprint
+   iteration.
+6. **No-repo projects** (when `repo` is null) --- skip all GitHub API
+   steps; the skill will operate against local JSON fallback.
+
+If bootstrap triggers onboarding, complete onboarding before proceeding.
+
+Produce the **project context object** (slug, name, repo, projectNumber,
+userRole, conventions, velocityHistory, hasRepo, and GitHub field IDs when
+applicable) for use in subsequent steps.
+
+---
+
+## Step 2 --- Parse Arguments
 
 Extract the following from `$ARGUMENTS`:
 
@@ -26,7 +56,7 @@ If no description is provided, ask the user for one before proceeding.
 
 ---
 
-## Step 2 --- JIT-Read Reference Material
+## Step 3 --- JIT-Read Reference Material
 
 Read the following sections from `plugins/scrum-toolkit/references/scrum-knowledge.md`
 (relative to the plugin root):
@@ -36,20 +66,26 @@ Read the following sections from `plugins/scrum-toolkit/references/scrum-knowled
 - **Prioritization** section --- for MoSCoW framework used in story-level
   prioritization
 
-If the `--gh-milestone` flag is present, also read:
+If the `--gh-milestone` flag is present AND `hasRepo` is true, also read:
 
 - **GitHub Mapping** section --- for milestone conventions, issue templates,
   label taxonomy, and project board workflow
+
+If `--gh-milestone` is present AND `hasRepo` is true, also JIT-read the
+**"Milestone Operations"**, **"Issue Operations"**, and **"Writing Project
+State"** sections from `plugins/scrum-toolkit/references/github-api-patterns.md`.
+These provide REST and GraphQL templates needed for milestone creation, issue
+creation, and setting custom fields on project board items.
 
 If `--roadmap` is provided, read the roadmap file at the given path to gather
 context on existing epics, sprint boundaries, and strategic priorities.
 
 ---
 
-## Step 3 --- Dispatch to scrum-architect
+## Step 4 --- Dispatch to scrum-architect
 
 Use the **Agent** tool to dispatch the **scrum-architect** agent with the
-following prompt (fill in the bracketed values from Steps 1-2):
+following prompt (fill in the bracketed values from Steps 1-3):
 
 ````text
 ## Phase: Epic Authoring
@@ -58,12 +94,13 @@ following prompt (fill in the bracketed values from Steps 1-2):
 
 - **Epic description:** [description from arguments]
 - **Roadmap context:** [summary of roadmap content if provided, otherwise "none"]
+- **Bootstrap context:** [the full project context object from Step 1]
 
 ### Reference Knowledge
 
-[Paste the Artifacts section content read in Step 2]
+[Paste the Artifacts section content read in Step 3]
 
-[Paste the Prioritization section content read in Step 2]
+[Paste the Prioritization section content read in Step 3]
 
 ### Instructions
 
@@ -122,53 +159,78 @@ Display the agent's output to the user.
 
 ---
 
-## Step 4 --- GitHub Milestone and Issues (if --gh-milestone)
+## Step 5 --- GitHub Milestone and Issues (if --gh-milestone)
 
-If the `--gh-milestone` flag was **not** provided, skip to Step 5.
+If the `--gh-milestone` flag was **not** provided, skip to Step 6.
 
-If `--gh-milestone` is present, dispatch the **scrum-architect** agent with the
-following prompt:
+### No-Repo Guard
 
-````text
-## Phase: GitHub Milestone Publishing
+If `--gh-milestone` is present but `hasRepo` is **false**, warn the user:
 
-### Instructions
+> **Warning:** This project is not connected to a GitHub repository.
+> The `--gh-milestone` flag requires a linked repo. Skipping GitHub publishing.
+> To connect this project, run `/scrum onboard` and configure a repository.
 
-Detect repository conventions first. Inspect existing milestones, issues, labels,
-templates, and project boards before creating anything.
+Skip to Step 6 after displaying the warning.
 
-1. Create a GitHub milestone via `gh api`:
-   ```bash
-   gh api repos/{owner}/{repo}/milestones -f title="[Epic Title]" \
-     -f description="[Business Objective]" -f state="open"
-   ```
-   Capture the milestone number from the response.
+### GitHub Publishing (hasRepo is true)
 
-2. For each story stub, create a GitHub issue via `gh issue create` with:
-   - Title: concise summary derived from the story stub
-   - Body: the full As-a/I-want/So-that text with acceptance criteria placeholders
-     as checkboxes
-   - Milestone: assign to the newly created milestone
-   - Labels: apply detected conventions (story point labels like `sp:N`, priority
-     labels, type labels)
+When `--gh-milestone` is present AND `hasRepo` is true, create the milestone
+and issues directly using the bootstrap context and epic output from Step 4.
 
-3. Check for issue templates in `.github/ISSUE_TEMPLATE/`. If a story template
-   exists, adapt the issue body to match it.
+#### 5a --- Create the milestone
 
-4. After creating all issues, report:
-   - The milestone URL
-   - A table of created issues with their numbers and URLs
+Use `gh api` to create a GitHub milestone:
 
-### Epic Content
+```text
+gh api repos/<OWNER>/<REPO>/milestones -X POST \
+  -f title="<Epic Title>" \
+  -f description="<Business Objective>"
+```
 
-[Paste the epic output from Step 3]
-````
+Capture the milestone number from the response.
 
-Report the created milestone and issue URLs to the user.
+#### 5b --- Create issues for each story stub
+
+For each story stub from the epic output, use `gh issue create` with:
+
+- **Title:** a concise summary derived from the story stub
+- **Body:** the full As-a / I-want / So-that text with acceptance criteria
+  placeholders as checkboxes
+- **Labels:** apply `story` type label and a `priority:*` label matching the
+  MoSCoW priority (e.g., `priority:must`, `priority:should`, `priority:could`,
+  `priority:wont`)
+- **Milestone:** assign to the newly created milestone
+
+Check for issue templates in `.github/ISSUE_TEMPLATE/`. If a story template
+exists, adapt the issue body to match it.
+
+Capture each issue URL and number from the output.
+
+#### 5c --- Add issues to project board and set custom fields
+
+For each created issue:
+
+1. **Resolve the issue node ID** via GraphQL (see github-api-patterns.md
+   "Resolve issue node ID").
+2. **Add the issue to the project** using `addProjectV2ItemById` mutation
+   (see github-api-patterns.md "Add existing issue to project"). Capture the
+   returned project item ID.
+3. **Set custom fields** on the project board item using the bootstrap field
+   IDs and `updateProjectV2ItemFieldValue`:
+   - **Story Points** --- set the `storyPointsFieldId` to the numeric point
+     value from the story stub estimate.
+   - **Priority** --- set the `priorityFieldId` to the option ID matching
+     the MoSCoW priority (Must / Should / Could / Won't).
+   - **Status** --- set the `statusFieldId` to the option ID for
+     "Sprint Backlog" (the default status for new items).
+
+Report the created milestone URL and a table of created issues with their
+numbers, URLs, and assigned custom field values to the user.
 
 ---
 
-## Step 5 --- Summary
+## Step 6 --- Summary
 
 Present a brief summary:
 
@@ -176,8 +238,40 @@ Present a brief summary:
 - Feature count and total story points
 - Whether a GitHub milestone was created (with URL if applicable)
 - Number of issues created (if applicable)
+- Project board fields set (story points, priority, status) on each issue
+  if applicable
 - Suggested next steps (e.g., "Refine story stubs into full stories with
   `/user-story`" or "Pull stories into a sprint with `/plan`")
+
+---
+
+## Self-Verification
+
+After the agent completes, verify the output before presenting it to the
+user:
+
+- [ ] Bootstrap was executed and produced a valid project context object.
+- [ ] The epic has a clear title and business objective.
+- [ ] Features are logically grouped with 1-3 story stubs each.
+- [ ] Every story stub uses As-a / I-want / So-that format.
+- [ ] Story point estimates use the Fibonacci scale (1, 2, 3, 5, 8, 13).
+- [ ] MoSCoW priorities are assigned to all story stubs.
+- [ ] No `sp:N` labels were used anywhere --- story points are set via
+  custom fields only.
+- [ ] If `--gh-milestone` AND `hasRepo`: milestone was created via
+  `gh api`.
+- [ ] If `--gh-milestone` AND `hasRepo`: issues were created with `story`
+  and `priority:*` labels (no `sp:N` labels).
+- [ ] If `--gh-milestone` AND `hasRepo`: each issue was added to the
+  project board via `addProjectV2ItemById`.
+- [ ] If `--gh-milestone` AND `hasRepo`: Story Points, Priority, and Status
+  custom fields were set on each project board item.
+- [ ] If `--gh-milestone` AND NOT `hasRepo`: a warning was displayed and
+  GitHub publishing was skipped.
+- [ ] If `--roadmap`: epic aligns with the roadmap's strategic priorities.
+- [ ] All output follows markdown formatting conventions.
+
+If any check fails, correct the issue before delivering the final output.
 
 ---
 

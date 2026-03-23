@@ -39,7 +39,22 @@ Step 4.
 
 ---
 
-## Step 3 — Detect Repository PR Conventions
+## Step 3 — Check Working Tree
+
+Before gathering PR context, verify the working tree is clean:
+
+```bash
+git status --porcelain
+```
+
+If there is any output, the working tree has uncommitted or unstaged changes.
+Warn the user and list the dirty files. Ask whether they want to commit, stash,
+or abort before proceeding. **Do not continue to Step 4 until the working tree
+is clean.**
+
+---
+
+## Step 4 — Detect Repository PR Conventions
 
 Run the following commands to understand the repository's existing PR style:
 
@@ -88,7 +103,7 @@ how to proceed.
 
 ---
 
-## Step 4 — Dispatch to scrum-architect
+## Step 5 — Dispatch to scrum-architect
 
 Use the Agent tool to launch the **scrum-architect** agent with the following
 prompt:
@@ -101,7 +116,7 @@ You are drafting a pull request title and body. The user provided this context:
 </story-ref>
 
 <pr-conventions>
-{PR template content and patterns from recent PRs observed in Step 3}
+{PR template content and patterns from recent PRs observed in Step 4}
 </pr-conventions>
 
 <branch-context>
@@ -137,7 +152,7 @@ No markdown fences around the output.
 
 ---
 
-## Step 5 — User Approval and PR Creation
+## Step 6 — User Approval and PR Creation
 
 Present the drafted PR title and body to the user and ask for approval:
 
@@ -152,7 +167,7 @@ After successful creation, display the PR URL.
 
 ---
 
-## Step 6 — Changelog Entry (conditional)
+## Step 7 — Changelog Entry (conditional)
 
 This step only runs if `--changelog` was present in `$ARGUMENTS`.
 

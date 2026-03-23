@@ -1,18 +1,32 @@
 ---
 name: branch
 version: "1.0.0"
-description: Use when a user wants to create a feature branch following the repository's naming conventions, optionally linked to a story or epic.
+description: "Use when a user wants to create a feature branch following the repository's naming conventions, optionally linked to a story or epic."
 argument-hint: "<description or story ref> [--from=<base>]"
 allowed-tools: [Read, Write, Agent, Glob, Grep, Bash]
 ---
 
-You are orchestrating SCRUM-aware branch creation. Parse the user's arguments,
-load relevant reference material, detect repository branch naming conventions,
-then dispatch the scrum-architect agent to generate the branch name.
+You are orchestrating SCRUM-aware branch creation. Bootstrap the project
+context, parse the user's arguments, detect repository branch naming
+conventions, then dispatch the scrum-architect agent to generate the branch
+name.
 
 ---
 
-## Step 1 — Parse Arguments
+## Step 1 — Bootstrap
+
+JIT-read `plugins/scrum-toolkit/references/bootstrap.md` and execute the
+bootstrap sequence. The branch skill only needs local conventions — it does
+**not** interact with the GitHub API, so skip Steps 5–6 of the bootstrap
+(GitHub-connected and no-repo project board logic). The key outputs you
+need are:
+
+- **slug** — derived project identifier
+- **conventions** — from `~/.scrum-toolkit/projects/<slug>.json`
+
+---
+
+## Step 2 — Parse Arguments
 
 Read `$ARGUMENTS` and extract:
 
@@ -28,21 +42,15 @@ branch.
 
 ---
 
-## Step 2 — JIT-Read Reference Material
-
-Use the Read tool to load the **DevOps Conventions** section from
-`plugins/scrum-toolkit/references/scrum-knowledge.md`.
-
-This section covers branch naming patterns (`feature/`, `bugfix/`, `hotfix/`,
-`release/`). Keep the loaded reference in context for the agent dispatch in
-Step 4.
-
----
-
 ## Step 3 — Detect Repository Branch Naming Conventions
 
-Run the following command to understand the repository's existing branch
-naming style:
+Check the `conventions.branches` field from the project file
+(`~/.scrum-toolkit/projects/<slug>.json`) loaded during bootstrap.
+
+- If `conventions.branches` **exists and is not empty**, use it as the
+  canonical branch naming pattern (e.g., `"feature/<id>-description"`).
+- If `conventions.branches` is **missing or the project file was not
+  found**, fall back to git branch analysis:
 
 ```bash
 git branch -r --format='%(refname:short)' | head -30
@@ -60,7 +68,18 @@ git branch --show-current
 
 ---
 
-## Step 4 — Dispatch to scrum-architect
+## Step 4 — JIT-Read Reference Material
+
+Use the Read tool to load the **DevOps Conventions** section from
+`plugins/scrum-toolkit/references/scrum-knowledge.md`.
+
+This section covers branch naming patterns (`feature/`, `bugfix/`, `hotfix/`,
+`release/`). Keep the loaded reference in context for the agent dispatch in
+Step 5.
+
+---
+
+## Step 5 — Dispatch to scrum-architect
 
 Use the Agent tool to launch the **scrum-architect** agent with the following
 prompt:
@@ -77,11 +96,12 @@ You are generating a branch name. The user provided this context:
 </base-branch>
 
 <repository-conventions>
-{branch naming patterns observed from git branch -r in Step 3}
+{conventions.branches value from the project file, or branch naming
+patterns observed from git branch -r in Step 3}
 </repository-conventions>
 
 <reference>
-{loaded DevOps Conventions section from Step 2}
+{loaded DevOps Conventions section from Step 4}
 </reference>
 
 Generate a branch name following these rules:
@@ -97,13 +117,14 @@ Generate a branch name following these rules:
 4. Keep the total name under 60 characters
 5. Match the repository's existing branch naming conventions observed in
    the remote branches
+6. If cached conventions specify a pattern, follow it exactly
 
 Output ONLY the branch name — no commentary, no explanation.
 ````
 
 ---
 
-## Step 5 — User Approval and Branch Creation
+## Step 6 — User Approval and Branch Creation
 
 Present the proposed branch name to the user and ask for approval:
 
@@ -118,6 +139,19 @@ Present the proposed branch name to the user and ask for approval:
 
 After successful creation, confirm the new branch name and base branch to
 the user.
+
+---
+
+## Self-Verification
+
+Before reporting completion, confirm all of the following:
+
+- [ ] Bootstrap ran and project slug was derived
+- [ ] Branch conventions were read from `projects/<slug>.json` or detected
+      from git branch analysis
+- [ ] The branch name follows the detected convention style
+- [ ] No GitHub API calls were made
+- [ ] The user approved the branch name before creation
 
 ---
 

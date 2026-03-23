@@ -1,18 +1,34 @@
 ---
 name: pr
 version: "1.0.0"
-description: Use when a user wants to create a pull request with SCRUM story references, optionally generating a changelog entry.
+description: "Use when a user wants to create a pull request with SCRUM story references, optionally generating a changelog entry."
 argument-hint: "[story ref] [--changelog] [--draft]"
 allowed-tools: [Read, Write, Agent, Glob, Grep, Bash]
 ---
 
-You are orchestrating SCRUM-aware pull request creation. Parse the user's
-arguments, load relevant reference material, detect repository PR conventions,
-then dispatch the scrum-architect agent to draft the PR.
+You are orchestrating SCRUM-aware pull request creation. Bootstrap the
+project context, parse the user's arguments, detect repository PR
+conventions, then dispatch the scrum-architect agent to draft the PR.
+After creation, update the linked item on the Projects v2 board.
 
 ---
 
-## Step 1 — Parse Arguments
+## Step 1 — Bootstrap
+
+JIT-read `plugins/scrum-toolkit/references/bootstrap.md` and execute the
+bootstrap sequence. The pr skill needs both local conventions and GitHub
+board access (when `hasRepo` is true). The key outputs you need are:
+
+- **slug** — derived project identifier
+- **conventions** — from `~/.scrum-toolkit/projects/<slug>.json`
+- **hasRepo** — whether this project is GitHub-connected
+- **repo** — `org/repo-name` (when `hasRepo` is true)
+- **projectId** — GitHub Projects v2 node ID (when `hasRepo` is true)
+- **statusFieldId** — Status field node ID (when `hasRepo` is true)
+
+---
+
+## Step 2 — Parse Arguments
 
 Read `$ARGUMENTS` and extract:
 
@@ -25,17 +41,6 @@ Read `$ARGUMENTS` and extract:
 
 Multiple flags can be combined. Everything that is not a recognized flag is
 treated as the story reference.
-
----
-
-## Step 2 — JIT-Read Reference Material
-
-Use the Read tool to load the **DevOps Conventions** section from
-`plugins/scrum-toolkit/references/scrum-knowledge.md`.
-
-This section covers PR template structure, conventional commits, and semantic
-versioning. Keep the loaded reference in context for the agent dispatch in
-Step 4.
 
 ---
 
@@ -56,7 +61,11 @@ is clean.**
 
 ## Step 4 — Detect Repository PR Conventions
 
-Run the following commands to understand the repository's existing PR style:
+First check the `conventions` field from the project file
+(`~/.scrum-toolkit/projects/<slug>.json`) loaded during bootstrap. If
+conventions are available, use them as the baseline for PR style.
+
+Then run the following commands to gather additional repository context:
 
 ```bash
 cat .github/pull_request_template.md 2>/dev/null || echo "No PR template found"
@@ -119,6 +128,10 @@ You are drafting a pull request title and body. The user provided this context:
 {PR template content and patterns from recent PRs observed in Step 4}
 </pr-conventions>
 
+<local-conventions>
+{conventions from the project file loaded during bootstrap, or "none available"}
+</local-conventions>
+
 <branch-context>
 Branch: {current branch name}
 Base: {detected base branch}
@@ -128,10 +141,6 @@ Commits:
 Changed files:
 {output of git diff <base>..HEAD --stat}
 </branch-context>
-
-<reference>
-{loaded DevOps Conventions section from Step 2}
-</reference>
 
 Draft a pull request title and body following these rules:
 
@@ -167,7 +176,52 @@ After successful creation, display the PR URL.
 
 ---
 
-## Step 7 — Changelog Entry (conditional)
+## Step 7 — Update Project Board Status (conditional)
+
+This step only runs when **all** of the following are true:
+
+- `hasRepo` is true (the project is GitHub-connected)
+- The PR references a story or issue (a story reference was provided in
+  `$ARGUMENTS` or the PR body contains a `Closes #N` / `Fixes #N` link)
+
+If `hasRepo` is false, skip this step entirely — PR creation via
+`gh pr create` still works even without a scrum-toolkit portfolio entry.
+
+### Resolve the linked issue
+
+Extract the issue number from the story reference or `Closes #N` syntax in
+the PR body. Then look up the issue's project item:
+
+JIT-read `plugins/scrum-toolkit/references/github-api-patterns.md`, the
+"Writing Project State" section. Use the "Get single item by issue number"
+query from the "Reading Project State" section to find the project item ID
+for the linked issue.
+
+### Update status to In Review
+
+Using the `statusFieldId` and `projectId` from bootstrap, and the item ID
+from the query above, find the option ID for "In Review" from the Status
+field options (resolved during bootstrap). Then run the "Update item status
+field" mutation to set the status to "In Review".
+
+### Offer to remove blocked label
+
+Check whether the linked issue has a `blocked` label:
+
+```bash
+gh issue view <ISSUE_NUMBER> --repo "<OWNER>/<REPO>" --json labels --jq '.labels[].name'
+```
+
+If a `blocked` label is present, ask the user whether to remove it. If they
+confirm:
+
+```bash
+gh issue edit <ISSUE_NUMBER> --repo "<OWNER>/<REPO>" --remove-label "blocked"
+```
+
+---
+
+## Step 8 — Changelog Entry (conditional)
 
 This step only runs if `--changelog` was present in `$ARGUMENTS`.
 
@@ -180,6 +234,22 @@ This step only runs if `--changelog` was present in `$ARGUMENTS`.
    Removed, Fixed, Security.
 4. Insert the entry under the `[Unreleased]` section (create it if missing)
 5. Inform the user the changelog was updated and offer to commit the change
+
+---
+
+## Self-Verification
+
+Before reporting completion, confirm all of the following:
+
+- [ ] Bootstrap ran and project context was loaded
+- [ ] PR conventions were read from `projects/<slug>.json` or detected from
+      the repository
+- [ ] Working tree was clean before PR creation
+- [ ] PR was created successfully and URL was displayed
+- [ ] If `hasRepo` and a story/issue was linked: board item status was
+      updated to "In Review"
+- [ ] If the linked issue had a `blocked` label: user was offered removal
+- [ ] If `--changelog` was passed: changelog entry was generated
 
 ---
 

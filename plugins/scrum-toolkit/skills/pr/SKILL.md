@@ -1,7 +1,7 @@
 ---
 name: pr
 version: "1.0.0"
-description: "Use when a user wants to create a pull request with SCRUM story references, optionally generating a changelog entry."
+description: Use when a user wants to create a pull request with SCRUM story references, optionally generating a changelog entry. Trigger for "open a PR", "create a pull request", "submit this for review", "make a PR", "push and create PR", "open a draft PR", or any request to propose changes for review.
 argument-hint: "[story ref] [--changelog] [--draft]"
 allowed-tools: [Read, Write, Agent, Bash]
 ---
@@ -13,7 +13,7 @@ After creation, update the linked item on the Projects v2 board.
 
 ---
 
-## Step 1 — Bootstrap
+## Step 1 --- Bootstrap
 
 JIT-read `plugins/scrum-toolkit/references/bootstrap.md` and execute the
 bootstrap sequence. The pr skill needs both local conventions and GitHub
@@ -28,7 +28,7 @@ board access (when `hasRepo` is true). The key outputs you need are:
 
 ---
 
-## Step 2 — Parse Arguments
+## Step 2 --- Parse Arguments
 
 Read `$ARGUMENTS` and extract:
 
@@ -44,7 +44,7 @@ treated as the story reference.
 
 ---
 
-## Step 3 — Check Working Tree
+## Step 3 --- Check Working Tree
 
 Before gathering PR context, verify the working tree is clean:
 
@@ -59,7 +59,7 @@ is clean.**
 
 ---
 
-## Step 4 — Detect Repository PR Conventions
+## Step 4 --- Detect Repository PR Conventions
 
 First check the `conventions` field from the project file
 (`~/.scrum-toolkit/projects/<slug>.json`) loaded during bootstrap. If
@@ -113,7 +113,7 @@ how to proceed.
 
 ---
 
-## Step 5 — Dispatch to scrum-architect
+## Step 5 --- Dispatch to scrum-architect
 
 Use the Agent tool to launch the **scrum-architect** agent with the following
 prompt:
@@ -162,7 +162,7 @@ No markdown fences around the output.
 
 ---
 
-## Step 6 — User Approval and PR Creation
+## Step 6 --- User Approval and PR Creation
 
 Present the drafted PR title and body to the user and ask for approval:
 
@@ -177,7 +177,7 @@ After successful creation, display the PR URL.
 
 ---
 
-## Step 7 — Update Project Board Status (conditional)
+## Step 7 --- Update Project Board Status (conditional)
 
 This step only runs when **all** of the following are true:
 
@@ -222,7 +222,7 @@ gh issue edit <ISSUE_NUMBER> --repo "<OWNER>/<REPO>" --remove-label "blocked"
 
 ---
 
-## Step 8 — Changelog Entry (conditional)
+## Step 8 --- Changelog Entry (conditional)
 
 This step only runs if `--changelog` was present in `$ARGUMENTS`.
 

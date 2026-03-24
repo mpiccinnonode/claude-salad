@@ -1,7 +1,7 @@
 ---
 name: epic
 version: "1.0.0"
-description: Use when a user needs to create an epic with feature breakdown and story stubs, optionally publishing to GitHub as a milestone with issues.
+description: Use when a user needs to create an epic with feature breakdown and story stubs, optionally publishing to GitHub as a milestone with issues. Trigger for "create an epic", "define an epic for X", "break this into features and stories", "I need an epic for Y", or any request to group related stories into a larger unit of work.
 argument-hint: "<description> [--roadmap=<path>] [--gh-milestone]"
 allowed-tools: [Read, Write, Agent, Bash]
 ---

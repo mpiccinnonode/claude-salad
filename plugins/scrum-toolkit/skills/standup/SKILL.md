@@ -1,7 +1,7 @@
 ---
 name: standup
 version: "1.0.0"
-description: Use when a user wants to generate a daily standup status report from their current git activity, open PRs, and work in progress.
+description: Use when a user wants to generate or prepare a daily standup report from git activity, open PRs, and work in progress. Trigger for "standup", "daily standup", "scrum update", "what did I do yesterday?", "morning report", "prepare my standup", or "what have I been working on?"
 argument-hint: "[--since=<date>] [--format=slack|markdown|plain]"
 allowed-tools: [Read, Write, Agent, Bash]
 ---

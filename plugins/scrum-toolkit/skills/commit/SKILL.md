@@ -1,7 +1,7 @@
 ---
 name: commit
 version: "1.0.0"
-description: "Use when a user wants to stage and commit changes with a SCRUM-aware conventional commit message."
+description: Use when a user wants to stage and commit changes with a SCRUM-aware conventional commit message. Trigger for "commit my changes", "create a commit", "write a commit message", "commit this", "git commit", or any request to save and record work in version control.
 argument-hint: "[story ref]"
 allowed-tools: [Read, Agent, Bash]
 ---
@@ -12,7 +12,7 @@ dispatch the scrum-architect agent to draft a conventional commit message.
 
 ---
 
-## Step 1 — Bootstrap
+## Step 1 --- Bootstrap
 
 JIT-read `plugins/scrum-toolkit/references/bootstrap.md` and execute the
 bootstrap sequence. The commit skill only needs local conventions — it does
@@ -25,7 +25,7 @@ need are:
 
 ---
 
-## Step 2 — Parse Arguments
+## Step 2 --- Parse Arguments
 
 Read `$ARGUMENTS` and extract:
 
@@ -38,7 +38,7 @@ Everything that is not a recognized flag is treated as the story reference.
 
 ---
 
-## Step 3 — Detect Repository Conventions
+## Step 3 --- Detect Repository Conventions
 
 Check the `conventions.commits` field from the project file
 (`~/.scrum-toolkit/projects/<slug>.json`) loaded during bootstrap.
@@ -69,7 +69,7 @@ changes are staged.
 
 ---
 
-## Step 4 — Dispatch to scrum-architect
+## Step 4 --- Dispatch to scrum-architect
 
 Use the Agent tool to launch the **scrum-architect** agent with the
 following prompt:
@@ -108,7 +108,7 @@ blank line to separate subject from body if a body is included.
 
 ---
 
-## Step 5 — User Approval and Commit
+## Step 5 --- User Approval and Commit
 
 Present the drafted commit message to the user and ask for approval:
 

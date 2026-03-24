@@ -1,7 +1,7 @@
 ---
 name: branch
 version: "1.0.0"
-description: "Use when a user wants to create a feature branch following the repository's naming conventions, optionally linked to a story or epic."
+description: Use when a user wants to create a feature branch following the repository's naming conventions, optionally linked to a story or epic. Trigger for "create a branch", "make a feature branch", "branch for this story", "new branch for X", "start work on this feature", or any request to create a new git branch.
 argument-hint: "<description or story ref> [--from=<base>]"
 allowed-tools: [Read, Agent, Bash]
 ---
@@ -13,7 +13,7 @@ name.
 
 ---
 
-## Step 1 — Bootstrap
+## Step 1 --- Bootstrap
 
 JIT-read `plugins/scrum-toolkit/references/bootstrap.md` and execute the
 bootstrap sequence. The branch skill only needs local conventions — it does
@@ -26,7 +26,7 @@ need are:
 
 ---
 
-## Step 2 — Parse Arguments
+## Step 2 --- Parse Arguments
 
 Read `$ARGUMENTS` and extract:
 
@@ -42,7 +42,7 @@ branch.
 
 ---
 
-## Step 3 — Detect Repository Branch Naming Conventions
+## Step 3 --- Detect Repository Branch Naming Conventions
 
 Check the `conventions.branches` field from the project file
 (`~/.scrum-toolkit/projects/<slug>.json`) loaded during bootstrap.
@@ -68,7 +68,7 @@ git branch --show-current
 
 ---
 
-## Step 4 — JIT-Read Reference Material
+## Step 4 --- JIT-Read Reference Material
 
 Use the Read tool to load the **DevOps Conventions** section from
 `plugins/scrum-toolkit/references/scrum-knowledge.md`.
@@ -79,7 +79,7 @@ Step 5.
 
 ---
 
-## Step 5 — Dispatch to scrum-architect
+## Step 5 --- Dispatch to scrum-architect
 
 Use the Agent tool to launch the **scrum-architect** agent with the following
 prompt:
@@ -124,7 +124,7 @@ Output ONLY the branch name — no commentary, no explanation.
 
 ---
 
-## Step 6 — User Approval and Branch Creation
+## Step 6 --- User Approval and Branch Creation
 
 Present the proposed branch name to the user and ask for approval:
 

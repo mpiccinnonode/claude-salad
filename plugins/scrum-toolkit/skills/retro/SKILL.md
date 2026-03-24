@@ -1,7 +1,7 @@
 ---
 name: retro
 version: "1.0.0"
-description: Use when a user wants to facilitate a sprint retrospective by analyzing the sprint's git history, merged PRs, GitHub Projects v2 board data, and velocity metrics to generate a structured retro document.
+description: Use when a user wants to facilitate or generate a sprint retrospective. Trigger for "retro", "retrospective", "sprint lessons learned", "what went wrong this sprint?", "what went well?", "team retrospective", "end of sprint review", or any request to reflect on a completed sprint.
 argument-hint: "[--sprint=<range>] [--since=<date>] [--until=<date>]"
 allowed-tools: [Read, Write, Agent, Bash]
 ---
@@ -47,7 +47,7 @@ Retrospective entry for domain context.
 
 ### Git and GitHub CLI data
 
-Run the following Bash commands to collect retrospective inputs:
+Run the following Bash commands in parallel to collect retrospective inputs:
 
 1. **Git log for the sprint range** ---
    `git log --since="<since>" --until="<until>" --oneline --stat`.

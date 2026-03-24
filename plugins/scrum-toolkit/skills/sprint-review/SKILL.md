@@ -1,7 +1,7 @@
 ---
 name: sprint-review
 version: "1.0.0"
-description: Use when a user wants to prepare a sprint review or demo summary showing what was delivered, for stakeholder communication.
+description: Use when a user wants to prepare a sprint review, demo, or stakeholder update showing what was delivered this sprint. Trigger for "sprint review", "sprint demo", "what did we ship?", "show stakeholders what we delivered", "sprint summary", or "prepare for demo day".
 argument-hint: "[--sprint=<range>] [--since=<date>] [--until=<date>]"
 allowed-tools: [Read, Write, Agent, Bash]
 ---

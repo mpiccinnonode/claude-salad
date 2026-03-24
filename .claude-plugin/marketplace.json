@@ -14,9 +14,9 @@
     },
     {
       "name": "scrum-toolkit",
-      "version": "0.1.0",
+      "version": "1.0.0",
       "source": "./plugins/scrum-toolkit",
-      "description": "Transform project ideas into SCRUM roadmaps with epics, stories, and sprint plans"
+      "description": "Full SCRUM lifecycle toolkit — ceremonies, PM/PO authoring, and DevOps actions with GitHub integration"
     }
   ]
 }

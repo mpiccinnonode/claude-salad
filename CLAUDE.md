@@ -1,7 +1,5 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
-
 claude-salad is a multi-plugin marketplace for Claude Code. No build step or test suite — content is markdown files executed by Claude Code.
 
 ## Lint

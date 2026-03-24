@@ -65,7 +65,7 @@ supplementary.
 GitHub has no native concept for:
 
 | Data | Why local |
-|------|-----------|
+| --- | --- |
 | Velocity history | Historical append-only data across sprints |
 | Team conventions | Branch naming, commit style, label taxonomy |
 | Estimation scale | Config, not state |
@@ -155,7 +155,7 @@ concurrency risk.
 Skills read and write GitHub state using these mappings:
 
 | SCRUM concept | GitHub primitive | Access method |
-|---------------|------------------|---------------|
+| --- | --- | --- |
 | Sprint backlog | Project items in current iteration | GraphQL: project items filtered by iteration |
 | Story points | Custom number field `Story Points` | GraphQL: field value read/write |
 | Status | Custom single-select field `Status` | GraphQL: field value update |
@@ -326,7 +326,7 @@ Which skill reads/writes what:
 ### 7.1 GitHub State (via API)
 
 | Skill | Reads | Writes |
-|-------|-------|--------|
+| --- | --- | --- |
 | `plan` | Product backlog, current iteration | Create/update iteration, move items to sprint |
 | `standup` | Current sprint items + statuses | — (read-only) |
 | `sprint-review` | Current sprint items, completed work | — (read-only; triggers local velocity write) |
@@ -348,7 +348,7 @@ local log files.
 ### 7.2 Local JSON
 
 | Skill | Reads | Writes |
-|-------|-------|--------|
+| --- | --- | --- |
 | `plan` | Conventions, velocity history | — |
 | `sprint-review` | Velocity history | Append to velocityHistory |
 | `retro` | Velocity history | Update goalMet on latest entry |
@@ -406,7 +406,7 @@ If portfolio has exactly one project, select it automatically.
 **Step 3 — Intent Detection.**
 
 | Intent | Triggers |
-|--------|----------|
+| --- | --- |
 | `overview` | no arguments, "status", "how are we doing", "dashboard" |
 | `question` | free-form question about project state |
 | `ceremony` | "standup", "retro", "review", "planning", "grooming" |
@@ -476,7 +476,7 @@ It is meant to be reviewed and edited by the team before being pushed to GitHub.
 
 Under the new architecture, `gh-board sync` is redefined as:
 
-**"Read local planning artifacts and reconcile them with GitHub state."**
+> "Read local planning artifacts and reconcile them with GitHub state."
 
 Specifically:
 
@@ -571,7 +571,7 @@ The original State Schema Design proposed:
 This revised spec replaces that with:
 
 | Original | Revised | Reason |
-|----------|---------|--------|
+| --- | --- | --- |
 | Markdown state files | GitHub Projects v2 | Eliminates parse/write complexity and conflicts |
 | `portfolio.md` | `portfolio.json` | Simpler to parse, index-only |
 | `projects/<slug>.md` | `projects/<slug>.json` | Config + velocity only, not state |

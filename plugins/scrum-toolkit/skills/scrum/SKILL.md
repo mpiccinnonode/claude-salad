@@ -108,7 +108,7 @@ When `hasRepo` is false:
 
 ### overview
 
-Dispatch the **scrum-architect** agent with the fetched project state:
+Use the Agent tool with `subagent_type: "scrum-toolkit:scrum-architect"` to launch the **scrum-architect** agent with the fetched project state:
 
 ````text
 ## Phase: Sprint Overview
@@ -133,7 +133,7 @@ Keep it short. No invented data --- use only the state provided.
 
 ### question
 
-Dispatch the **scrum-architect** agent with the fetched state and the user's
+Use the Agent tool with `subagent_type: "scrum-toolkit:scrum-architect"` to launch the **scrum-architect** agent with the fetched state and the user's
 question:
 
 ````text
@@ -161,9 +161,9 @@ handles their request and suggest they invoke it directly:
 | Trigger | Skill | Suggested invocation |
 | --- | --- | --- |
 | standup | standup | `/standup` |
-| retro | retro | `/retro` |
+| retro | sprint-retro | `/sprint-retro` |
 | review | sprint-review | `/sprint-review` |
-| planning, grooming | plan | `/plan --sprint` or `/plan --grooming` |
+| planning, grooming | sprint-plan | `/sprint-plan --sprint` or `/sprint-plan --grooming` |
 
 Example output:
 
@@ -209,7 +209,7 @@ Run `/pr` to create a SCRUM-aware pull request.
 
 ### portfolio
 
-Dispatch the **scrum-architect** agent with the fetched multi-project state:
+Use the Agent tool with `subagent_type: "scrum-toolkit:scrum-architect"` to launch the **scrum-architect** agent with the fetched multi-project state:
 
 ````text
 ## Phase: Portfolio Overview
@@ -253,8 +253,13 @@ Walk the user through project setup, asking one question at a time:
    says "none" or "local only", set `repo: null`.
 3. **Sprint duration?** --- 1 week, 2 weeks, or 3 weeks.
 4. **Your role?** --- Product Owner, Scrum Master, or Developer.
+5. **Artifact language?** --- what language should story descriptions, roadmaps,
+   and other generated artifacts be written in? (e.g., English, Italian).
+   Default: English.
+6. **Estimation scale?** --- Fibonacci (1, 2, 3, 5, 8, 13) or hours
+   (1, 2, 4, 8, 16)?
 
-After the user answers all four questions:
+After the user answers all six questions:
 
 1. **Derive the slug** --- from the repo (`org/repo` becomes `org-repo`) or
    from the project name (lowercase, spaces to hyphens) if no repo.
@@ -273,7 +278,9 @@ After the user answers all four questions:
      "name": "<project-name>",
      "repo": "<org/repo>" or null,
      "projectNumber": <board-number> or null,
-     "userRole": "<role>"
+     "userRole": "<role>",
+     "language": "<language from question 5>",
+     "estimationScale": "fibonacci" or "hours"
    }
    ```
 

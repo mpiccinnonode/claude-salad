@@ -64,7 +64,7 @@ context on existing epics, sprint boundaries, and strategic priorities.
 
 ## Step 4 --- Dispatch to scrum-architect
 
-Use the **Agent** tool to dispatch the **scrum-architect** agent with the
+Use the Agent tool with `subagent_type: "scrum-toolkit:scrum-architect"` to dispatch the **scrum-architect** agent with the
 following prompt (fill in the bracketed values from Steps 1-3):
 
 ````text

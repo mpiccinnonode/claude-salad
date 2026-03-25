@@ -55,7 +55,7 @@ Keep the loaded reference in context for the agent dispatch in Step 4.
 
 ## Step 4 --- Dispatch to scrum-architect
 
-Use the Agent tool to launch the **scrum-architect** agent. Include the
+Use the Agent tool with `subagent_type: "scrum-toolkit:scrum-architect"` to launch the **scrum-architect** agent. Include the
 bootstrap project context, loaded reference material, and the
 subcommand-specific prompt from the appropriate section below.
 

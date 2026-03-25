@@ -94,7 +94,7 @@ fallback schema, read `backlog` and `currentSprint` from
 
 ## Step 5 --- Dispatch to scrum-architect
 
-Use the **Agent** tool to launch the `scrum-architect` agent with the
+Use the Agent tool with `subagent_type: "scrum-toolkit:scrum-architect"` to launch the **scrum-architect** agent with the
 following context:
 
 ````text

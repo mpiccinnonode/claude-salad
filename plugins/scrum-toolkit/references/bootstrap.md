@@ -82,6 +82,8 @@ name              — human-readable project name
 repo              — "org/repo-name" or null
 projectNumber     — GitHub Projects board number (null when no repo)
 userRole          — resolved role with fallback (developer | scrum-master | product-owner)
+language          — artifact language (e.g., "English", "Italian"); falls back to defaults.language
+estimationScale   — "fibonacci" or "hours"; falls back to defaults.estimationScale
 conventions       — branch, commit, label conventions from local JSON
 velocityHistory   — array of past sprint metrics from local JSON
 hasRepo           — boolean that controls GitHub vs. local-fallback path
@@ -107,7 +109,8 @@ registry of all projects the user works with.
   "defaults": {
     "sprintDurationDays": 14,
     "estimationScale": "fibonacci",
-    "userRole": "product-owner"
+    "userRole": "product-owner",
+    "language": "English"
   },
   "projects": [
     {
@@ -115,7 +118,9 @@ registry of all projects the user works with.
       "name": "My App",
       "repo": "org/repo-name",
       "projectNumber": 3,
-      "userRole": "developer"
+      "userRole": "developer",
+      "language": "Italian",
+      "estimationScale": "hours"
     }
   ]
 }
@@ -127,6 +132,11 @@ Field notes:
   `product-owner`.
 - `projects[].userRole` — optional; when absent the skill falls back to
   `defaults.userRole`.
+- `projects[].language` — optional; when absent falls back to
+  `defaults.language` (default: `"English"`). Controls the language of
+  generated artifacts (stories, roadmaps, retros).
+- `projects[].estimationScale` — optional; when absent falls back to
+  `defaults.estimationScale`. Valid values: `"fibonacci"` or `"hours"`.
 - `sprintDurationDays` — integer; common values are 7, 14, or 21.
 
 ### projects/\<slug>.json

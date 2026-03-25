@@ -273,6 +273,10 @@ user:
   GitHub publishing was skipped.
 - [ ] If `--roadmap`: epic aligns with the roadmap's strategic priorities.
 - [ ] All output follows markdown formatting conventions.
+- [ ] Phase Tasks were created before each step and completed after.
+- [ ] Skill emits `[N/TOTAL]` counters directly in the issue creation and field-setting loops.
+- [ ] Loop failures are accumulated and appended to the Step 6 summary.
+- [ ] All Tasks were marked completed before the final summary.
 
 If any check fails, correct the issue before delivering the final output.
 

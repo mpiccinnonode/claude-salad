@@ -375,6 +375,10 @@ user:
 - [ ] Error handling: API failures are reported clearly, not silently
   swallowed.
 - [ ] All output follows markdown formatting conventions.
+- [ ] All phase Tasks were created before the agent dispatch.
+- [ ] Dispatch prompt instructs agent to emit `[N/TOTAL]` counters in execution loops only.
+- [ ] Agent output was inspected and Tasks renamed per the outcome table.
+- [ ] All Tasks were marked completed after the agent dispatch returns.
 
 If any check fails, correct the issue before delivering the final output.
 

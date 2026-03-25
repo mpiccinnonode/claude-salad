@@ -1,6 +1,6 @@
 ---
 name: commit
-version: "1.0.0"
+version: "2.0.0"
 description: Use when a user wants to stage and commit changes with a SCRUM-aware conventional commit message. Trigger for "commit my changes", "create a commit", "write a commit message", "commit this", "git commit", or any request to save and record work in version control.
 argument-hint: "[story ref]"
 allowed-tools: [Read, Agent, Bash]

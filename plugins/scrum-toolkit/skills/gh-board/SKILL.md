@@ -64,6 +64,12 @@ If the subcommand is **sync**, create two tasks before dispatching:
 1. Subject: `Read artifacts & compute diff` — mark `in_progress` immediately.
 2. Subject: `Execute approved changes` — mark `in_progress` immediately.
 
+If the subcommand is **init**, create three tasks before dispatching:
+
+1. Subject: `Create project board` — mark `in_progress` immediately.
+2. Subject: `Create custom fields` — mark `in_progress` immediately.
+3. Subject: `Create repo labels` — mark `in_progress` immediately.
+
 ---
 
 ### No-Repo Handling
@@ -129,6 +135,8 @@ labels, milestones, and issue templates before creating anything.
      (use green for story/epic, red for bug, yellow for spike)
    - Status label: `blocked`
      (use red)
+
+   Prefix each label creation attempt with `[N/TOTAL]` — e.g., `[1/8] Creating label: priority:must`. For failures: `[3/8] FAILED: priority:must — gh: 422`. Continue on failure.
 
    **Do NOT create `sp:N` labels.** Story points are tracked exclusively
    via the custom number field on the project board.
@@ -326,6 +334,12 @@ If the subcommand was **sync**, inspect the agent output and apply the first mat
 - **User declined changes:** Mark `Read artifacts & compute diff` completed. Mark `Execute approved changes` completed with subject `Execute approved changes — skipped (user declined)`.
 - **`FAILED:` lines present in output:** Mark `Read artifacts & compute diff` completed. Count lines containing `FAILED:` (call this N). Mark `Execute approved changes` completed with subject `Execute approved changes — N item(s) failed`.
 - **Clean execution:** Mark both Tasks completed with their original subjects unchanged.
+
+If the subcommand was **init**, inspect the agent output and complete Tasks:
+
+- If `Create project board` or `Create custom fields` failed (error in output for those steps), mark the failed Task completed with subject `<original subject> — failed` and mark remaining uncompleted Tasks completed with subject `<original subject> — skipped`.
+- If the label creation loop contains lines containing `FAILED:`, count them (N) and mark `Create repo labels` completed with subject `Create repo labels — N item(s) failed`.
+- Otherwise mark all three Tasks completed with their original subjects unchanged.
 
 ## Step 5 --- Self-Verification
 

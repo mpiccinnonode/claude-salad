@@ -1,22 +1,35 @@
 # CLAUDE.md
 
-claude-salad is a multi-plugin marketplace for Claude Code. No build step or test suite -- content is markdown files executed by Claude Code.
+claude-salad is a multi-plugin marketplace for Claude Code. No build step or test suite — content is markdown files executed by Claude Code.
+
+## Lint
+
+```bash
+npx markdownlint-cli2 "**/*.md"        # lint all markdown (matches CI)
+npx markdownlint-cli2 "plugins/config-doctor/**/*.md"  # lint one plugin
+```
+
+CI runs this on every push to `main` and on pull requests via `.github/workflows/lint.yml`. Config lives in `.markdownlint.yaml` at the repo root.
 
 ## Repository structure
 
 ```text
 .claude-plugin/
-  marketplace.json   # Marketplace registry listing all plugins
+  marketplace.json        # Marketplace registry — lists every plugin with name, version, source path
 
-plugins/
-  config-doctor/     # Deep-scan and audit a project's Claude configuration
-  scrum-toolkit/     # Transform project ideas into SCRUM roadmaps
+plugins/<plugin-name>/    # Each plugin is self-contained
+  .claude-plugin/
+    plugin.json           # Plugin metadata (name, version, author, repo)
+  CLAUDE.md               # Plugin-specific conventions (agent frontmatter, skill flags, etc.)
+  agents/                 # Agent definitions — deployed to user's .claude/agents/ on install
+  skills/                 # Skill definitions (not all plugins have skills)
 ```
 
 ## Conventions
 
 - **Plugin independence**: each plugin under `plugins/` is fully self-contained with its own CLAUDE.md, agents, skills, and plugin.json. No shared agents across plugins.
-- **Version sync**: each plugin's `plugin.json` version must match the corresponding entry in the root `marketplace.json`.
+- **Version sync**: a plugin's version appears in three places that must stay in sync — `plugins/<name>/.claude-plugin/plugin.json` (source of truth), the matching entry in `.claude-plugin/marketplace.json`, and any `version:` field in skill frontmatter. Update all three together.
+- **Agent frontmatter**: every agent `.md` file requires `name:`, `description:` (with `<example>` blocks), and `model:` fields in YAML frontmatter. See each plugin's CLAUDE.md for model assignments.
 - **No build artifacts**: do not introduce package managers, build tools, or compiled assets. This marketplace is pure markdown.
-- **Markdown lint**: all markdown files are validated by CI via `.markdownlint.yaml` at the repo root.
-- **Plugin-level conventions**: see each plugin's own `CLAUDE.md` for plugin-specific rules (agent frontmatter, skill frontmatter, etc.).
+- **Markdown lint**: all markdown files are validated by CI. Run `npx markdownlint-cli2 "**/*.md"` locally before pushing.
+- **Plugin-level conventions**: see each plugin's own `CLAUDE.md` for plugin-specific rules (skill flags, subagent dispatch patterns, etc.).

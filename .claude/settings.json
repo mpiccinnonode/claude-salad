@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx markdownlint-cli2 \"**/*.md\" 2>&1 | head -30 || true"
+          }
+        ]
+      }
+    ]
+  }
+}

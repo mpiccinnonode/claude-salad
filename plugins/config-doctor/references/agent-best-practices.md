@@ -3,6 +3,7 @@
 Reference for writing Claude Code agent `.md` files. Derived from Anthropic's official engineering guidance (March 2026).
 
 **Sources:**
+
 - [Building Effective Agents](https://www.anthropic.com/engineering/building-effective-agents)
 - [Effective Context Engineering](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents)
 - [Claude 4 Prompting Best Practices](https://platform.claude.com/docs/en/docs/build-with-claude/prompt-engineering/claude-4-best-practices)
@@ -56,6 +57,7 @@ The role isn't decorative — it should tell the agent what to prioritize when i
 ### 3.1 Right altitude — not too brittle, not too vague
 
 Avoid two extremes:
+
 - **Too prescriptive:** Hardcoded logic that breaks when context shifts
 - **Too vague:** "Be helpful and thorough" — provides no actionable signal
 
@@ -170,7 +172,7 @@ Anthropic reports spending more time on tool documentation than overall prompts 
 ## 10. Anti-Patterns to Avoid
 
 | Anti-Pattern | Why It's Harmful |
-|---|---|
+| --- | --- |
 | Generic persona ("You are a helpful assistant") | Provides no decision-making guidance for ambiguous situations |
 | Superlative stacking ("elite world-class expert") | Burns tokens, adds no behavioral signal beyond a simple role statement |
 | Unbounded scope | Agent attempts tasks it can't do well, producing mediocre output across the board |

@@ -1,9 +1,9 @@
 ---
 name: audit
-version: "1.1.0"
-description: Deep-scan a project's Claude configuration (.claude/ directory, CLAUDE.md, agents, rules, skills, memory files). Produces a quality report, tooling gap analysis, and memory optimization recommendations — then optionally enforces significant changes.
+version: "1.2.0"
+description: Use when a user asks to audit, review, or analyze their Claude Code configuration — including agents, rules, skills, or memory files — or when they want tooling gap analysis or memory optimization recommendations for a Claude Code project.
 argument-hint: "[--report-only | --apply-safe | --apply-all] [--phase=agents,skills,...] [--skip-agents] [--skip-skills] [--skip-tooling] [--skip-memory] [/path/to/project]"
-allowed-tools: [Read, Glob, Grep, Write, Edit, Bash, Agent]
+allowed-tools: [Read, Glob, Grep, Write, Edit, Agent]
 ---
 
 You are orchestrating a multiphase Claude configuration audit. Work through the phases below in order. Be explicit about what you are doing at each step so the user can follow along and intervene if needed.
@@ -21,7 +21,7 @@ Check whether Serena MCP tools are available in this session by looking for tool
 
 ## Phase 0 — Orientation
 
-Determine the project root by locating `CLAUDE.md` and the `.claude/` directory relative to the current working directory. List their contents so you know what exists:
+Determine the project root by locating `CLAUDE.md` and the `.claude/` directory relative to the current working directory. If a path was provided via `$ARGUMENTS`, treat it as the project root for all discovery steps below. List their contents so you know what exists:
 
 - `.claude/rules/` — all rule files (recursive)
 - `.claude/agents/` — project-level agent definitions
@@ -236,7 +236,7 @@ Present the user with three options:
 **C) Apply all recommendations** — Apply all findings including structural changes, agent rewrites, and rule file reorganization. Requires explicit user confirmation before each significant change.
 
 - Rewrite skills scoring below 35/50 using skill-evaluator's suggested revisions
-- Present script-offloading recommendations for acknowledgment (not auto-implemented — writing scripts is outside audit enforcement scope)
+- Present script-offloading recommendations for acknowledgment (not auto-implemented — writing scripts is outside audit enforcement scope). For each opportunity, present: skill name, description, category, estimated savings, effort level — then ask "Acknowledge and continue? [y/n]"
 
 Ask the user which option they want before proceeding. Default to A if no response.
 

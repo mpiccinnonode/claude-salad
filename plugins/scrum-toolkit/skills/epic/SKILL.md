@@ -162,6 +162,8 @@ Skip to Step 6 after displaying the warning.
 When `--gh-milestone` is present AND `hasRepo` is true, create the milestone
 and issues directly using the bootstrap context and epic output from Step 4.
 
+Create a task with subject `Create GitHub milestone` and mark it `in_progress` immediately using TaskCreate and TaskUpdate.
+
 #### 5a --- Create the milestone
 
 Use `gh api` to create a GitHub milestone:
@@ -173,6 +175,10 @@ gh api repos/<OWNER>/<REPO>/milestones -X POST \
 ```
 
 Capture the milestone number from the response.
+
+Mark the `Create GitHub milestone` task as `completed`.
+
+Count the story stubs from the agent output (call this N). Create a task with subject `Create issues (N total)` — replace N with the actual count — and mark it `in_progress` immediately.
 
 #### 5b --- Create issues for each story stub
 
@@ -193,7 +199,15 @@ Capture each issue URL and number from the output. If any `gh issue create`
 call fails, continue with the remaining story stubs. Collect all failures and
 include them in the Step 6 summary for manual retry.
 
+Prefix each `gh issue create` attempt with `[M/N]` — e.g., `[1/7] Creating issue: As a user...`. For failures, emit `[M/N] FAILED: "story title" — <error>`. Continue the loop on failure and accumulate failures in a local list.
+
+Mark the `Create issues (N total)` task as `completed`.
+
 #### 5c --- Add issues to project board and set custom fields
+
+Create a task with subject `Set project board fields (N items)` — replace N with the issue count from Step 5b — and mark it `in_progress` immediately.
+
+Prefix each field-setting sequence (steps 1-3 per issue) with `[M/N]` — e.g., `[1/7] Setting fields for issue #42`. For failures, emit `[M/N] FAILED: issue #42 — <error>`. Continue on failure and accumulate in the local failures list.
 
 For each created issue:
 
@@ -210,6 +224,8 @@ For each created issue:
      the MoSCoW priority (Must / Should / Could / Won't).
    - **Status** --- set the `statusFieldId` to the option ID for
      "Sprint Backlog" (the default status for new items).
+
+Mark the `Set project board fields (N items)` task as `completed`.
 
 Report the created milestone URL and a table of created issues with their
 numbers, URLs, and assigned custom field values to the user.
@@ -228,6 +244,7 @@ Present a brief summary:
   if applicable
 - Suggested next steps (e.g., "Refine story stubs into full stories with
   `/user-story`" or "Pull stories into a sprint with `/plan`")
+- If any issue creation or field-setting failures were accumulated, append a **Failures** block listing each failure with its `[M/N]` counter and error message, and note which items require manual retry.
 
 ---
 

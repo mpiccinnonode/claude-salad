@@ -64,6 +64,8 @@ context on existing epics, sprint boundaries, and strategic priorities.
 
 ## Step 4 --- Dispatch to scrum-architect
 
+Create a task with subject `Generate epic content` and mark it `in_progress` immediately using TaskCreate and TaskUpdate.
+
 Use the Agent tool with `subagent_type: "scrum-toolkit:scrum-architect"` to dispatch the **scrum-architect** agent with the
 following prompt (fill in the bracketed values from Steps 1-3):
 
@@ -134,6 +136,8 @@ following prompt (fill in the bracketed values from Steps 1-3):
 | Could-have Points | N |
 ```
 ````
+
+Mark the `Generate epic content` task as `completed`.
 
 Display the agent's output to the user.
 

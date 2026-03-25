@@ -3,7 +3,7 @@ name: sprint-plan
 version: "1.0.0"
 description: Use when a user needs sprint planning, backlog grooming, or a full SCRUM roadmap from a project idea or requirements. Trigger for "plan next sprint", "groom the backlog", "estimate our stories", "create a roadmap", "break this into sprints", "what goes into sprint N?", or any request to organize or prioritize project work.
 argument-hint: "[--grooming|--sprint|--full] [backlog or project context]"
-allowed-tools: [Read, Write, Agent, Bash]
+allowed-tools: [Read, Write, Agent, Bash, TaskCreate, TaskUpdate]
 ---
 
 You are orchestrating SCRUM planning. Bootstrap the project context, parse the
@@ -59,6 +59,8 @@ Keep the loaded reference in context for the agent dispatch in Step 4.
 ---
 
 ## Step 4 --- Dispatch to scrum-architect
+
+If the mode is **Full Roadmap**, create a task with subject `Generate full SCRUM roadmap (5 phases)` and mark it `in_progress` immediately using TaskCreate and TaskUpdate.
 
 Use the Agent tool with `subagent_type: "scrum-toolkit:scrum-architect"` to launch the **scrum-architect** agent. Include the
 bootstrap project context, loaded reference material, and the mode-specific
@@ -330,6 +332,8 @@ tables for structured data.
 
 ---
 
+If the mode was **Full Roadmap**, mark the `Generate full SCRUM roadmap (5 phases)` task as `completed` immediately after the agent dispatch returns.
+
 ## Step 5 --- Self-Verification
 
 After the agent completes, verify the output before presenting it to the
@@ -361,6 +365,8 @@ user:
 - [ ] No-repo projects: GitHub API calls were skipped; local JSON
   fallback was used instead.
 - [ ] All output follows markdown formatting conventions.
+- [ ] For `--full` mode: wrapping Task was created before the agent dispatch.
+- [ ] For `--full` mode: wrapping Task was marked completed immediately after the agent returns.
 
 If any check fails, correct the issue before delivering the final output.
 

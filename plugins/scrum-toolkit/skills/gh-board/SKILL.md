@@ -59,6 +59,11 @@ Use the Agent tool with `subagent_type: "scrum-toolkit:scrum-architect"` to laun
 bootstrap project context, loaded reference material, and the
 subcommand-specific prompt from the appropriate section below.
 
+If the subcommand is **sync**, create two tasks before dispatching:
+
+1. Subject: `Read artifacts & compute diff` — mark `in_progress` immediately.
+2. Subject: `Execute approved changes` — mark `in_progress` immediately.
+
 ---
 
 ### No-Repo Handling
@@ -216,7 +221,7 @@ GitHub state, and applies approved changes.
    - Set custom field values (story points via number field, priority via
      single-select field, status via single-select field, sprint via
      iteration field)
-   - Report each action as it completes
+   - Prefix each executed change with `[N/TOTAL]` — e.g., `[1/5] Created issue #42: As a user...`. For failures: `[3/5] FAILED: "As a user..." — gh: 422 Unprocessable`. Continue the loop on failure; collect failures for the Step 6 summary.
 
 6. **Summary** --- report what was synced, what was skipped, and any items
    that need manual attention.
@@ -314,6 +319,13 @@ Use the bootstrap context for all field IDs --- do NOT re-resolve them.
 ````
 
 ---
+
+If the subcommand was **sync**, inspect the agent output and apply the first matching case to complete the Tasks:
+
+- **No diff output (error before approval gate):** Mark `Read artifacts & compute diff` completed with subject `Read artifacts & compute diff — failed`. Mark `Execute approved changes` completed with subject `Execute approved changes — skipped (pre-flight error)`.
+- **User declined changes:** Mark `Read artifacts & compute diff` completed. Mark `Execute approved changes` completed with subject `Execute approved changes — skipped (user declined)`.
+- **`FAILED:` lines present in output:** Mark `Read artifacts & compute diff` completed. Count lines containing `FAILED:` (call this N). Mark `Execute approved changes` completed with subject `Execute approved changes — N item(s) failed`.
+- **Clean execution:** Mark both Tasks completed with their original subjects unchanged.
 
 ## Step 5 --- Self-Verification
 

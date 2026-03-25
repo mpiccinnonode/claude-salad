@@ -1,6 +1,6 @@
 ---
 name: branch
-version: "1.0.0"
+version: "2.0.0"
 description: Use when a user wants to create a feature branch following the repository's naming conventions, optionally linked to a story or epic. Trigger for "create a branch", "make a feature branch", "branch for this story", "new branch for X", "start work on this feature", or any request to create a new git branch.
 argument-hint: "<description or story ref> [--from=<base>]"
 allowed-tools: [Read, Agent, Bash]

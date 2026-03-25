@@ -1,6 +1,6 @@
 ---
 name: sprint-plan
-version: "1.0.0"
+version: "2.0.0"
 description: Use when a user needs sprint planning, backlog grooming, or a full SCRUM roadmap from a project idea or requirements. Trigger for "plan next sprint", "groom the backlog", "estimate our stories", "create a roadmap", "break this into sprints", "what goes into sprint N?", or any request to organize or prioritize project work.
 argument-hint: "[--grooming|--sprint|--full] [backlog or project context]"
 allowed-tools: [Read, Write, Agent, Bash, TaskCreate, TaskUpdate]

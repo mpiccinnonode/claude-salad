@@ -42,9 +42,9 @@ newline-separated text, each non-empty line is one branch input. If the input
 starts with `[`, parse it as a JSON array of strings. After parsing, continue
 to **Step 2b** and then jump to the **Bulk Mode** section instead of Step 5.
 
-If no description or story reference is provided, ask the user before
-proceeding. The `--from` flag is optional; the default base is the current
-branch.
+If no description or story reference is provided and `--bulk` is not active,
+ask the user before proceeding. The `--from` flag is optional; the default
+base is the current branch.
 
 ---
 
@@ -243,39 +243,39 @@ TaskUpdate.
 
 For each `i` in `proposed` (1-indexed):
 
-1. Check if the branch already exists:
+#### Step 1 — Check if the branch already exists
 
 ```bash
 git branch --list "<proposed[i]>"
 ```
 
-1. If the branch already exists:
+#### Step 2 — If the branch already exists
 
 ```text
 [i/TOTAL] SKIPPED: <proposed[i]> already exists
 ```
 
-   Append to `skipped` list. Continue loop.
+Append to `skipped` list. Continue loop.
 
-1. If the branch does not exist, create it:
+#### Step 3 — If the branch does not exist, create it
 
 ```bash
 git checkout -b <proposed[i]> <base-branch-or-current>
 ```
 
-   On success:
+On success:
 
 ```text
 [i/TOTAL] Created: <proposed[i]>
 ```
 
-   On failure:
+On failure:
 
 ```text
 [i/TOTAL] FAILED: <proposed[i]> — <git error>
 ```
 
-   Append to `failures` list. Continue loop.
+Append to `failures` list. Continue loop.
 
 After the loop, mark the `Create branches (TOTAL total)` task as `completed`.
 

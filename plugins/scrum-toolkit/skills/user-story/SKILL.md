@@ -39,7 +39,7 @@ Extract the following from `$ARGUMENTS`:
   the "If no description is provided" guard (an empty list will be caught in
   Step 2b).
 
-If no description is provided, ask the user for one before proceeding.
+If no description is provided and `--bulk` was not detected, ask the user for one before proceeding.
 
 ---
 

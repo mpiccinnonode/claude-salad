@@ -548,6 +548,8 @@ user:
 - [ ] For `--full` mode: wrapping Task was marked completed immediately after the agent returns.
 - [ ] For `--bulk-import` mode: input document was parsed (JSON array or
   markdown table).
+- [ ] For `--bulk-import` mode: if the file cannot be parsed in either format,
+  an error was reported and execution stopped before the publishing loop.
 - [ ] For `--bulk-import` mode: only runs when `hasRepo` is true; a warning
   was shown and execution stopped when `hasRepo` is false.
 - [ ] For `--bulk-import` mode: each item has a created GitHub issue with

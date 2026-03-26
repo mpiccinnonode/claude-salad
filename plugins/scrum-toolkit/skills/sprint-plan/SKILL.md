@@ -38,8 +38,10 @@ user before proceeding.
 
 For `--bulk-import` mode, everything after the flag is treated as a **file
 path** to the input document. If the path is missing or the file does not
-exist, ask the user for a valid path before proceeding. After determining
-the mode, jump to the appropriate step:
+exist, ask the user for a valid path before proceeding. (This overrides the
+"if no context is provided" guard above — for `--bulk-import`, the file path
+is the required context.) After determining the mode, jump to the appropriate
+step:
 
 - `--bulk-import` → after Step 3, jump to the **Mode: Bulk Import** section
   (skip the scrum-architect dispatch in Step 4)
@@ -462,6 +464,14 @@ For each successfully created issue:
 2. Add the issue to the project using `addProjectV2ItemById` mutation.
    Capture the returned project item ID.
 
+On failure, emit:
+
+```text
+[i/TOTAL] BOARD FAILED: issue #<number> — <error>
+```
+
+Append to `failures`. Continue the loop.
+
 ##### b3 — Set custom fields
 
 Using the bootstrap field IDs and the returned project item ID:
@@ -556,6 +566,8 @@ user:
   `story` and `priority:*` labels.
 - [ ] For `--bulk-import` mode: each issue was added to the project board and
   Status was set to "Sprint Backlog".
+- [ ] For `--bulk-import` mode: b2 board-add failures emit `BOARD FAILED` and
+  are accumulated; the loop did not abort.
 - [ ] For `--bulk-import` mode: Story Points and Priority custom fields were
   set from the source document values (not inferred).
 - [ ] For `--bulk-import` mode: `[i/TOTAL]` progress was emitted per item.

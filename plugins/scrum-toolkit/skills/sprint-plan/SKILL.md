@@ -1,8 +1,8 @@
 ---
 name: sprint-plan
-version: "2.0.0"
+version: "2.1.0"
 description: Use when a user needs sprint planning, backlog grooming, or a full SCRUM roadmap from a project idea or requirements. Trigger for "plan next sprint", "groom the backlog", "estimate our stories", "create a roadmap", "break this into sprints", "what goes into sprint N?", or any request to organize or prioritize project work.
-argument-hint: "[--grooming|--sprint|--full] [backlog or project context]"
+argument-hint: "[--grooming|--sprint|--full|--bulk-import] [backlog or project context]"
 allowed-tools: [Read, Write, Agent, Bash, TaskCreate, TaskUpdate]
 ---
 
@@ -30,10 +30,21 @@ Read `$ARGUMENTS` and determine the mode:
 | `--sprint` | Sprint Planning | Sprint goal, story selection, capacity planning |
 | `--grooming` | Backlog Grooming | Backlog prioritization, story refinement, estimation |
 | *(no flag)* | Full Roadmap | Same as `--full` |
+| `--bulk-import` | Bulk Import | Parse a structured backlog document (markdown table or JSON array) and publish all items to GitHub as issues, adding each to the project board |
 
 Everything after the flag is the **project context** (idea description, path to
 a requirements doc, or backlog reference). If no context is provided, ask the
 user before proceeding.
+
+For `--bulk-import` mode, everything after the flag is treated as a **file
+path** to the input document. If the path is missing or the file does not
+exist, ask the user for a valid path before proceeding. (This overrides the
+"if no context is provided" guard above — for `--bulk-import`, the file path
+is the required context.) After determining the mode, jump to the appropriate
+step:
+
+- `--bulk-import` → after Step 3, jump to the **Mode: Bulk Import** section
+  (skip the scrum-architect dispatch in Step 4)
 
 ---
 
@@ -48,11 +59,15 @@ selected mode requires:
 | Full Roadmap | Ceremonies, Artifacts, Prioritization |
 | Sprint Planning | Ceremonies (Sprint Planning entry), Artifacts (Sprint Backlog, Definition of Done) |
 | Backlog Grooming | Artifacts (Product Backlog, User Story Format, Estimation Scales), Prioritization |
+| Bulk Import | `"Reading Project State"` and `"Writing Project State"` sections from `github-api-patterns.md`; the `"Issue Operations"` section from the same file |
 
 Additionally, for `--sprint` and `--grooming` modes, load the **"Reading
 Project State"** section from
 `plugins/scrum-toolkit/references/github-api-patterns.md`. This provides
 GraphQL query templates needed to fetch sprint items and backlog from GitHub.
+
+For `--bulk-import`, also JIT-read the **"GitHub Mapping"** section from
+`scrum-knowledge.md` to understand label taxonomy and status field option IDs.
 
 Keep the loaded reference in context for the agent dispatch in Step 4.
 
@@ -332,6 +347,180 @@ tables for structured data.
 
 ---
 
+### Mode: Bulk Import (`--bulk-import`)
+
+This section runs when `--bulk-import` is set. It does **not** dispatch the
+scrum-architect agent — it mechanically imports a structured document.
+
+#### No-Repo Guard
+
+If `hasRepo` is **false**, warn the user:
+
+> **Warning:** `--bulk-import` requires a GitHub repository connection.
+> Run `/scrum onboard` to configure one, then retry.
+
+Stop execution after the warning.
+
+#### Step A --- Parse the Input Document
+
+Read the file at the path provided after `--bulk-import`.
+
+**JSON array format** — file starts with `[`:
+
+```json
+[
+  { "title": "As a user, I want login", "points": 3, "priority": "Must" },
+  { "title": "As a user, I want logout", "points": 1, "priority": "Should" }
+]
+```
+
+Required fields per item: `title` (string). Optional: `points` (integer,
+Fibonacci), `priority` (Must/Should/Could/Won't), `epic` (milestone name).
+Default `points` to `0` if absent. Default `priority` to `"Should"` if absent.
+
+**Markdown table format** — file contains a markdown table with a header row:
+
+```markdown
+| Title | Points | Priority | Epic |
+|-------|--------|----------|------|
+| As a user, I want login | 3 | Must | Authentication |
+| As a user, I want logout | 1 | Should | Authentication |
+```
+
+Required column: `Title`. Optional columns: `Points`, `Priority`, `Epic`
+(case-insensitive header matching). Apply the same defaults as JSON.
+
+If the file cannot be parsed in either format, report the error and stop.
+
+Record:
+
+- **items** — ordered list of parsed objects (title, points, priority, epic)
+- **total** — count of items
+
+#### Step B --- GitHub Publishing Loop
+
+Create a task with subject `Bulk import: create issues (TOTAL total)` —
+replace TOTAL with the count from Step A — and mark it `in_progress`
+immediately using TaskCreate and TaskUpdate.
+
+For each item `i` (1-indexed) in `items`:
+
+Emit before starting:
+
+```text
+[i/TOTAL] Creating issue: <title preview (60 chars)>
+```
+
+##### b1 — Create the issue
+
+Use `gh issue create` with:
+
+- **Title:** `items[i].title`
+- **Body:**
+
+```markdown
+## User Story
+
+{items[i].title}
+
+### Acceptance Criteria
+
+- [ ] (to be refined)
+
+### Priority
+
+**MoSCoW:** {items[i].priority}
+
+### Estimate
+
+**Story Points:** {items[i].points}
+```
+
+- **Labels:** `story` and `priority:<lowercase-priority>` (e.g.,
+  `priority:must`, `priority:should`, `priority:could`, `priority:wont`)
+- **Milestone:** if `items[i].epic` is set and a matching GitHub milestone
+  exists (check with `gh api repos/<OWNER>/<REPO>/milestones`), assign it
+
+On success, capture the issue URL and number. Emit:
+
+```text
+[i/TOTAL] Created issue #<number>: <url>
+```
+
+On failure, emit:
+
+```text
+[i/TOTAL] FAILED: "<title preview>" — <error>
+```
+
+Append to `failures`. Continue the loop.
+
+##### b2 — Add to project board
+
+For each successfully created issue:
+
+1. Resolve the issue node ID via GraphQL (see github-api-patterns.md
+   "Resolve issue node ID").
+2. Add the issue to the project using `addProjectV2ItemById` mutation.
+   Capture the returned project item ID.
+
+On failure, emit:
+
+```text
+[i/TOTAL] BOARD FAILED: issue #<number> — <error>
+```
+
+Append to `failures`. Continue the loop.
+
+##### b3 — Set custom fields
+
+Using the bootstrap field IDs and the returned project item ID:
+
+1. **Story Points** — `updateProjectV2ItemFieldValue` with
+   `storyPointsFieldId` and `items[i].points` (integer).
+2. **Priority** — `updateProjectV2ItemFieldValue` with `priorityFieldId`
+   and the option ID matching `items[i].priority`.
+3. **Status** — `updateProjectV2ItemFieldValue` with `statusFieldId` and
+   the option ID for "Sprint Backlog".
+
+On any field-setting failure, emit:
+
+```text
+[i/TOTAL] FIELD FAILED: issue #<number> — <field name>: <error>
+```
+
+Append to `failures`. Continue the loop.
+
+---
+
+After the loop, mark the `Bulk import: create issues (TOTAL total)` task
+as `completed`.
+
+#### Step C --- Summary
+
+```markdown
+## Bulk Import — Complete
+
+- **Issues created:** [success count] / [TOTAL]
+- **Project board items added:** [board-add count]
+- **Fields set:** [field-set count]
+
+### Created Issues
+
+| # | Title | Points | Priority | URL |
+|---|-------|--------|----------|-----|
+| [i/TOTAL] | ... | ... | ... | ... |
+
+### Failures
+
+[List failures, or "None."]
+
+**Next steps:** Run `/sprint-plan --sprint` to pull these items into the
+current sprint.
+```
+
+---
+
 If the mode was **Full Roadmap**, mark the `Generate full SCRUM roadmap (5 phases)` task as `completed` immediately after the agent dispatch returns.
 
 ## Step 5 --- Self-Verification
@@ -367,6 +556,25 @@ user:
 - [ ] All output follows markdown formatting conventions.
 - [ ] For `--full` mode: wrapping Task was created before the agent dispatch.
 - [ ] For `--full` mode: wrapping Task was marked completed immediately after the agent returns.
+- [ ] For `--bulk-import` mode: input document was parsed (JSON array or
+  markdown table).
+- [ ] For `--bulk-import` mode: if the file cannot be parsed in either format,
+  an error was reported and execution stopped before the publishing loop.
+- [ ] For `--bulk-import` mode: only runs when `hasRepo` is true; a warning
+  was shown and execution stopped when `hasRepo` is false.
+- [ ] For `--bulk-import` mode: each item has a created GitHub issue with
+  `story` and `priority:*` labels.
+- [ ] For `--bulk-import` mode: each issue was added to the project board and
+  Status was set to "Sprint Backlog".
+- [ ] For `--bulk-import` mode: b2 board-add failures emit `BOARD FAILED` and
+  are accumulated; the loop did not abort.
+- [ ] For `--bulk-import` mode: Story Points and Priority custom fields were
+  set from the source document values (not inferred).
+- [ ] For `--bulk-import` mode: `[i/TOTAL]` progress was emitted per item.
+- [ ] For `--bulk-import` mode: failures were accumulated; loop did not abort
+  on first failure.
+- [ ] For `--bulk-import` mode: the wrapping Task was created and completed.
+- [ ] For all other modes: existing behaviour is unchanged (no regression).
 
 If any check fails, correct the issue before delivering the final output.
 

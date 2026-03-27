@@ -1,6 +1,6 @@
 ---
 name: pr
-version: "2.0.0"
+version: "2.1.0"
 description: Use when a user wants to create a pull request with SCRUM story references, optionally generating a changelog entry. Trigger for "open a PR", "create a pull request", "submit this for review", "make a PR", "push and create PR", "open a draft PR", or any request to propose changes for review.
 argument-hint: "[story ref] [--changelog] [--draft]"
 allowed-tools: [Read, Write, Agent, Bash]

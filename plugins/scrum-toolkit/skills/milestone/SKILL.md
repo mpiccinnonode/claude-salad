@@ -1,6 +1,6 @@
 ---
 name: milestone
-version: "2.0.0"
+version: "2.1.0"
 description: Use when a user needs to define a release milestone with goals and sprint ranges, optionally creating a GitHub milestone. Trigger for "create a milestone", "define a release", "set up v1.0", "what's our Q2 scope?", "define release goals", "plan a release milestone", or any request to mark a meaningful delivery checkpoint.
 argument-hint: "<goals> [--sprints=<range>] [--gh-milestone]"
 allowed-tools: [Read, Write, Agent, Bash]

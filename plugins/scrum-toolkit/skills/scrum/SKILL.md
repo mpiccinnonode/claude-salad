@@ -1,6 +1,6 @@
 ---
 name: scrum
-version: "2.0.0"
+version: "2.1.0"
 description: Use when a user wants a SCRUM project overview, health check, or dashboard, needs to navigate between projects, or needs routing to the right SCRUM skill. Also trigger for "how's my sprint?", "what should I work on today?", "project status", "show my board", or any SCRUM request without a more specific skill match.
 argument-hint: "[project] [free-form intent or question]"
 allowed-tools: [Read, Write, Agent, Bash]

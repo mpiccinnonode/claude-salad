@@ -1,5 +1,15 @@
 # Changelog
 
+## scrum-toolkit 2.0.0 → 2.1.0
+
+- feat(user-story): add --bulk flag for batch story creation with [N/TOTAL] counters
+- feat(branch): add --bulk flag for batch branch creation with skip-on-exist guard
+- feat(sprint-plan): add --bulk-import mode for structured backlog publishing to GitHub
+- fix(user-story): condition no-description guard to exclude --bulk path
+- fix(branch): scope no-description guard to single-item mode; clarify creation loop step numbering
+- fix(sprint-plan): add missing self-verification check for parse failure stop
+- fix(sprint-plan): add b2 board-add failure path; clarify --bulk-import routing guard
+
 ## scrum-toolkit 1.0.0 → 2.0.0
 
 - feat: add /scrum wrapper skill for unified entry point with intent routing

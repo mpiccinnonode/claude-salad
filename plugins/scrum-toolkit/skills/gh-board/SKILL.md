@@ -1,6 +1,6 @@
 ---
 name: gh-board
-version: "2.0.0"
+version: "2.1.0"
 description: Use when a user wants to initialize a GitHub project board, check board status, or sync local planning artifacts to GitHub Projects v2. Trigger for "set up the board", "init project board", "board status", "sync to GitHub", "push stories to GitHub", "check the board", or any request to manage the GitHub Projects v2 board.
 argument-hint: "<init|sync|status> [--project=<name>] [--sprint=<N>]"
 allowed-tools: [Read, Write, Agent, Bash, TaskCreate, TaskUpdate]

@@ -186,6 +186,73 @@ proceeding to Phase 2.
 
 ---
 
+## Bootstrap/Import Plan Gate
+
+After detection completes (Phase 1) and before generation begins (Phase 2),
+present the user with the full bootstrap/import plan. This is the single gate
+between "what we intend to do" and "doing it."
+
+### Build the plan
+
+Combine detection results with template data (if present) to build the plan:
+
+**If a template was discovered:**
+
+Present using AskUserQuestion:
+
+> ## Bootstrap/Import Plan
+>
+> ### From Template (locked --- written as-is)
+>
+> | File     | Source        | Lines         |
+> |----------|---------------|---------------|
+> | {target} | {source path} | {line\_count} |
+>
+> ### Will Be Generated (by agent-architect)
+>
+> | File     | Purpose                                                    |
+> |----------|------------------------------------------------------------|
+> | {target} | {derived from generation.required/conditional in schema}   |
+>
+> {For each target, note if it has inject rules: "+ N inject rules from template"}
+>
+> ### Inject Rules
+>
+> | Target   | Rules                  |
+> |----------|------------------------|
+> | {target} | {rule 1}, {rule 2}, .. |
+>
+> ### Project-Wide Instructions
+>
+> {list each instruction, or "None"}
+>
+> ### Skipped / Warnings
+>
+> {any validation warnings from Phase 0, or "None"}
+>
+> Does this plan look right? You can ask me to adjust before I proceed.
+
+**If no template:**
+
+Present a simpler version:
+
+> ## Bootstrap Plan
+>
+> ### Will Be Generated
+>
+> | File                              | Purpose                                       |
+> |-----------------------------------|-----------------------------------------------|
+> | CLAUDE.md                         | Project conventions, build/test/lint commands |
+> | .claude/rules/guardrails.md       | Stack-specific boundaries                     |
+> | {conditional files if applicable} | {purpose}                                     |
+>
+> Does this plan look right?
+
+The user can approve, request changes, or abort. Only proceed to Phase 2 after
+approval.
+
+---
+
 ## Phase 2 --- Generation
 
 Dispatch the **agent-architect** agent (opus) via the Agent tool with

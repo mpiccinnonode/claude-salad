@@ -1,0 +1,219 @@
+# Bootstrap Schema — Routing Map
+# Read by detection agent (Phase 1) and agent-architect (Phase 2).
+# Defines WHAT to look for and WHAT to produce. Agents reason about
+# specific content — this file is not a template library.
+
+# ---------------------------------------------------------------------------
+# Detection: what to scan for during project analysis
+# ---------------------------------------------------------------------------
+detection:
+
+  # Manifest files that identify the project stack
+  manifests:
+    - file: package.json
+      stack: node
+      framework_signals:
+        - name: react
+          indicators: [react, react-dom]
+        - name: next
+          indicators: [next]
+        - name: angular
+          indicators: ["@angular/core"]
+        - name: vue
+          indicators: [vue]
+        - name: svelte
+          indicators: [svelte]
+        - name: express
+          indicators: [express]
+        - name: fastify
+          indicators: [fastify]
+        - name: nuxt
+          indicators: [nuxt]
+        - name: remix
+          indicators: ["@remix-run/node"]
+        - name: astro
+          indicators: [astro]
+
+    - file: pyproject.toml
+      stack: python
+      framework_signals:
+        - name: django
+          indicators: [django]
+        - name: fastapi
+          indicators: [fastapi]
+        - name: flask
+          indicators: [flask]
+
+    - file: requirements.txt
+      stack: python
+      framework_signals:
+        - name: django
+          indicators: [django]
+        - name: fastapi
+          indicators: [fastapi]
+        - name: flask
+          indicators: [flask]
+
+    - file: go.mod
+      stack: go
+      framework_signals:
+        - name: gin
+          indicators: [gin-gonic/gin]
+        - name: echo
+          indicators: [labstack/echo]
+        - name: fiber
+          indicators: [gofiber/fiber]
+
+    - file: Cargo.toml
+      stack: rust
+      framework_signals:
+        - name: actix
+          indicators: [actix-web]
+        - name: axum
+          indicators: [axum]
+        - name: rocket
+          indicators: [rocket]
+
+    - file: pom.xml
+      stack: java
+      framework_signals:
+        - name: spring
+          indicators: [spring-boot]
+        - name: quarkus
+          indicators: [quarkus]
+
+    - file: build.gradle
+      stack: kotlin
+      framework_signals:
+        - name: spring
+          indicators: [spring-boot]
+        - name: ktor
+          indicators: [ktor]
+
+    - file: build.gradle.kts
+      stack: kotlin
+      framework_signals:
+        - name: spring
+          indicators: [spring-boot]
+        - name: ktor
+          indicators: [ktor]
+
+    - file: "*.csproj"
+      stack: dotnet
+      framework_signals:
+        - name: aspnet
+          indicators: [Microsoft.AspNetCore]
+        - name: blazor
+          indicators: [Microsoft.AspNetCore.Components]
+        - name: maui
+          indicators: [Microsoft.Maui]
+
+    - file: Gemfile
+      stack: ruby
+      framework_signals:
+        - name: rails
+          indicators: [rails]
+        - name: sinatra
+          indicators: [sinatra]
+
+    - file: mix.exs
+      stack: elixir
+      framework_signals:
+        - name: phoenix
+          indicators: [phoenix]
+
+    - file: Package.swift
+      stack: swift
+      framework_signals:
+        - name: vapor
+          indicators: [vapor]
+
+  # Config fragments that inform convention generation
+  config_fragments:
+    - pattern: ".eslintrc*"
+      informs: code-style
+    - pattern: "eslint.config.*"
+      informs: code-style
+    - pattern: ".prettierrc*"
+      informs: formatting
+    - pattern: "tsconfig.json"
+      informs: type-checking
+    - pattern: ".editorconfig"
+      informs: editor-settings
+    - pattern: "biome.json"
+      informs: code-style, formatting
+    - pattern: "ruff.toml"
+      informs: code-style
+    - pattern: "pyproject.toml"
+      informs: code-style
+      note: check for [tool.ruff] or [tool.black] sections
+    - pattern: "rustfmt.toml"
+      informs: formatting
+    - pattern: ".golangci.yml"
+      informs: code-style
+    - pattern: ".rubocop.yml"
+      informs: code-style
+    - pattern: ".github/workflows/*"
+      informs: ci
+    - pattern: ".gitlab-ci.yml"
+      informs: ci
+    - pattern: "Jenkinsfile"
+      informs: ci
+    - pattern: ".circleci/*"
+      informs: ci
+    - pattern: "Dockerfile*"
+      informs: deployment
+    - pattern: "docker-compose*"
+      informs: deployment
+    - pattern: "Makefile"
+      informs: build-commands
+
+  # Complexity signals
+  complexity_signals:
+    monorepo:
+      - lerna.json
+      - nx.json
+      - pnpm-workspace.yaml
+      - turbo.json
+      - "package.json"  # check for workspaces field
+    ci:
+      - ".github/workflows/*"
+      - ".gitlab-ci.yml"
+      - Jenkinsfile
+      - ".circleci/*"
+
+# ---------------------------------------------------------------------------
+# Generation: what config files to produce
+# ---------------------------------------------------------------------------
+generation:
+
+  # Always produced
+  required:
+    - target: CLAUDE.md
+      purpose: Project conventions, build/test/lint commands, repo structure
+      derives_from: [manifests, config_fragments, directory_structure]
+
+    - target: .claude/rules/guardrails.md
+      purpose: Critical do's and don'ts for the detected stack
+      derives_from: [stack, framework]
+
+  # Produced when conditions are met
+  conditional:
+    - target: ".claude/rules/standards/{stack}.md"
+      purpose: Code style rules derived from detected linter/formatter config
+      condition: config_fragments detected with informs=code-style or informs=formatting
+      derives_from: [config_fragments]
+
+    - target: ".claude/agents/*.md"
+      purpose: Specialized agents for distinct subsystems
+      condition: complexity warrants it (monorepo, large codebase, multiple domains)
+      derives_from: [complexity, directory_structure]
+      note: >
+        Skip for simple projects. When generated, each agent must include
+        proper frontmatter with name, description (with example blocks),
+        and model fields. Must pass agent-architect rubric >= 35/50.
+
+  # Always checked
+  gitignore:
+    ensure_excluded:
+      - ".claude/settings.local.json"

@@ -1,6 +1,6 @@
 ---
 name: audit
-version: "1.2.0"
+version: "1.3.0"
 description: Use when a user asks to audit, review, or analyze their Claude Code configuration — including agents, rules, skills, or memory files — or when they want tooling gap analysis or memory optimization recommendations for a Claude Code project.
 argument-hint: "[--report-only | --apply-safe | --apply-all] [--phase=agents,skills,...] [--skip-agents] [--skip-skills] [--skip-tooling] [--skip-memory] [/path/to/project]"
 allowed-tools: [Read, Glob, Grep, Write, Edit, Agent]
@@ -35,7 +35,7 @@ Report a brief inventory table (file path, rough size in lines) before proceedin
 
 ## Phase 1 — Agent & Rules Quality Audit (agent-architect)
 
-Use the Agent tool to launch the **agent-architect** subagent with the following prompt:
+Use the Agent tool to launch the **config-doctor:agent-architect** subagent with the following prompt:
 
 ```text
 Audit all Claude configuration files for this project. Check both .claude/agents/ and agents/ directories for agent definitions; check .claude/rules/ for rules files. Skills are evaluated separately by the skill-evaluator agent. Read CLAUDE.md and any memory files under .claude/.
@@ -60,7 +60,7 @@ Capture and display the full report from agent-architect before proceeding.
 
 Use the Agent tool to launch **both** of the following subagents **in parallel** (two Agent tool calls in a single message):
 
-**skill-evaluator:**
+**config-doctor:skill-evaluator:**
 
 ```text
 Audit all skill files for this project. Check both .claude/skills/ and skills/
@@ -77,7 +77,7 @@ Output a structured report:
 Do NOT apply any changes. Report only.
 ```
 
-**code-quality-scouter** (script-offloading analysis):
+**config-doctor:code-quality-scouter** (script-offloading analysis):
 
 ```text
 Analyze all skill files in this project for script-offloading opportunities.
@@ -125,7 +125,7 @@ Capture and display both reports (skill-evaluator and scouter) before proceeding
 
 ## Phase 3 — Tooling Gap Analysis (code-quality-scouter)
 
-Use the Agent tool to launch the **code-quality-scouter** subagent with the following prompt:
+Use the Agent tool to launch the **config-doctor:code-quality-scouter** subagent with the following prompt:
 
 ```text
 Audit this project's developer tooling and Claude Code integrations.
@@ -171,7 +171,7 @@ Check whether a `memory-optimizer` agent exists in the **project's** `.claude/ag
 
 **If a project-level memory-optimizer is found:** use it — it may be customized for this project's conventions. Launch it via the Agent tool with the prompt below.
 
-**If no project-level memory-optimizer is found:** use the **bundled `memory-optimizer`** agent that ships with this plugin. Launch it via the Agent tool with the same prompt below.
+**If no project-level memory-optimizer is found:** use the **bundled `config-doctor:memory-optimizer`** agent that ships with this plugin. Launch it via the Agent tool with the same prompt below.
 
 Prompt to use in either case:
 
@@ -249,7 +249,7 @@ When applying changes:
 1. **Always read the file before editing** — never write blind
 2. **One change at a time** — describe what you are about to change and why, then apply it
 3. **Preserve intent** — when rewriting for brevity, verify the rule's meaning is unchanged
-4. **Agent rewrites** — when rewriting an agent that scored < 35/50, use agent-architect to produce the improved version, then apply it
+4. **Agent rewrites** — when rewriting an agent that scored < 35/50, use config-doctor:agent-architect to produce the improved version, then apply it
 5. **Never delete a rule file entirely** without explicit user confirmation
 6. **After each batch of changes**, summarize what was changed and what remains
 

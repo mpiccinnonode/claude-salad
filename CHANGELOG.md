@@ -1,5 +1,13 @@
 # Changelog
 
+## config-doctor 1.2.0 → 1.3.0
+
+- feat(bootstrap): add /bootstrap skill for day-0 Claude Code project setup
+- feat(bootstrap): detect stack and generate tailored .claude/ configuration
+- feat(bootstrap): support .claude-bootstrap.yaml template contracts (locked files, inject rules)
+- feat(bootstrap): add pre-write confirmation gate and dry-run mode
+- chore(config-doctor): add bootstrap schema reference and update plugin docs
+
 ## scrum-toolkit 2.0.0 → 2.1.0
 
 - feat(user-story): add --bulk flag for batch story creation with [N/TOTAL] counters

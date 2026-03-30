@@ -410,12 +410,16 @@ Present the following report to the user:
 - Existing config: {list of detected config fragments, or "none"}
 - Complexity: {file count} files, {depth} depth, monorepo={monorepo}, CI={ci}
 
-### Generated Files
+### Files
 
-| File | Purpose | Lines |
-|------|---------|-------|
-| {path} | {purpose} | {line_count} |
-| ... | ... | ... |
+| File   | Source   | Purpose   | Lines        |
+|--------|----------|-----------|--------------|
+| {path} | {source} | {purpose} | {line_count} |
+
+- For locked files: Source = "template", purpose derived from the target path
+- For agent-generated files: Source = "generated", purpose from agent output
+- If inject rules were applied to a generated file, note it in purpose:
+  e.g., "Project conventions + 3 template rules"
 
 ### What's NOT Included (and why)
 
@@ -432,7 +436,9 @@ no linter/formatter config was detected"}
 ### Apply gate
 
 - If `--dry-run` was specified: stop here. The report is the final output.
-- Otherwise: ask the user "Apply these files? (Y/n)" using AskUserQuestion.
+- Otherwise: the bootstrap/import plan was already approved in the Plan Gate.
+  Ask the user "Apply these {N} files? (Y/n)" using AskUserQuestion as a
+  final confirmation before writing.
 - **On approval**: write all files using the Write tool. Create directories as
   needed.
 - **On rejection**: stop. No files written. Tell the user they can re-run

@@ -1,6 +1,6 @@
 ---
 name: audit
-version: "1.2.0"
+version: "1.3.0"
 description: Use when a user asks to audit, review, or analyze their Claude Code configuration — including agents, rules, skills, or memory files — or when they want tooling gap analysis or memory optimization recommendations for a Claude Code project.
 argument-hint: "[--report-only | --apply-safe | --apply-all] [--phase=agents,skills,...] [--skip-agents] [--skip-skills] [--skip-tooling] [--skip-memory] [/path/to/project]"
 allowed-tools: [Read, Glob, Grep, Write, Edit, Agent]

@@ -1,6 +1,6 @@
 ---
 name: bootstrap
-version: "1.2.0"
+version: "1.3.0"
 description: Use when a user wants to bootstrap, initialize, or set up Claude Code configuration for a project from scratch. Trigger for "bootstrap this project", "set up Claude config", "initialize .claude", "create CLAUDE.md for this repo", "day 0 setup", "scaffold Claude config", "configure Claude for this codebase", or any request to create an initial Claude Code environment tailored to a project's detected stack. Also trigger when a user opens a new project and asks "how should I configure Claude for this?" or "get Claude ready for this project". Do NOT trigger for auditing existing config (use /audit instead).
 argument-hint: "[--dry-run] [/path/to/project]"
 allowed-tools: [Read, Glob, Grep, Write, Edit, Agent, AskUserQuestion]

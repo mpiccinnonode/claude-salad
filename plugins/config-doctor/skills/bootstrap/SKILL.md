@@ -279,6 +279,10 @@ tailored config files.
 
 {merge_context}
 
+{template_instructions_block}
+
+{template_locked_block}
+
 **Your task:**
 
 Generate configuration files following the `generation` section of the schema.
@@ -301,6 +305,8 @@ For **conditional** targets:
   generated, each agent must include proper frontmatter with `name:`,
   `description:` (with `<example>` blocks), and `model:` fields.
 - .gitignore additions: ensure `.claude/settings.local.json` is excluded.
+
+{template_inject_block}
 
 For **merge** intent: read the existing config files at the project root and
 generate ONLY what is missing or under-specified. Do not overwrite existing
@@ -325,12 +331,55 @@ For example:
 Generate ONLY the file contents. No explanations outside the file markers.
 ````
 
-Replace `{references_path}`, `{detection_report}`, `{intent}`, and
-`{merge_context}` before dispatching. For `{merge_context}`:
+Replace `{references_path}`, `{detection_report}`, `{intent}`,
+`{merge_context}`, and template blocks before dispatching.
+
+For `{merge_context}`:
 
 - If intent is **merge**: read existing CLAUDE.md and `.claude/rules/` files,
   then include their content as "Existing config files:" in the prompt.
 - Otherwise: set to empty string.
+
+For template context blocks:
+
+- If `template` is null (no `.claude-bootstrap.yaml` found), omit all three
+  template blocks entirely.
+- If `template` exists, include each block only when its data is non-empty:
+  - `{template_instructions_block}` --- if `template.instructions` is
+    non-empty, replace with:
+
+    ```text
+    **Project-wide instructions from the project author:**
+    {for each instruction, render as a bullet point}
+    These instructions should shape your reasoning about all generated files.
+    ```
+
+  - `{template_locked_block}` --- if `template.locked` is non-empty,
+    replace with:
+
+    ```text
+    **Do NOT generate these files --- they are provided by the project template:**
+    {for each locked entry, render as: "- {target}"}
+    ```
+
+  - `{template_inject_block}` --- if `template.inject` is non-empty,
+    replace with:
+
+    ```text
+    **Project-specific rules to incorporate:**
+    {for each inject entry:}
+    When generating `{target}`, incorporate these rules:
+    {for each rule, render as a bullet point}
+    ```
+
+    If an inject target does not match any file that would otherwise be
+    generated (not in `generation.required` or triggered by
+    `generation.conditional`), instead use:
+
+    ```text
+    Generate `{target}` using the following project-specific rules as its content:
+    {rules as bullet points}
+    ```
 
 ### Parse the output
 

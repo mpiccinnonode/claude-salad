@@ -1,5 +1,10 @@
 # Changelog
 
+## config-doctor 1.3.0 → 1.4.0
+
+- feat(bootstrap): add --granularity flag for selective import control (config, code, or all)
+- docs(config-doctor): update README and CLAUDE.md with granularity flag documentation
+
 ## config-doctor 1.2.0 → 1.3.0
 
 - feat(bootstrap): add /bootstrap skill for day-0 Claude Code project setup

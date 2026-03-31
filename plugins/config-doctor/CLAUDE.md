@@ -24,6 +24,7 @@ skills/audit/
 
 skills/bootstrap/
   SKILL.md           # Day-0 bootstrap: detects stack, generates tailored .claude/ config (4 phases)
+                     # Supports --import=<url> for full project scaffolding from remote templates
 
 .gitignore           # OS and IDE artifact exclusions
 .markdownlint.yaml   # Markdown lint rules for CI validation
@@ -37,5 +38,5 @@ Subagents use native Claude Code tools (`Read`, `Glob`, `Grep`) by default. If t
 
 - **Agent frontmatter**: each agent file requires `name:`, `description:` (with `<example>` blocks), and `model:` fields. `agent-architect` runs on `opus`; others run on `sonnet`.
 - **Skill frontmatter**: `skills/audit/SKILL.md` requires `name:`, `description:`, `version:`, and `allowed-tools:`. The `argument-hint:` field controls slash command autocomplete.
-- **`$ARGUMENTS`**: each skill receives user flags via the `$ARGUMENTS` placeholder at the end of `SKILL.md`. Audit accepts `--report-only`, `--apply-safe`, `--apply-all`, `--phase=<names>`, `--skip-*` flags, or a path. Bootstrap accepts `--dry-run` or a path.
+- **`$ARGUMENTS`**: each skill receives user flags via the `$ARGUMENTS` placeholder at the end of `SKILL.md`. Audit accepts `--report-only`, `--apply-safe`, `--apply-all`, `--phase=<names>`, `--skip-*` flags, or a path. Bootstrap accepts `--dry-run`, `--import=<url>`, `--granularity=[config|code|all]`, or a path.
 - **Version sync**: `plugin.json` and `SKILL.md` both declare a `version` field. Keep them in sync — `plugin.json` is the source of truth.

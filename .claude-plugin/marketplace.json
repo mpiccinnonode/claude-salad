@@ -8,7 +8,7 @@
   "plugins": [
     {
       "name": "config-doctor",
-      "version": "1.3.0",
+      "version": "1.4.0",
       "source": "./plugins/config-doctor",
       "description": "Deep-scan and audit a project's Claude configuration"
     },

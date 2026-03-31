@@ -1,14 +1,15 @@
 ---
 name: bootstrap
-version: "1.3.0"
-description: Use when a user wants to bootstrap, initialize, or set up Claude Code configuration for a project from scratch. Trigger for "bootstrap this project", "set up Claude config", "initialize .claude", "create CLAUDE.md for this repo", "day 0 setup", "scaffold Claude config", "configure Claude for this codebase", or any request to create an initial Claude Code environment tailored to a project's detected stack. Also trigger when a user opens a new project and asks "how should I configure Claude for this?" or "get Claude ready for this project". Do NOT trigger for auditing existing config (use /audit instead).
-argument-hint: "[--dry-run] [/path/to/project]"
-allowed-tools: [Read, Glob, Grep, Write, Edit, Agent, AskUserQuestion]
+version: "1.4.0"
+description: Use when a user wants to bootstrap, initialize, or set up Claude Code configuration for a project from scratch, or import a full project from a template repo. Trigger for "bootstrap this project", "set up Claude config", "initialize .claude", "create CLAUDE.md for this repo", "day 0 setup", "scaffold Claude config", "configure Claude for this codebase", "import from template", "start project from template", or any request to create an initial Claude Code environment tailored to a project's detected stack. Also trigger when a user opens a new project and asks "how should I configure Claude for this?" or "get Claude ready for this project". Supports --import=<url> to scaffold a full project (config + source code) from a remote template repo. Do NOT trigger for auditing existing config (use /audit instead).
+argument-hint: "[--dry-run] [--import=<repo-url>] [--granularity=config|code|all] [/path/to/project]"
+allowed-tools: [Read, Glob, Grep, Write, Edit, Agent, AskUserQuestion, Bash]
 ---
 
 You are orchestrating a Claude Code bootstrap workflow that detects a project's
-stack and generates a tailored `.claude/` configuration. Work through the phases
-below in order.
+stack and generates a tailored `.claude/` configuration. When `--import` is used,
+you also scaffold the full project source code from a remote template repository.
+Work through the phases below in order.
 
 ---
 
@@ -21,9 +22,119 @@ Determine the project root:
 - If `$ARGUMENTS` contains a path argument (not a flag), use it as the project root.
 - Otherwise, use the current working directory.
 
+### Parse arguments
+
+- `--dry-run` --- run detection and generation but stop before writing files
+  (Phase 3 presents the report but does not apply).
+- `--import=<url>` --- import from a remote template repository (GitHub URL).
+  Accepts formats: `https://github.com/owner/repo`, `github.com/owner/repo`,
+  or `owner/repo`. Extract `{owner}` and `{repo}` for GitHub API calls.
+- `--granularity=[config|code|all]` --- controls what gets imported (default: `all`).
+  Only meaningful when `--import` is specified; ignored otherwise.
+  - `config` --- only import Claude config files (locked entries from `.claude-bootstrap.yaml`)
+  - `code` --- only import project source/scaffold files (everything not in `locked`)
+  - `all` --- import both config and scaffold files (the full template)
+- Path argument --- already handled above.
+
+Record parsed flags for use in later phases.
+
+### Resolve import source (only when `--import` is specified)
+
+When `--import` is provided, the template lives in a remote repo instead of the
+local project root. This sub-phase fetches everything needed from the remote.
+
+### Step 1 --- Fetch the remote file tree
+
+Use `gh api` via Bash to get the full recursive tree:
+
+```bash
+gh api repos/{owner}/{repo}/git/trees/HEAD?recursive=1 --jq '.tree[] | select(.type=="blob") | .path'
+```
+
+Store the full list of file paths as `remote_tree`.
+
+### Step 2 --- Fetch `.claude-bootstrap.yaml`
+
+```bash
+gh api repos/{owner}/{repo}/contents/.claude-bootstrap.yaml --jq '.content' | base64 -d
+```
+
+If not found, the remote repo has no template contract. Warn the user and fall
+back to treating the entire repo as scaffold (no locked config files). Set
+`template` to null and `granularity` to `code` (since there is no config to
+import).
+
+### Step 3 --- Fetch `.template/manifest.json` (if exists)
+
+```bash
+gh api repos/{owner}/{repo}/contents/.template/manifest.json --jq '.content' | base64 -d
+```
+
+If found, parse the `tokens` object and `files` array. These drive the
+token-replacement step in Phase 3. Store as `manifest.tokens` and
+`manifest.files`. If not found, set `manifest` to null (no token replacement).
+
+### Step 4 --- Classify files
+
+Partition `remote_tree` into three categories:
+
+- **Config files** --- paths that appear as `target` (or `source`) in the
+  `locked` entries of `.claude-bootstrap.yaml`. These are Claude configuration.
+- **Meta files** --- files that should never be copied to the target project:
+  - `.git/` and `.github/` directories
+  - `.claude-bootstrap.yaml`
+  - `.template/` directory
+  - `package-lock.json` (regenerated by `npm install`)
+  - `README.md` (template readme, not the project's)
+- **Scaffold files** --- everything in `remote_tree` that is neither config
+  nor meta. These are project source code, build configs, assets, etc.
+
+The `.claude-bootstrap.yaml` may include an optional `exclude` list of glob
+patterns for additional scaffold files to skip (e.g., demo data, example tests).
+If present, filter scaffold files through these patterns.
+
+### Step 5 --- Determine files to fetch based on granularity
+
+| Granularity | Fetch config? | Fetch scaffold? |
+|-------------|---------------|-----------------|
+| `config`    | Yes           | No              |
+| `code`      | No            | Yes             |
+| `all`       | Yes           | Yes             |
+
+### Step 6 --- Fetch file contents
+
+For each file that needs fetching (per granularity), retrieve its content:
+
+```bash
+gh api repos/{owner}/{repo}/contents/{path} --jq '.content' | base64 -d
+```
+
+For efficiency, batch files by directory using the contents API on directories
+when possible, or fetch individual files. Store each as
+`{path, content, line_count, category}` where category is `"config"` or
+`"scaffold"`.
+
+Store results as:
+
+- `import.config_files` --- list of config file tuples
+- `import.scaffold_files` --- list of scaffold file tuples
+- `import.source_url` --- the original `--import` URL for attribution
+
+### Step 7 --- Feed into template discovery
+
+If `.claude-bootstrap.yaml` was fetched successfully, parse it exactly as the
+"Discover template contract" section below describes, but using the remote
+content instead of local files. The `locked` entries resolve against the
+fetched `import.config_files` (content is already in memory --- no need to
+re-read from the project root). Skip the "check source file exists at project
+root" validation since sources live in the remote repo.
+
 ### Discover template contract
 
 Glob for `.claude-bootstrap.yaml` at the project root.
+
+**Skip this step if `--import` was used** --- template discovery already
+happened in "Resolve import source" above.
 
 **If found:**
 
@@ -85,17 +196,36 @@ Glob for `.claude/` directory and `CLAUDE.md` at the project root.
 
 - **If no existing config** (or only empty stubs): proceed normally.
 
-### Parse arguments
+### Check for existing project files (import mode only)
 
-- `--dry-run` --- run detection and generation but stop before writing files
-  (Phase 3 presents the report but does not apply).
-- Path argument --- already handled above.
+When `--import` is used with granularity `code` or `all`, check if the project
+root already has source files (e.g., `src/`, `package.json`).
 
-Record parsed flags for use in later phases.
+- **If project files exist:** ask the user using AskUserQuestion:
+
+  > The project root already contains source files. Importing scaffold files
+  > may overwrite them. What would you like to do?
+  >
+  > - **Overwrite** --- replace existing files with template scaffold
+  > - **Skip existing** --- only write scaffold files that don't already exist
+  > - **Abort** --- cancel the import
+
+  Record the user's choice for Phase 3.
+
+- **If project root is empty** (or only has `.claude/` and `.git/`): proceed.
 
 ---
 
 ## Phase 1 --- Detection
+
+**When `--import` is used:** The local project is likely empty, so detection
+should run against the remote template's manifests. Use the already-fetched
+scaffold files --- specifically `package.json`, `angular.json`, `tsconfig.json`,
+and other manifests from `import.scaffold_files` --- to build the detection
+report. Write them to a temporary location or parse them directly from memory.
+Do not dispatch the detection agent against an empty project root.
+
+**When `--import` is NOT used:** Dispatch normally as described below.
 
 Dispatch a **haiku** agent via the Agent tool to scan the project. The agent
 determines the project's stack, framework, tooling, and complexity.
@@ -196,7 +326,67 @@ between "what we intend to do" and "doing it."
 
 Combine detection results with template data (if present) to build the plan:
 
-**If a template was discovered:**
+**If `--import` was used with scaffold files:**
+
+Present using AskUserQuestion. The plan must show both config and scaffold
+sections based on the active granularity:
+
+> ## Bootstrap/Import Plan
+>
+> **Source:** `{import.source_url}`
+> **Granularity:** `{granularity}`
+>
+> {If granularity is `config` or `all`:}
+>
+> ### From Template (config --- Claude configuration)
+>
+> | File     | Lines         |
+> |----------|---------------|
+> | {target} | {line\_count} |
+>
+> {If granularity is `code` or `all`:}
+>
+> ### From Template (scaffold --- project source code)
+>
+> | Directory    | Files | Description                    |
+> |--------------|-------|--------------------------------|
+> | `src/app/`   | {N}   | Application source code        |
+> | `src/theme/` | {N}   | Theme and styling              |
+> | `src/assets/`| {N}   | Static assets and translations |
+> | (root)       | {N}   | Build configs, manifests       |
+> | {dir}/       | {N}   | {brief description}            |
+>
+> **Total scaffold files:** {count}
+>
+> {If manifest.tokens is non-null:}
+>
+> ### Token Replacement
+>
+> The template defines **{N} tokens** that will be replaced across all written
+> files after import. You will be prompted for each value.
+>
+> | Token          | Required | Default    |
+> |----------------|----------|------------|
+> | `{token_name}` | {yes/no} | {default}  |
+>
+> ### Will Be Generated (by agent-architect)
+>
+> {List any files that need generation --- i.e., targets in
+> `generation.required` or `generation.conditional` that are NOT covered by
+> locked entries. If all config is locked, show "None --- template provides
+> all configuration."}
+>
+> ### Project-Wide Instructions
+>
+> {list each instruction, or "None"}
+>
+> ### Skipped / Warnings
+>
+> {any validation warnings, or "None"}
+>
+> Does this plan look right? You can ask me to adjust before I proceed.
+
+**If a template was discovered (no `--import`, local template):**
 
 Present using AskUserQuestion:
 
@@ -255,7 +445,12 @@ approval.
 
 ## Phase 2 --- Generation
 
-Dispatch the **agent-architect** agent (opus) via the Agent tool with
+**Skip this phase entirely** if all required and conditional generation targets
+are covered by locked template entries (i.e., the template provides everything
+and no files need to be generated). This is common when importing a
+comprehensive template.
+
+Otherwise, dispatch the **agent-architect** agent (opus) via the Agent tool with
 `subagent_type: "config-doctor:agent-architect"`.
 
 ### Agent prompt
@@ -412,14 +607,36 @@ Present the following report to the user:
 
 ### Files
 
+{If import mode with scaffold files, split into two tables:}
+
+#### Config Files ({count})
+
+| File   | Source   | Purpose   | Lines        |
+|--------|----------|-----------|--------------|
+| {path} | {source} | {purpose} | {line_count} |
+
+#### Scaffold Files ({count})
+
+| File   | Lines        |
+|--------|--------------|
+| {path} | {line_count} |
+
+{Otherwise, single table:}
+
 | File   | Source   | Purpose   | Lines        |
 |--------|----------|-----------|--------------|
 | {path} | {source} | {purpose} | {line_count} |
 
 - For locked files: Source = "template", purpose derived from the target path
+- For scaffold files: Source = "template (scaffold)"
 - For agent-generated files: Source = "generated", purpose from agent output
 - If inject rules were applied to a generated file, note it in purpose:
   e.g., "Project conventions + 3 template rules"
+
+{If manifest.tokens is non-null:}
+### Token Replacement
+
+{N} tokens will be replaced across all written files.
 
 ### What's NOT Included (and why)
 
@@ -430,8 +647,21 @@ no linter/formatter config was detected"}
 ### Next Steps
 
 1. Review generated files and adjust to your preferences
-2. Run `/audit` after a few sessions to identify refinement opportunities
+2. {If scaffold was imported:} Run `npm install` to install dependencies
+3. Run `/audit` after a few sessions to identify refinement opportunities
 ````
+
+### Process template instructions
+
+Before writing files, process any `template.instructions`. Instructions are
+directives from the template author that should be executed during bootstrap.
+
+Common instruction patterns:
+
+- **Token collection:** If instructions reference `.template/manifest.json` and
+  token replacement, read the manifest, prompt the user for each token value
+  using AskUserQuestion (batch related tokens together, max 4 per question),
+  and store the collected values for the token replacement step.
 
 ### Apply gate
 
@@ -439,10 +669,46 @@ no linter/formatter config was detected"}
 - Otherwise: the bootstrap/import plan was already approved in the Plan Gate.
   Ask the user "Apply these {N} files? (Y/n)" using AskUserQuestion as a
   final confirmation before writing.
-- **On approval**: write all files using the Write tool. Create directories as
-  needed.
+- **On approval**: proceed to writing.
 - **On rejection**: stop. No files written. Tell the user they can re-run
   without `--dry-run` when ready.
+
+### Write files
+
+Write all files using the Write tool. Create directories as needed.
+
+**Write order:**
+
+1. **Scaffold files** (if any) --- project source code, build configs, assets.
+   These go first because config files may reference them.
+   - If user chose "Skip existing" in the existing-files check, skip any
+     scaffold file whose target path already exists in the project root.
+2. **Config files** --- locked template entries and/or agent-generated files.
+3. **Generated files** --- any files produced by agent-architect in Phase 2.
+
+### Token replacement
+
+After ALL files have been written, apply token replacement if `manifest.tokens`
+is non-null and token values were collected from the user.
+
+**Replacement scope:** Token replacement applies to ALL written files regardless
+of `--granularity`. This is because tokens like `{{APP_NAME}}` or `{{APP_ID}}`
+may appear in both config files (e.g., `CLAUDE.md`) and scaffold files (e.g.,
+`capacitor.config.ts`, `package.json`).
+
+**Replacement process:**
+
+1. Prioritize files listed in `manifest.files` --- these are the primary
+   token-bearing files identified by the template author.
+2. After processing `manifest.files`, scan all other written files for any
+   remaining `{{TOKEN}}` patterns and replace them.
+3. Use the Edit tool for replacements (not Write) to preserve file structure
+   and avoid accidental overwrites.
+
+### Post-write: .gitignore check
+
+Ensure `.claude/settings.local.json` is in the project's `.gitignore`. If not
+present, append it. If no `.gitignore` exists, create one with this entry.
 
 ---
 
@@ -453,6 +719,18 @@ them as follows:
 
 - `--dry-run` --- run detection and generation but present report only, do not
   write files
+- `--import=<url>` --- import from a remote GitHub template repository. The URL
+  can be a full GitHub URL (`https://github.com/owner/repo`), a short form
+  (`github.com/owner/repo`), or just `owner/repo`. The skill fetches the
+  template contract (`.claude-bootstrap.yaml`), manifest (`.template/manifest.json`),
+  and project files from the remote repo via the GitHub API (`gh` CLI).
+- `--granularity=[config|code|all]` --- what to import from the remote template
+  (default: `all`). Only meaningful with `--import`.
+  - `config` --- import only Claude configuration (`.claude/` files, `CLAUDE.md`,
+    and other `locked` entries from the template contract)
+  - `code` --- import only project scaffold files (source code, build configs,
+    assets --- everything NOT in `locked`)
+  - `all` --- import the full template: both Claude config and project scaffold
 - A path argument (e.g., `/path/to/project`) --- use that path as the project
   root instead of cwd
 

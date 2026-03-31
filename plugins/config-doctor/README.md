@@ -18,6 +18,8 @@ Runs a five-phase audit:
 
 Day-0 setup for new projects. Detects your stack and generates a tailored `.claude/` configuration — CLAUDE.md, agents, rules, and memory structure. Supports `.claude-bootstrap.yaml` template contracts for locked files and inject rules.
 
+**New in 1.4.0:** `--import=<repo-url>` scaffolds a full project from a remote GitHub template — not just Claude config, but also source code, build configs, and assets. Use `--granularity=[config|code|all]` to control what gets imported (default: `all`).
+
 ## Bundled agents
 
 The plugin ships four agents used internally by the audit:
@@ -50,6 +52,8 @@ The `memory-optimizer` is only used if the project does not already have a custo
 ```text
 /bootstrap
 /bootstrap --dry-run
+/bootstrap --import=https://github.com/owner/template-repo
+/bootstrap --import=owner/repo --granularity=config
 /bootstrap /path/to/project
 ```
 
@@ -80,6 +84,8 @@ config-doctor works out of the box with native Claude Code tools. For ~60% lower
 | Flag | Effect |
 | ------ | -------- |
 | `--dry-run` | Detects stack and shows what would be generated; writes nothing |
+| `--import=<url>` | Import from a remote GitHub template repo (full URL, `github.com/owner/repo`, or `owner/repo`) |
+| `--granularity=<mode>` | What to import: `config` (Claude config only), `code` (project source only), `all` (both, default) |
 | `/path/to/project` | Targets a specific directory instead of cwd |
 
 ## Installation

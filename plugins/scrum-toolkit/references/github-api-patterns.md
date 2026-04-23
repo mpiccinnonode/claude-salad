@@ -328,6 +328,46 @@ gh api graphql -f query='
 # { "data": { "repository": { "issue": { "id": "I_..." } } } }
 ```
 
+### Resolve project item ID for issue
+
+An issue can be on multiple project boards. Given an issue number and a known
+`projectId`, find the matching project item ID (needed before any
+`updateProjectV2ItemFieldValue` mutation targets that issue).
+
+```bash
+gh api graphql -f query='
+  query($owner: String!, $repo: String!, $number: Int!) {
+    repository(owner: $owner, name: $repo) {
+      issue(number: $number) {
+        id
+        projectItems(first: 10) {
+          nodes {
+            id
+            project { id }
+          }
+        }
+      }
+    }
+  }
+' -f owner="<OWNER>" -f repo="<REPO>" -F number="<ISSUE_NUMBER>"
+# Response shape:
+# { "data": { "repository": { "issue": {
+#   "id": "I_...",
+#   "projectItems": { "nodes": [
+#     { "id": "PVTI_...", "project": { "id": "PVT_..." } }
+#   ] }
+# } } } }
+```
+
+Filter the `projectItems.nodes` array by `project.id === <PROJECT_ID>` to
+find the item ID for the bootstrap project.
+
+**Not on the board:** if no matching node exists, the issue is not on this
+project board. Callers that need the issue on the board (e.g., re-estimation
+in `/user-story-edit`) should either add it via
+[Add existing issue to project](#add-existing-issue-to-project) first, or
+skip the field update and report it in the summary.
+
 ---
 
 ## Issue Operations

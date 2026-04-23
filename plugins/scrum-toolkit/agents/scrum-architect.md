@@ -26,6 +26,12 @@ description: |
   user: "/retro --sprint=3"
   assistant: "I'll use the scrum-architect agent to analyze sprint 3 data and generate a structured retrospective."
   </example>
+
+  <example>
+  Context: The /user-story-edit skill dispatches the agent to amend an existing story.
+  user: "/user-story-edit #40 -- add a caching AC with TTL 1 week"
+  assistant: "I'll use the scrum-architect agent to produce a targeted amendment to issue #40's body, preserving existing sections."
+  </example>
 model: sonnet
 ---
 

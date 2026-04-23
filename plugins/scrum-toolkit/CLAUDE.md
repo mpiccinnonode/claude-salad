@@ -24,6 +24,7 @@ skills/
   sprint-retro/SKILL.md               # Sprint retrospective facilitation
   sprint-review/SKILL.md              # Sprint review and demo prep
   user-story/SKILL.md                 # User story authoring with optional GitHub issue
+  user-story-edit/SKILL.md            # Targeted edits to existing user story issues (diff-based amendments)
   epic/SKILL.md                        # Epic creation with feature breakdown
   milestone/SKILL.md                   # Milestone definition
   commit/SKILL.md                      # SCRUM-aware conventional commits

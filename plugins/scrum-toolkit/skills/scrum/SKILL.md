@@ -59,7 +59,7 @@ token consumed in Step 2).
 | `overview` | no remaining arguments, "status", "how are we doing", "dashboard" |
 | `question` | free-form question about project state |
 | `ceremony` | "standup", "retro", "review", "planning", "grooming" |
-| `authoring` | "story", "epic", "milestone", "feature" |
+| `authoring` | "story", "epic", "milestone", "feature", "edit story", "update story", "amend story", "add AC" |
 | `devops` | "commit", "pr", "branch", "board" |
 | `portfolio` | "all projects", "portfolio" |
 | `onboarding` | "add project", "new project" |
@@ -178,15 +178,30 @@ Route to the appropriate specialist skill:
 
 | Trigger | Skill | Suggested invocation |
 | --- | --- | --- |
-| story, feature | user-story | `/user-story {remaining args}` |
+| story, feature (new) | user-story | `/user-story {remaining args}` |
+| edit story, update story, amend story, add AC | user-story-edit | `/user-story-edit {refs} -- {change}` |
 | epic | epic | `/epic {remaining args}` |
 | milestone | milestone | `/milestone {remaining args}` |
+
+Disambiguate `authoring` between **new story** and **edit existing story**
+before routing:
+
+- Route to `/user-story-edit` when the request names one or more existing
+  issues (`#NNN`, URLs, or "these stories") and describes a scoped change
+  (add an AC, amend a section, re-estimate).
+- Route to `/user-story` when the request describes a new capability with
+  no existing issue reference.
 
 Example output:
 
 ```text
 User story authoring is handled by the /user-story skill.
 Run `/user-story {your description}` to create a story.
+```
+
+```text
+Editing existing stories is handled by the /user-story-edit skill.
+Run `/user-story-edit #40,#41 -- add a caching AC with TTL 1 week`.
 ```
 
 ### devops

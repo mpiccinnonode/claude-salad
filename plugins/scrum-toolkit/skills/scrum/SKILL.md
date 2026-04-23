@@ -174,38 +174,108 @@ Run `/standup` to generate your standup report.
 
 ### authoring
 
-Route to the appropriate specialist skill:
+Dispatch scrum-architect inline. The agent produces the artifact in one
+shot; the router does **not** publish to GitHub or run bulk mode. After
+the agent returns, surface a follow-up suggestion for the matching
+`--gh-*` flag when the user needs publishing or bulk.
 
-| Trigger | Skill | Suggested invocation |
+Pick the phase by trigger keyword:
+
+| Trigger | Phase | Follow-up suggestion |
 | --- | --- | --- |
-| story, feature | user-story | `/user-story {remaining args}` |
-| epic | epic | `/epic {remaining args}` |
-| milestone | milestone | `/milestone {remaining args}` |
+| story, feature | User Story Authoring (mirrors `/user-story` Step 4) | `/user-story {desc} --gh-issue` (or `--bulk`) |
+| epic | Epic Authoring (mirrors `/epic` Step 4) | `/epic {desc} --gh-milestone` |
+| milestone | Milestone Definition (mirrors `/milestone` Step 4) | `/milestone {goals} --gh-milestone` |
 
-Example output:
+Dispatch prompt (fill bracketed values; swap the phase block per trigger):
 
-```text
-User story authoring is handled by the /user-story skill.
-Run `/user-story {your description}` to create a story.
-```
+````text
+## Phase: {User Story Authoring | Epic Authoring | Milestone Definition}
+
+### Inputs
+
+- **Project:** {name} ({slug})
+- **{Story description | Epic description | Goals}:** {remaining $ARGUMENTS}
+- **Bootstrap context:** {full project context object from Step 1}
+
+### Reference Knowledge
+
+JIT-read the **Artifacts** section (and **Prioritization** for epic) from
+`plugins/scrum-toolkit/references/scrum-knowledge.md` and apply
+INVEST / MoSCoW / Fibonacci guidance.
+
+### Instructions
+
+Follow the phase-specific instructions and output format defined in the
+matching specialist skill (`/user-story`, `/epic`, or `/milestone`)
+Step 4. Router dispatch is **authoring-only**: do NOT publish to GitHub,
+create issues, create milestones, or enter bulk mode. If the user clearly
+wants publishing, stop and tell them to re-run the specialist skill with
+the appropriate `--gh-*` flag.
+````
+
+After display, print the follow-up suggestion on a single line.
 
 ### devops
 
-Route to the appropriate specialist skill:
+Dispatch scrum-architect inline. For `commit`, `pr`, and `branch` the
+agent drafts the artifact and presents it for user approval (same
+approval gate as the specialist skills) before executing
+`git commit` / `gh pr create` / `git checkout -b`. For `board`, the
+router only runs the **status** phase (read-only report) — board init
+and sync stay behind `/gh-board`.
 
-| Trigger | Skill | Suggested invocation |
+Pick the phase by trigger keyword:
+
+| Trigger | Phase | Follow-up suggestion |
 | --- | --- | --- |
-| commit | commit | `/commit` |
-| pr | pr | `/pr` |
-| branch | branch | `/branch {description}` |
-| board | gh-board | `/gh-board status` |
+| commit | Conventional Commit Drafting (mirrors `/commit` Step 4) | --- |
+| pr | Pull Request Drafting (mirrors `/pr` Step 5) | `/pr --changelog` for changelog entry |
+| branch | Branch Name Generation (mirrors `/branch` Step 5) | --- |
+| board | GitHub Board Status Report (mirrors `/gh-board` status) | `/gh-board init` to create a board; `/gh-board sync` to push local artifacts |
 
-Example output:
+Dispatch prompt (fill bracketed values; swap the phase block per trigger):
 
-```text
-Pull request creation is handled by the /pr skill.
-Run `/pr` to create a SCRUM-aware pull request.
-```
+````text
+## Phase: {phase name from table}
+
+### Inputs
+
+- **Project:** {name} ({slug})
+- **Bootstrap context:** {full project context object from Step 1,
+  including field IDs when `hasRepo` is true}
+- **User args:** {remaining $ARGUMENTS after intent keyword removal}
+
+### Reference Knowledge
+
+JIT-read the section(s) the matching specialist skill loads:
+
+- commit: none (git log fallback only)
+- pr: none for draft; "Writing Project State" only if the user approves
+  and a story ref is present
+- branch: **DevOps Conventions** from `scrum-knowledge.md`
+- board: **Reading Project State** from `github-api-patterns.md`
+
+### Instructions
+
+Follow the phase-specific instructions and output format from the
+matching specialist skill (`/commit`, `/pr`, `/branch`, or `/gh-board`
+status). The agent fetches whatever local state it needs (`git status`,
+`git diff`, `git log`, `gh` queries) — the router does NOT pre-fetch
+board state for devops intents.
+
+Scope guards:
+
+- commit / pr / branch: draft first, obtain user approval, then execute.
+- board: **read-only**. Report sprint status only. If the user appears
+  to want init or sync, stop and tell them to run `/gh-board init` or
+  `/gh-board sync` — creating or mutating a board is out of scope for
+  the router.
+- If `hasRepo` is false: apply the no-repo fallback from the matching
+  specialist skill (local JSON for board; skip GitHub-only steps for pr).
+````
+
+After the agent returns, print any follow-up suggestion from the table.
 
 ### portfolio
 
@@ -299,8 +369,11 @@ When `hasRepo` is false for the selected project:
 
 - **overview / question** --- use local JSON `backlog` and `currentSprint`
   fields instead of GitHub queries. Dispatch to scrum-architect as normal.
-- **ceremony / authoring / devops** --- route to the specialist skill as
-  usual. Each specialist skill handles no-repo mode internally.
+- **ceremony** --- route to the specialist skill as usual. Each specialist
+  skill handles no-repo mode internally.
+- **authoring / devops** --- dispatch scrum-architect as normal; the agent
+  applies the no-repo fallback from the matching specialist skill (local
+  JSON for board; skip GitHub-only steps for pr/story/epic/milestone).
 - **portfolio** --- show local state summary for no-repo projects alongside
   GitHub state for repo-connected projects.
 

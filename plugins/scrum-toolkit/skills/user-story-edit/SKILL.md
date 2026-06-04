@@ -1,6 +1,6 @@
 ---
 name: user-story-edit
-version: "2.1.0"
+version: "2.2.0"
 description: Use when a user needs to apply a scoped, targeted change to one or more existing GitHub issues (user stories) — adding an acceptance criterion, amending a section, or re-estimating — without rewriting the whole body. Trigger for "update story X", "edit story", "amend the story", "add an AC to issue #N", "add a caching AC to these stories", or any request to modify existing stories in place rather than authoring new ones. NOT for creating new stories (use /user-story) or whole-backlog grooming (use /sprint-plan --grooming).
 argument-hint: "<issue-refs> -- <change-description> [--yes] [--bulk]"
 allowed-tools: [Read, Write, Agent, Bash, TaskCreate, TaskUpdate]

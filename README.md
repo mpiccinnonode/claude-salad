@@ -32,6 +32,9 @@ claude
 ```bash
 /plugin install scrum-toolkit
 ```
+```bash
+/plugin install triage
+```
 
 ### 4. Restart Claude Code
 

@@ -43,7 +43,7 @@ Record parsed flags for use in later phases.
 When `--import` is provided, the template lives in a remote repo instead of the
 local project root. This sub-phase fetches everything needed from the remote.
 
-**Step 1 --- Fetch the remote file tree**
+### Step 1 --- Fetch the remote file tree
 
 Use `gh api` via Bash to get the full recursive tree:
 
@@ -53,7 +53,7 @@ gh api repos/{owner}/{repo}/git/trees/HEAD?recursive=1 --jq '.tree[] | select(.t
 
 Store the full list of file paths as `remote_tree`.
 
-**Step 2 --- Fetch `.claude-bootstrap.yaml`**
+### Step 2 --- Fetch `.claude-bootstrap.yaml`
 
 ```bash
 gh api repos/{owner}/{repo}/contents/.claude-bootstrap.yaml --jq '.content' | base64 -d
@@ -64,7 +64,7 @@ back to treating the entire repo as scaffold (no locked config files). Set
 `template` to null and `granularity` to `code` (since there is no config to
 import).
 
-**Step 3 --- Fetch `.template/manifest.json` (if exists)**
+### Step 3 --- Fetch `.template/manifest.json` (if exists)
 
 ```bash
 gh api repos/{owner}/{repo}/contents/.template/manifest.json --jq '.content' | base64 -d
@@ -74,7 +74,7 @@ If found, parse the `tokens` object and `files` array. These drive the
 token-replacement step in Phase 3. Store as `manifest.tokens` and
 `manifest.files`. If not found, set `manifest` to null (no token replacement).
 
-**Step 4 --- Classify files**
+### Step 4 --- Classify files
 
 Partition `remote_tree` into three categories:
 
@@ -93,7 +93,7 @@ The `.claude-bootstrap.yaml` may include an optional `exclude` list of glob
 patterns for additional scaffold files to skip (e.g., demo data, example tests).
 If present, filter scaffold files through these patterns.
 
-**Step 5 --- Determine files to fetch based on granularity**
+### Step 5 --- Determine files to fetch based on granularity
 
 | Granularity | Fetch config? | Fetch scaffold? |
 |-------------|---------------|-----------------|
@@ -101,7 +101,7 @@ If present, filter scaffold files through these patterns.
 | `code`      | No            | Yes             |
 | `all`       | Yes           | Yes             |
 
-**Step 6 --- Fetch file contents**
+### Step 6 --- Fetch file contents
 
 For each file that needs fetching (per granularity), retrieve its content:
 
@@ -115,11 +115,12 @@ when possible, or fetch individual files. Store each as
 `"scaffold"`.
 
 Store results as:
+
 - `import.config_files` --- list of config file tuples
 - `import.scaffold_files` --- list of scaffold file tuples
 - `import.source_url` --- the original `--import` URL for attribution
 
-**Step 7 --- Feed into template discovery**
+### Step 7 --- Feed into template discovery
 
 If `.claude-bootstrap.yaml` was fetched successfully, parse it exactly as the
 "Discover template contract" section below describes, but using the remote
@@ -336,6 +337,7 @@ sections based on the active granularity:
 > **Granularity:** `{granularity}`
 >
 > {If granularity is `config` or `all`:}
+>
 > ### From Template (config --- Claude configuration)
 >
 > | File     | Lines         |
@@ -343,6 +345,7 @@ sections based on the active granularity:
 > | {target} | {line\_count} |
 >
 > {If granularity is `code` or `all`:}
+>
 > ### From Template (scaffold --- project source code)
 >
 > | Directory    | Files | Description                    |
@@ -356,6 +359,7 @@ sections based on the active granularity:
 > **Total scaffold files:** {count}
 >
 > {If manifest.tokens is non-null:}
+>
 > ### Token Replacement
 >
 > The template defines **{N} tokens** that will be replaced across all written
@@ -653,6 +657,7 @@ Before writing files, process any `template.instructions`. Instructions are
 directives from the template author that should be executed during bootstrap.
 
 Common instruction patterns:
+
 - **Token collection:** If instructions reference `.template/manifest.json` and
   token replacement, read the manifest, prompt the user for each token value
   using AskUserQuestion (batch related tokens together, max 4 per question),

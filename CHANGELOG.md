@@ -1,5 +1,13 @@
 # Changelog
 
+## triage 1.0.0 (new plugin)
+
+- feat(triage): add /triage advisory task classifier — classifies a natural-language task into a workflow shape and maps each phase to the best installed skill, agent, or MCP server
+- feat(triage): MCP-server discovery across project `.mcp.json`, `~/.claude.json` per-project entry, and plugin `.mcp.json` (wrapped and bare-map forms)
+- feat(triage): cross-platform node-only helper scripts (`.mjs`) — no shell/jq/awk/sed/yq/python dependency
+- test(triage): node:test parity + MCP fixture suite (24 tests, zero deps); first claude-salad plugin to ship runtime scripts + tests
+- chore: lift the marketplace's pure-markdown-only rule to allow minimal runtime scripts and self-contained tests
+
 ## config-doctor 1.2.0 → 1.3.0
 
 - feat(bootstrap): add /bootstrap skill for day-0 Claude Code project setup

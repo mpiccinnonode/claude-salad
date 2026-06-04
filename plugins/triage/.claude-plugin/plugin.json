@@ -1,0 +1,9 @@
+{
+  "name": "triage",
+  "version": "1.0.0",
+  "description": "Advisory task classifier — reads your installed skills, agents, and MCP servers, classifies a task into a workflow shape, and maps each phase to the best available invocation. Never dispatches agents or edits code.",
+  "author": { "name": "mpiccinnonode" },
+  "repository": "https://github.com/mpiccinnonode/claude-salad",
+  "license": "MIT",
+  "keywords": ["triage", "routing", "skills", "workflow", "onboarding", "mcp"]
+}

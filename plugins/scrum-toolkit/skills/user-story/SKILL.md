@@ -1,6 +1,6 @@
 ---
 name: user-story
-version: "2.1.0"
+version: "2.2.0"
 description: Use when a user needs to create or author a user story with acceptance criteria, optionally publishing it as a GitHub issue. Trigger for "write a user story", "create a story", "add a story for X", "story with acceptance criteria", or whenever the user describes a feature to implement and wants it captured in story format.
 argument-hint: "<description> [--epic=<ref>] [--roadmap=<path>] [--gh-issue] [--bulk]"
 allowed-tools: [Read, Write, Agent, Bash, TaskCreate, TaskUpdate]

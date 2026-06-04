@@ -1,6 +1,6 @@
 ---
 name: sprint-retro
-version: "2.1.0"
+version: "2.2.0"
 description: Use when a user wants to facilitate or generate a sprint retrospective. Trigger for "retro", "retrospective", "sprint lessons learned", "what went wrong this sprint?", "what went well?", "team retrospective", "end of sprint review", or any request to reflect on a completed sprint.
 argument-hint: "[--sprint=<range>] [--since=<date>] [--until=<date>]"
 allowed-tools: [Read, Write, Agent, Bash]

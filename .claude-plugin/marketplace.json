@@ -14,9 +14,15 @@
     },
     {
       "name": "scrum-toolkit",
-      "version": "2.1.0",
+      "version": "2.2.0",
       "source": "./plugins/scrum-toolkit",
       "description": "Full SCRUM lifecycle toolkit — ceremonies, PM/PO authoring, and DevOps actions with GitHub integration"
+    },
+    {
+      "name": "triage",
+      "version": "1.0.0",
+      "source": "./plugins/triage",
+      "description": "Advisory task classifier that routes tasks to the best available skill, agent, or MCP server."
     }
   ]
 }

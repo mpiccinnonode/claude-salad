@@ -1,0 +1,11 @@
+{
+  "name": "triage-plugin",
+  "version": "1.0.0",
+  "description": "Advisory task classifier that routes natural-language tasks to the right installed skill, agent, or MCP server.",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "test": "node --test"
+  }
+}

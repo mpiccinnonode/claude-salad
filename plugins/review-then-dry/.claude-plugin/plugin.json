@@ -1,6 +1,6 @@
 {
   "name": "review-then-dry",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Chained code-review + reuse audit producing one unified findings spec. Node-only, Windows-portable.",
   "author": { "name": "mpiccinnonode" },
   "repository": "https://github.com/mpiccinnonode/claude-salad",

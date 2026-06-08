@@ -193,7 +193,7 @@ State which files you are reviewing and how you determined the set (user-args / 
 
 ## Phase 1 — Standards and Correctness
 
-Dispatch the **code-reviewer** agent (subagent type: `code-reviewer`) with the target files. Do NOT compose an inline system prompt — use the existing agent configuration.
+Dispatch the **code-reviewer** agent (subagent type: `review-then-dry:code-reviewer`) with the target files. Do NOT compose an inline system prompt — use the existing agent configuration.
 
 **Checklist injection:** If Phase 0 produced a valid checklist (or the file existed and Phase 0 was skipped because no changes were needed), include in the agent dispatch prompt:
 
@@ -208,7 +208,7 @@ Instruct the agent: "Use `mcp__serena__*` tools for code exploration (pre-activa
 
 ## Phase 2 — Simplification (Verbosity Lens)
 
-Dispatch the **code-reviewer** agent a second time with the same target files, this time focused exclusively on verbosity — code that is technically correct but heavier than it needs to be. Do NOT compose an inline system prompt for the agent's core behavior — use its existing configuration. Pass the verbosity instructions below as the task framing.
+Dispatch the **code-reviewer** agent (subagent type: `review-then-dry:code-reviewer`) a second time with the same target files, this time focused exclusively on verbosity — code that is technically correct but heavier than it needs to be. Do NOT compose an inline system prompt for the agent's core behavior — use its existing configuration. Pass the verbosity instructions below as the task framing.
 
 Instruct the agent: "Scan the target files for verbosity patterns only — do not re-report correctness or standards issues already covered by Phase 1. Flag each finding with the `[verbosity:{pattern}]` tag. Patterns to detect:
 

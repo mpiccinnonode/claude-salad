@@ -4,6 +4,10 @@ Three-skill suite backported from personal `~/.claude` skills: `lifecycled-code-
 `dry`, and the `review-then-dry` orchestrator. See the design spec at
 `docs/superpowers/specs/2026-06-08-review-then-dry-plugin-design.md` for the 11 locked decisions.
 
+- Agents: `agents/code-reviewer.md` (dispatched by `lifecycled-code-review`) and
+  `agents/reusability-refactor-expert.md` (dispatched by `dry`). These are the dispatch
+  targets the skills reference by `subagent_type`; they MUST ship with the plugin or the
+  skills fail to dispatch on a fresh install. Backported 1:1 from personal `~/.claude/agents`.
 - Skill bodies: `skills/*/SKILL.md`. In-plugin paths use quoted `"${CLAUDE_PLUGIN_ROOT}"`.
 - Helper scripts: Node only, no shell/jq/python/yq. Each has a fixed argv signature + stdout
   contract in its header, ported 1:1 from a POSIX `.sh` original.

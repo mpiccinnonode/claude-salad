@@ -23,6 +23,12 @@
       "version": "1.0.0",
       "source": "./plugins/triage",
       "description": "Advisory task classifier that routes tasks to the best available skill, agent, or MCP server."
+    },
+    {
+      "name": "review-then-dry",
+      "version": "1.0.0",
+      "source": "./plugins/review-then-dry",
+      "description": "Chained code-review + reuse audit producing one unified findings spec. Node-only, Windows-portable."
     }
   ]
 }

@@ -26,7 +26,7 @@
     },
     {
       "name": "review-then-dry",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "source": "./plugins/review-then-dry",
       "description": "Chained code-review + reuse audit producing one unified findings spec. Node-only, Windows-portable."
     }

@@ -1,5 +1,17 @@
 # Changelog
 
+## review-then-dry 1.0.0 (new plugin)
+
+- feat(review-then-dry): scaffold Node-only, Windows-portable plugin (no shell/jq/yq/python)
+- feat(review-then-dry): add /review-then-dry orchestrator chaining lifecycled-code-review + dry into one unified findings spec
+- feat(review-then-dry): add lifecycled-code-review skill (renamed from built-in code-review to avoid collision) and dry reuse-audit skill
+- feat(review-then-dry): port five helper scripts from POSIX shell to Node — get-review-targets, safe-write-yaml, get-spec-context, evict-staged, lifecycle-pass
+- feat(review-then-dry): vendor js-yaml v4 ESM build (decided over npm dep) with a parity test; js-yaml kept as devDependency for CVE hygiene only
+- feat(review-then-dry): add cold-start checklist gate and spec-path prompts
+- test(review-then-dry): node:test suite covering all scripts plus vendor parity (zero external deps)
+- docs(review-then-dry): vendor offload-scripts convention doc; add to README and sync plugin versions
+- chore(review-then-dry): register plugin in marketplace; add package-lock.json for reproducible installs
+
 ## scrum-toolkit 2.1.0 → 2.2.0
 
 - feat(user-story-edit): add /user-story-edit skill for targeted, diff-based amendments to existing GitHub user story issues

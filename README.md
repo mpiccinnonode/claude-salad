@@ -34,6 +34,9 @@ claude
 ```bash
 /plugin install scrum-toolkit
 ```
+```bash
+/plugin install triage
+```
 
 ```bash
 /plugin install triage

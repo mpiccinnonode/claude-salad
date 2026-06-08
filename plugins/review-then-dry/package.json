@@ -1,6 +1,6 @@
 {
   "name": "review-then-dry-plugin",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Chained code-review + reuse audit producing one unified findings spec.",
   "private": true,
   "type": "module",

@@ -53,7 +53,7 @@ If the resolved set is empty: report "No target files detected (no diff vs main,
 
 ## Dispatch
 
-Dispatch the agent with `subagent_type: reusability-refactor-expert`, passing the resolved file list. Use the existing agent configuration — do not compose an inline system prompt or constrain its analysis.
+Dispatch the agent with `subagent_type: review-then-dry:reusability-refactor-expert`, passing the resolved file list. Use the existing agent configuration — do not compose an inline system prompt or constrain its analysis.
 
 Standard instruction to include in the dispatch prompt:
 

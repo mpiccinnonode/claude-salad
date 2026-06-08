@@ -123,7 +123,14 @@ Runs at the start of every review, before dispatching agents. **All proposed cha
 Rule evaluation (prune / freeze / expire / glob-mismatch) is offloaded to `${CLAUDE_PLUGIN_ROOT}/skills/lifecycled-code-review/scripts/lifecycle-pass.mjs`. Do NOT re-traverse the YAML in the skill body — the script is authoritative. See `${CLAUDE_PLUGIN_ROOT}/references/offload-scripts.md` for the script contract.
 
 1. **Check** for `.claude/review-checklist.yaml`.
-   - If the file does not exist: skip Phase 0 entirely, proceed to Phase 1 (cold start — agents fall back to `.claude/rules/`).
+   - **If the file does not exist:** stop and prompt the user (this is a hard gate on *flow*, not *outcome*):
+
+     > "No `.claude/review-checklist.yaml` found. Seed one from `.claude/rules/` first (`--seed`)? [yes / no]"
+
+     - **Yes** → run Seed Mode (see the [Seed Mode](#seed-mode) section), then continue this review with the freshly seeded checklist.
+     - **No** → fall through to the cold-start path: skip the rest of Phase 0 and proceed to Phase 1 (agents fall back to `.claude/rules/` with no checklist).
+
+     Do not auto-proceed without an answer. When invoked by the `review-then-dry` orchestrator, this prompt still fires and still blocks — surface it rather than silently choosing cold start, since seeding materially changes the findings.
 
 2. **Backup** the current file to `.claude/review-checklist.yaml.bak`.
 
@@ -317,10 +324,11 @@ Runs after the user has triaged all findings (accept/reject/skip). Produces a du
 
 1. Run `git branch --show-current` to get the current branch name.
 2. Strip everything up to and including the first `/` (e.g., `feature/3-e2-s1-schermata-di-login` → `3-e2-s1-schermata-di-login`).
-3. Build a suggested path: `docs/superpowers/specs/{YYYY-MM-DD}-{branch-slug}-lifecycled-code-review-findings.md`
-4. **Ask the user to confirm or change the path:**
+3. **Ask the user for the output path — there is no default.**
 
-> "Findings spec will be written to `{suggested path}`. OK, or prefer a different path?"
+> "Where should I write the code-review findings spec? (provide a path, e.g. `docs/specs/<name>.md`)"
+
+   Use the branch slug (from step 2) only as a *suggested filename* in the prompt, not as an auto-applied default directory.
 
 1. Create the parent directory if it does not exist.
 2. If a file already exists at that path (same branch, same date): append a suffix (`-2`, `-3`, etc.) and re-confirm with the user.

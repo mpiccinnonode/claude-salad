@@ -85,9 +85,9 @@ If only one pass has accepted findings, still write the spec — note in the Int
 
 Otherwise, write a single spec file following the format from `/lifecycled-code-review`'s "Findings Spec Generation" section, with these adaptations:
 
-**Path:** `docs/superpowers/specs/{YYYY-MM-DD}-{branch-slug}-review-then-dry-findings.md`
-
-Ask the user to confirm or change the path before writing.
+**Path:** ask the user where to write the unified findings spec — there is no hardcoded default.
+Suggest a filename using the branch slug (e.g. `{branch-slug}-review-then-dry-findings.md`) but
+let the user supply the directory and confirm before writing.
 
 **Frontmatter** — same as `/lifecycled-code-review` but with:
 

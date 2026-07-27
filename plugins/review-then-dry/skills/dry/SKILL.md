@@ -10,7 +10,7 @@ description: |
   - Says a template/file is too long and asks if parts should become their own components (single-consumer extraction for readability counts)
   - Points at a folder/module asking for an "extraction review" or "scaffolding review"
 
-  Do NOT fire for: bug fixes, test failures, runtime errors, generic "review my code" (use lifecycled-code-review), renames, in-place tidying, UX critique, spec review pre-implementation (use urchin), or new architecture design.
+  Do NOT fire for: bug fixes, test failures, runtime errors, generic "review my code" (use lifecycled-code-review), renames, in-place tidying, UX critique, or new architecture design.
 allowed-tools:
   - Read
   - Bash
@@ -31,7 +31,6 @@ A thin, one-shot dispatcher around the `reusability-refactor-expert` agent. The 
 
 - **`/dry` (this skill):** "Find what to extract" — duplication, reuse candidates, single-consumer template extraction for readability. Read-only audit.
 - **`/lifecycled-code-review`:** Full two-pass review (correctness + reuse + simplification + checklist). Use before PRs.
-- **`urchin`:** Spec adversarial review BEFORE implementation.
 - **code-simplifier:** In-place leanness (delete unused, inline single-use) with no extraction.
 - **code-architect:** Designs new architectures pre-implementation.
 

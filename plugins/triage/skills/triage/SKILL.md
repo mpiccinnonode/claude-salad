@@ -166,20 +166,13 @@ For each phase in the derived flow, find the **best-matching skill or agent** fr
 
 ### Second pass — Tool-shaped supporting skills
 
-Some skills aren't phase-shaped. They're tools that augment whichever phase the user is in: a code-structure search skill speeds up Exploration, Debugging, and Implementation alike; a library-docs lookup fires whenever the task touches a named framework. After the per-phase mapping above, run a second pass against the same candidate list using these intent signals:
+Some candidates aren't phase-shaped: they're tools that augment whichever phase the
+user is in (code-structure search, library-docs lookup, memory recall, MCP servers).
+Run a second pass for these and surface matches in the **Supporting Skills** block.
 
-| Tool shape | Match on descriptions mentioning… |
-|---|---|
-| **Code understanding** | code structure search, AST traversal, symbol lookup, "instead of reading full files", structural code exploration, tree-sitter |
-| **Library docs** | library/framework/SDK documentation, API syntax lookup, version migration, library-specific debugging, "use when user asks about <lib>" |
-| **Memory recall** | persistent cross-session memory, prior-session lookup, "did we solve this before", cross-session search |
-| **MCP server** | any discovered `kind: "mcp-server"` record — match the server **name** (and `description` when present) to the shape it serves: docs servers (e.g. context7) → Library docs; memory servers (e.g. claude-mem) → Memory recall; code-graph/review servers (e.g. code-review-graph) → Code understanding / Review |
-
-**MCP servers are discovered, not assumed.** `discover-skills.mjs` emits `kind: "mcp-server"` records from the project `.mcp.json`, the user's `~/.claude.json` (this project's entry), and any installed plugin's `.mcp.json`. A server shipped by a plugin — e.g. a `code-review-graph` plugin — is therefore surfaced automatically with no plugin-specific knowledge baked into this skill. **Limitation:** discovery is server-level. The candidate record carries the server's name and (when the config provides one) its description — not its individual tool schemas, which are only available at runtime. Surface the server in the **Supporting Skills** block by name; do not claim specific tools it may expose.
-
-Surface every match in the recommendation's **Supporting Skills** block. Tool-shaped skills are not part of the phase sequence — they don't get tie-broken against phase matches and they don't get the generic-prompt fallback (if no tool-shaped skill matches a given shape, simply omit that shape from the block).
-
-For each match, write a one-sentence trigger condition tailored to *this task* (e.g., "fires when locating the existing auth middleware before editing it" — not the skill's generic description).
+Read `${CLAUDE_PLUGIN_ROOT}/skills/triage/references/tool-shaped-skills.md` for the
+shape table, the MCP discovery rules, and how matches are written up. Skip it when
+no candidate looks tool-shaped.
 
 ---
 
@@ -237,49 +230,16 @@ Mixed Features should almost always be Medium — the whole point of the classif
 
 ## Phase 6 — Persist the Triage Record
 
-Triage produces a durable artifact: one YAML file per task at `.claude/triage/<slug>.yaml`. This is how cross-session retrieval works — a future session invokes `triage-recall.mjs` (Phase 1a) and finds the record that this phase wrote.
+Triage produces a durable artifact: one YAML file per task at `.claude/triage/<slug>.yaml`.
+That is how cross-session retrieval works — a future session finds it via Phase 1a.
 
-### When to fire Phase 6
+Fires automatically after Phase 5 on **high** confidence; on medium/low, wait for the
+user to pick an interpretation first. It is skipped silently when the project has no
+configured storage path.
 
-- **High confidence** → fire automatically, immediately after Phase 5 output. Write with `status: draft` and the filename suffix `.draft.yaml`. The draft exists so nothing is lost if the user walks away; it's explicitly marked so it doesn't pollute `--active` results as a decided plan.
-- **Medium / Low confidence** → wait for the user to pick an interpretation (from the "If I Misclassified" block or the two-interpretation surface), then fire with `status: draft`.
-
-### Confirmation gate (promotes draft → in_progress)
-
-After the draft is written, tell the user:
-
-> `Saved as draft at <path>. Say "confirmed" (or start running the first recommended command) to promote to in_progress.`
-
-On confirmation — or when the user's next message clearly proceeds with the flow (e.g., invoking the first recommended skill) — rename `<slug>.draft.yaml` → `<slug>.yaml` and flip `status: draft` → `status: in_progress`. This two-step design prevents the old "user skipped confirmation ⇒ nothing saved" leak while keeping drafts distinguishable in git diffs and in recall.
-
-### Resolving the storage path
-
-```bash
-node "${CLAUDE_PLUGIN_ROOT}/skills/triage/scripts/resolve-triage-path.mjs" --root "$(pwd)" --home "$HOME"
-```
-
-Contract: stdout JSON, one of:
-
-- `{"path":"<abs>","scope":"project"}` — preferred; versioned with the project. If the directory doesn't exist yet, create it with `mkdir -p` before writing.
-- `{"path":"<abs>","scope":"user"}` — fallback when the project has no `.claude/` dir.
-- `{"path":null,"scope":null}` — nothing configured; **skip Phase 6 silently**. Do not attempt to create `.claude/` in the project — that's a project-config decision, not a triage decision.
-
-Non-zero + stderr on missing/relative `--root` or `--home`. Halt on non-zero and surface the diagnostic.
-
-### Slug derivation
-
-- Lowercase, hyphen-separated, max 50 chars, stripped of punctuation.
-- If `<slug>.yaml` or `<slug>.draft.yaml` already exists for an unrelated task, append `-2`, `-3`, etc.
-
-### File contents
-
-Write the file using the schema in `references/triage-schema.md` — that document is the source of truth for fields, lifecycle states, and invariants. Read it before writing.
-
-### After writing
-
-- Output the exact first command to copy-paste and stop.
-- Do not begin implementation.
-- Do not add an entry to MEMORY.md — the triage directory is the index, reached through `triage-recall.mjs`.
+Before writing, read `${CLAUDE_PLUGIN_ROOT}/skills/triage/references/phase6-persistence.md`
+for the confirmation gate, path resolution, and slug rules — and
+`references/triage-schema.md` for the fields themselves.
 
 ---
 

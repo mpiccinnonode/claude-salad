@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/checklist-heartbeat.mjs\" --frequency 24",
+            "timeout": 10,
+            "statusMessage": "Checking review checklist"
+          }
+        ]
+      }
+    ]
+  }
+}

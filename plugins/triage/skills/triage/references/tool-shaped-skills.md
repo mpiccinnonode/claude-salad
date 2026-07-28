@@ -1,6 +1,6 @@
 # Tool-shaped supporting skills
 
-Second pass of Phase 4. Read this when the candidate list contains skills that
+Second pass of Phase 3. Read this when the candidate list contains skills that
 are not phase-shaped — tools that augment whichever phase the user is in.
 
 Some skills aren't phase-shaped. They're tools that augment whichever phase the user is in: a code-structure search skill speeds up Exploration, Debugging, and Implementation alike; a library-docs lookup fires whenever the task touches a named framework. After the per-phase mapping above, run a second pass against the same candidate list using these intent signals:

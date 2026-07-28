@@ -3,7 +3,7 @@ name: reusability-refactor-expert
 description: |
   Use this agent to AUDIT existing code for extraction, reuse, and scalability opportunities — duplicated logic, base-class mirrors, repeated patterns, hardcoded values, and self-contained template blocks. Critically, this agent extracts template blocks into feature-scoped components for readability EVEN WITH A SINGLE CONSUMER when extraction reduces parent template cognitive load — this is its key differentiator from in-place simplification agents.
 
-  Do NOT use for: correctness/standards review (use code-reviewer), in-place leanness with no extraction angle (use code-simplifier), spec adversarial review pre-implementation (use urchin), or designing new architectures from scratch (use code-architect). This agent NEVER rewrites code — it produces an analysis report only.
+  Do NOT use for: correctness/standards review (use code-reviewer), in-place leanness with no extraction angle (use code-simplifier), or designing new architectures from scratch (use code-architect). This agent NEVER rewrites code — it produces an analysis report only.
 
   <example>
   user: "I just built the events detail page, check if anything can be reused"

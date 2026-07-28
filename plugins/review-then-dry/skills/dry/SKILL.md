@@ -1,16 +1,7 @@
 ---
 name: dry
 description: |
-  Use this skill for a read-only audit of existing code to find what could be extracted, shared, or deduplicated — never to rewrite. User intent is "tell me what to pull out" or "where's the duplication", not "fix it".
-
-  Fire when the user:
-  - Types `/dry`, "DRY this up", "deduplicate", or asks "anything reusable?", "what can be extracted?", "should this be a shared component?"
-  - Announces a feature/page/component done and asks for a reuse or extraction pass
-  - Suspects duplication across N files (mappers, services, tiles, components) and wants it inventoried
-  - Says a template/file is too long and asks if parts should become their own components (single-consumer extraction for readability counts)
-  - Points at a folder/module asking for an "extraction review" or "scaffolding review"
-
-  Do NOT fire for: bug fixes, test failures, runtime errors, generic "review my code" (use lifecycled-code-review), renames, in-place tidying, UX critique, spec review pre-implementation (use urchin), or new architecture design.
+  Read-only audit of existing code for what can be extracted, shared, or deduplicated — it reports, it never rewrites. Use when the intent is "tell me what to pull out" or "where is the duplication", including when a file or template is simply too long and parts should become their own components (single-consumer extraction counts). Not for correctness review — that is lifecycled-code-review.
 allowed-tools:
   - Read
   - Bash
@@ -31,7 +22,6 @@ A thin, one-shot dispatcher around the `reusability-refactor-expert` agent. The 
 
 - **`/dry` (this skill):** "Find what to extract" — duplication, reuse candidates, single-consumer template extraction for readability. Read-only audit.
 - **`/lifecycled-code-review`:** Full two-pass review (correctness + reuse + simplification + checklist). Use before PRs.
-- **`urchin`:** Spec adversarial review BEFORE implementation.
 - **code-simplifier:** In-place leanness (delete unused, inline single-use) with no extraction.
 - **code-architect:** Designs new architectures pre-implementation.
 

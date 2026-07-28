@@ -1,9 +1,19 @@
 {
   "name": "review-then-dry",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "Chained code-review + reuse audit producing one unified findings spec. Node-only, Windows-portable.",
-  "author": { "name": "mpiccinnonode" },
+  "author": {
+    "name": "mpiccinnonode"
+  },
   "repository": "https://github.com/mpiccinnonode/claude-salad",
   "license": "MIT",
-  "keywords": ["code-review", "dry", "reuse", "refactor", "findings-spec", "orchestrator"]
+  "keywords": [
+    "code-review",
+    "dry",
+    "reuse",
+    "refactor",
+    "findings-spec",
+    "orchestrator",
+    "checklist-lifecycle"
+  ]
 }

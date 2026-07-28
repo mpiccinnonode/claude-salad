@@ -62,25 +62,14 @@ Returns `[{"slug", "path"}]`, empty when there is no `specs/`. Halt on non-zero.
 
 ## Phase 2 — Classify and derive the flow
 
-Pick the classification that fits, then derive the phase sequence from the work itself — creative and restructuring work needs intent and constraints settled before code (Exploration → Planning → Implementation → Review); a bug needs the cause found before the patch (Debugging → Fix → Review); design work adds a Design Work phase before planning; a review request is just Review.
+Classify the task, then derive the phase sequence from the work itself, scaled to its actual scope: creative and restructuring work needs intent and constraints settled before code; a bug needs the cause found before the patch; design work needs the visual direction settled before anything is built; a review request is just Review.
 
-| Classification | Distinguishing signal |
-|---|---|
-| **UI Feature** | New page/component/layout; no significant data-layer change |
-| **Logic Feature** | New service, store, API integration, job; no significant UI |
-| **Mixed Feature** | New data flow *and* new UI to surface it |
-| **Bug Fix** | Broken, regressed, or flaky behavior |
-| **Refactor** | Restructuring with no behavior change |
-| **Design** | Visual/design-system work only — requirements exploration for a feature is *not* Design |
-| **Review** | Review of existing work |
-| **Other** | Ask one clarifying question; don't guess |
+`classification` is a schema enum — write one of `UI Feature`, `Logic Feature`, `Mixed Feature`, `Bug Fix`, `Refactor`, `Design`, `Review`, `Other` (see `references/triage-schema.md`). Two boundaries are genuinely counterintuitive and worth stating: exploring requirements for a feature is **not** `Design` — that value is for visual and design-system work only; and `Other` means stop and ask one clarifying question rather than force a fit.
 
 Two signals worth flagging explicitly, because they change the work and are easy to miss:
 
 - A bug in components with mobile-framework prefixes (`ion-*`, `Native*`) may be a platform-compat issue, not app logic.
 - A task touching files covered by an unrelated open spec is a conflict the user should decide on.
-
-For trivially-scoped tasks (copy change, one-token swap) keep Exploration in the flow but mark it `(optional — scope is self-evident)`; never drop it silently, since "trivial" is exactly where hidden scope hides.
 
 ---
 

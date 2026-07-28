@@ -17,6 +17,19 @@ Scripts live **inside the owning skill's folder**:
 
 A script is only ever called by its owning SKILL.md. Cross-skill calls are forbidden — if two skills need the same logic, each gets its own copy. This keeps the skill folder the unit of audit, revert, and removal.
 
+### Exception: shared parsing within one plugin
+
+Inside a single plugin, skills MAY share a module that defines how a common artifact is *read*. The rule above assumes the skill folder is the unit of install and removal; in a plugin it isn't — the plugin is, and two copies of the same parser inside one shipped unit can only diverge.
+
+That divergence is not hypothetical. `yamlField` was duplicated across `triage-recall.mjs` and `scan-stale.mjs`; the copies drifted on which field held the record's date (`created` vs `created_at`), and records written with the other spelling became invisible to *both* resume and cleanup — permanently. One shared module is the fix.
+
+Scope of the exception, deliberately narrow:
+
+- **Shared:** the definition of the artifact's shape — field extraction and the schema's allowed values (`skills/triage/scripts/yaml-fields.mjs`).
+- **Not shared:** anything a skill decides. Staleness rules, confidence, thresholds, and deletion jails stay in the owning skill's own scripts.
+- Only within one plugin. Across plugins, copy.
+- The sharing must be named in the plugin's `CLAUDE.md`, so it stays a listed decision rather than a habit.
+
 ## Extension choice
 
 - `.sh` — pure glob / grep / `wc` / shell arithmetic / `jq` one-liners.
@@ -59,7 +72,7 @@ Where the pre-offload skill body is idempotent, the script must be too. Re-runni
 
 ## What scripts must not do
 
-- Call other scripts in other skills' folders.
+- Call other scripts in other skills' folders — except importing a same-plugin shared parsing module, per the exception above.
 - Mutate state outside the skill folder or the explicit file paths passed via argv.
 - Read from the environment.
 - Write to stdout on failure, or to stderr on success.

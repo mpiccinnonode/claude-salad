@@ -10,6 +10,7 @@
 // Exactly one of --active|--find|--show. Exit 0 even when empty; exit 2 + stderr on bad argv.
 import { statSync, readdirSync, readFileSync } from "node:fs";
 import { isAbsolute, join, basename } from "node:path";
+import { yamlField, recordCreated } from "./yaml-fields.mjs";
 
 function die(msg) { process.stderr.write(`triage-recall: ${msg}\n`); process.exit(2); }
 function isDir(p) { try { return statSync(p).isDirectory(); } catch { return false; } }
@@ -32,15 +33,6 @@ if (!isAbsolute(dir)) die(`--dir must be absolute: ${dir}`);
 
 if (!isDir(dir)) { process.stdout.write(json ? "[]\n" : "(no triage records)\n"); process.exit(0); }
 
-// Extract a single top-level scalar `^field: value`; strip a leading and a trailing quote
-// independently (mirrors the original awk gsub behavior). Returns "" when absent.
-function yamlField(content, field) {
-  const esc = field.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const m = content.match(new RegExp(`^${esc}:[ \\t]*(.*)$`, "m"));
-  if (!m) return "";
-  return m[1].replace(/^["']/, "").replace(/["']$/, "");
-}
-
 function baseSlug(file) {
   return basename(file).replace(/\.yaml$/, "").replace(/\.draft$/, "");
 }
@@ -58,7 +50,7 @@ function record(file) {
     slug: baseSlug(file),
     status: yamlField(c, "status"),
     task: yamlField(c, "task"),
-    created: yamlField(c, "created"),
+    created: recordCreated(c),
     classification: yamlField(c, "classification"),
     path: file,
   };

@@ -1,5 +1,20 @@
 # Changelog
 
+## triage 1.0.0 → 1.1.0
+
+- feat(triage): add /triage-cleanup for pruning stale records, specs, and plans
+- feat(triage): add shared record parsing and a schema validator
+- feat(triage): add SessionStart heartbeat
+- refactor(triage): cut the always-loaded body to 9.4KB
+- refactor(triage): move conditional phases into references
+- refactor(triage): finish removing the flow-table scaffolding
+
+## review-then-dry 1.0.1 → 1.1.0
+
+- feat(review-then-dry): add standalone checklist-lifecycle skill + SessionStart heartbeat
+- refactor(review-then-dry): split lifecycled-code-review, trim dry description
+- chore(review-then-dry): drop refs to removed urchin skill
+
 ## review-then-dry 1.0.0 (new plugin)
 
 - feat(review-then-dry): scaffold Node-only, Windows-portable plugin (no shell/jq/yq/python)

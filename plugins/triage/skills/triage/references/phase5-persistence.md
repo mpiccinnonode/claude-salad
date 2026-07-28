@@ -1,4 +1,4 @@
-# Phase 6 — Persist the triage record
+# Phase 5 — Persist the triage record
 
 Read this before writing a triage record. Covers when the phase fires, the
 draft → in_progress confirmation gate, path resolution, slug rules, and what to
@@ -6,9 +6,9 @@ do after writing.
 
 Triage produces a durable artifact: one YAML file per task at `.claude/triage/<slug>.yaml`. This is how cross-session retrieval works — a future session invokes `triage-recall.mjs` (Phase 1a) and finds the record that this phase wrote.
 
-## When to fire Phase 6
+## When to fire Phase 5
 
-- **High confidence** → fire automatically, immediately after Phase 5 output. Write with `status: draft` and the filename suffix `.draft.yaml`. The draft exists so nothing is lost if the user walks away; it's explicitly marked so it doesn't pollute `--active` results as a decided plan.
+- **High confidence** → fire automatically, immediately after the Phase 4 output. Write with `status: draft` and the filename suffix `.draft.yaml`. The draft exists so nothing is lost if the user walks away; it's explicitly marked so it doesn't pollute `--active` results as a decided plan.
 - **Medium / Low confidence** → wait for the user to pick an interpretation (from the "If I Misclassified" block or the two-interpretation surface), then fire with `status: draft`.
 
 ## Confirmation gate (promotes draft → in_progress)
@@ -29,7 +29,7 @@ Contract: stdout JSON, one of:
 
 - `{"path":"<abs>","scope":"project"}` — preferred; versioned with the project. If the directory doesn't exist yet, create it with `mkdir -p` before writing.
 - `{"path":"<abs>","scope":"user"}` — fallback when the project has no `.claude/` dir.
-- `{"path":null,"scope":null}` — nothing configured; **skip Phase 6 silently**. Do not attempt to create `.claude/` in the project — that's a project-config decision, not a triage decision.
+- `{"path":null,"scope":null}` — nothing configured; **skip Phase 5 silently**. Do not attempt to create `.claude/` in the project — that's a project-config decision, not a triage decision.
 
 Non-zero + stderr on missing/relative `--root` or `--home`. Halt on non-zero and surface the diagnostic.
 
@@ -41,6 +41,16 @@ Non-zero + stderr on missing/relative `--root` or `--home`. Halt on non-zero and
 ## File contents
 
 Write the file using the schema in `references/triage-schema.md` — that document is the source of truth for fields, lifecycle states, and invariants. Read it before writing.
+
+## Validate every write
+
+Immediately after writing the draft, and again after promoting it:
+
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/skills/triage/scripts/validate-record.mjs" --file "<abs path to record>"
+```
+
+Exit 0 means conformant. Exit 1 means it printed the violations: **fix the file and re-run until it exits 0.** This is not optional bookkeeping. An off-schema `status` or a date in `created_at` instead of `created` makes the record invisible to both `--active` recall and `/triage-cleanup` — it can then never be resumed and never be closed.
 
 ## After writing
 

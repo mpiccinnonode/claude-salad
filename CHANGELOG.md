@@ -1,5 +1,9 @@
 # Changelog
 
+## review-then-dry 1.1.0 → 1.1.1
+
+- fix(review-then-dry): replace source-extension allowlist with non-source denylist in get-review-targets
+
 ## triage 1.0.0 → 1.1.0
 
 - feat(triage): add /triage-cleanup for pruning stale records, specs, and plans

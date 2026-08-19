@@ -35,7 +35,7 @@ Use the shared offload script (also used by `/lifecycled-code-review` — do not
 node "${CLAUDE_PLUGIN_ROOT}/scripts/get-review-targets.mjs" --repo "$(pwd)" [--args "$ARGUMENTS"]
 ```
 
-Contract: stdout JSON array of file paths. Strategy: user `$ARGUMENTS` (paths/globs, no extension filter) → branch diff vs `origin/HEAD` (default `develop`) → last 3 commits with source-extension filter (`ts tsx js jsx vue html scss css go py rs rb java kt swift mjs cjs`). Non-zero + stderr on missing `--repo` or non-git repo — halt and surface the error.
+Contract: stdout JSON array of file paths. Strategy: user `$ARGUMENTS` (paths/globs, no extension filter) → branch diff vs `origin/HEAD` (default `develop`) → last 3 commits, excluding non-source noise (docs, lockfiles, binaries/assets) rather than allowlisting languages. Non-zero + stderr on missing `--repo` or non-git repo — halt and surface the error.
 
 State which files are being audited and how the set was determined (user-args / diff / recent) before dispatching.
 

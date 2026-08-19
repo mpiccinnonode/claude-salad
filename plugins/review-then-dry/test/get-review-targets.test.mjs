@@ -58,7 +58,7 @@ test("no diff, no commits → empty array", () => {
   assert.deepEqual(out, []);
 });
 
-test("diff strategy filters to source extensions and dedupes", () => {
+test("diff strategy excludes docs/lockfiles/binaries, keeps everything else, dedupes", () => {
   const root = gitRepo();
   writeFileSync(join(root, "keep.ts"), "1");
   writeFileSync(join(root, "skip.md"), "1");
@@ -68,9 +68,16 @@ test("diff strategy filters to source extensions and dedupes", () => {
   execFileSync("git", ["-C", root, "branch", "develop"]);
   writeFileSync(join(root, "feature.ts"), "2");
   writeFileSync(join(root, "doc.md"), "2");
+  // languages a fixed allowlist would have missed — must NOT be filtered out
+  writeFileSync(join(root, "server.php"), "2");
+  writeFileSync(join(root, "lib.cpp"), "2");
+  writeFileSync(join(root, "migration.sql"), "2");
+  writeFileSync(join(root, "deploy.tf"), "2");
+  // obvious non-source noise — must still be filtered out
+  writeFileSync(join(root, "yarn.lock"), "2");
+  writeFileSync(join(root, "logo.png"), "2");
   execFileSync("git", ["-C", root, "add", "."]);
   execFileSync("git", ["-C", root, "commit", "-qm", "feat"]);
   const out = JSON.parse(run(["--repo", root]));
-  // diff vs develop shows feature.ts (source) but not doc.md (filtered)
-  assert.deepEqual(out, ["feature.ts"]);
+  assert.deepEqual(out, ["deploy.tf", "feature.ts", "lib.cpp", "migration.sql", "server.php"]);
 });

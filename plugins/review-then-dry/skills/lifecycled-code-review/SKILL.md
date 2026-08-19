@@ -118,7 +118,7 @@ Offloaded to `${CLAUDE_PLUGIN_ROOT}/scripts/get-review-targets.mjs` (spec §1.2.
 node "${CLAUDE_PLUGIN_ROOT}/scripts/get-review-targets.mjs" --repo "$(pwd)" [--args "$ARGUMENTS"]
 ```
 
-Contract: stdout JSON array of file paths. Strategy ranking inside the script: user `--args` (no extension filter) → branch diff vs `origin/HEAD` main branch (default `develop`) → last 3 commits. Source-extension filter applies to diff and log strategies: `ts tsx js jsx vue html scss css go py rs rb java kt swift mjs cjs`. Non-zero + stderr on missing `--repo` or non-git repo. Halt on non-zero.
+Contract: stdout JSON array of file paths. Strategy ranking inside the script: user `--args` (no extension filter) → branch diff vs `origin/HEAD` main branch (default `develop`) → last 3 commits. Diff and log strategies exclude non-source noise (docs, lockfiles, binaries/assets) rather than allowlisting languages, so unlisted languages aren't silently dropped. Non-zero + stderr on missing `--repo` or non-git repo. Halt on non-zero.
 
 State which files you are reviewing and how you determined the set (user-args / diff / recent) before starting analysis.
 

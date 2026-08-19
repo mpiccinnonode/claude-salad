@@ -5,7 +5,8 @@
 //   1. --args (user paths/globs) — whitespace split, no extension filter
 //   2. Active-branch diff vs main — `git diff <main> --name-only --diff-filter=d`
 //   3. Last 3 commits — `git log -3 --name-only --pretty=format: --diff-filter=d`
-// Source extensions: ts tsx js jsx vue html scss css go py rs rb java kt swift mjs cjs
+// Excludes non-source noise (docs, lockfiles, binaries/assets) rather than allowlisting
+// source extensions — an allowlist silently drops any language it forgot to name.
 // Exit 2 on bad argv / non-absolute repo; exit 1 on non-git repo. Ported from
 // get-review-targets.sh — jq replaced by native JSON.
 
@@ -13,7 +14,8 @@ import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 
-const SRC_RE = /\.(ts|tsx|js|jsx|vue|html|scss|css|go|py|rs|rb|java|kt|swift|mjs|cjs)$/;
+const NON_SOURCE_RE =
+  /\.(md|mdx|txt|rst|adoc|lock|min\.js|min\.css|map|png|jpe?g|gif|svg|ico|webp|avif|bmp|mp4|mov|avi|pdf|zip|tar|gz|7z|woff2?|ttf|eot|otf)$/i;
 
 function die(msg, code) {
   process.stderr.write(`get-review-targets: ${msg}\n`);
@@ -73,14 +75,14 @@ function main() {
   // Strategy 2: active branch diff vs main.
   const diff = git(repo, ["diff", mainBranch, "--name-only", "--diff-filter=d"]);
   if (diff) {
-    const files = diff.split("\n").filter((l) => SRC_RE.test(l));
+    const files = diff.split("\n").filter((l) => l && !NON_SOURCE_RE.test(l));
     if (files.length) { emitJson(files); return; }
   }
 
   // Strategy 3: last 3 commits.
   const log = git(repo, ["log", "-3", "--name-only", "--pretty=format:", "--diff-filter=d"]);
   if (log) {
-    const files = log.split("\n").filter((l) => SRC_RE.test(l));
+    const files = log.split("\n").filter((l) => l && !NON_SOURCE_RE.test(l));
     if (files.length) { emitJson(files); return; }
   }
 

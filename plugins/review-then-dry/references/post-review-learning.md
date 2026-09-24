@@ -12,10 +12,11 @@ If no checklist file exists AND no findings were accepted/rejected, skip Phase 3
 For each finding from the review, based on the user's action and the finding's tag:
 
 | User Action | Finding Tag | Checklist Update |
-|---|---|---|
+| --- | --- | --- |
 | Accepted | `[check:{id}]` | **Hit:** increment `hit_count`, reset `miss_streak` to 0, set `last_hit` to today |
 | Accepted | `[staged]` + `[check:{id}]` | Same as above — staged checks track hits identically |
 | Accepted | `[organic]` | **New check candidate:** generate a staged check from this finding |
+| Accepted | `[organic]` + `[security:{category}]` | **Security check candidate:** as `[organic]`, but severity `critical` and tags `[security]` so it takes the slowest freeze threshold |
 | Accepted | `[verbosity:{pattern}]` | **Verbosity check candidate:** if a `verbosity-{pattern}` check already exists, treat as a hit. Otherwise generate a staged check with id `verbosity-{pattern}`, severity `minor`, tags `[verbosity]`, rule text summarizing the pattern |
 | Rejected | `[verbosity:{pattern}]` | **Suppression candidate:** generate a suppression scoped to that verbosity pattern (prevents re-flagging in future reviews where the verbosity is intentional — e.g., boundary validation the agent misread as defensive-duplicate) |
 | Rejected | Any other tag | **Suppression candidate:** generate a suppression entry |

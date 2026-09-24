@@ -51,7 +51,7 @@ project_context:
 ## Lifecycle Thresholds
 
 | Severity | miss_streak to freeze | Rationale |
-|---|---|---|
+| --- | --- | --- |
 | critical | 25 | Security/correctness — rare violations still important |
 | major | 15 | Standard architectural checks |
 | minor | 8 | Style/naming — team internalizes quickly |

@@ -2,22 +2,10 @@
   "name": "mpiccinnonode",
   "owner": { "name": "mpiccinnonode" },
   "metadata": {
-    "description": "Claude Code plugins by mpiccinnonode -- config auditing, SCRUM planning, and more",
+    "description": "Claude Code plugins by mpiccinnonode -- task triage, code review, and more",
     "homepage": "https://github.com/mpiccinnonode/claude-salad"
   },
   "plugins": [
-    {
-      "name": "config-doctor",
-      "version": "1.4.0",
-      "source": "./plugins/config-doctor",
-      "description": "Deep-scan and audit a project's Claude configuration"
-    },
-    {
-      "name": "scrum-toolkit",
-      "version": "2.2.0",
-      "source": "./plugins/scrum-toolkit",
-      "description": "Full SCRUM lifecycle toolkit — ceremonies, PM/PO authoring, and DevOps actions with GitHub integration"
-    },
     {
       "name": "triage",
       "version": "1.1.0",

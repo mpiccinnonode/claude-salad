@@ -6,7 +6,7 @@ claude-salad is a multi-plugin marketplace for Claude Code. Most plugins are pur
 
 ```bash
 npx markdownlint-cli2 "**/*.md"        # lint all markdown (matches CI)
-npx markdownlint-cli2 "plugins/config-doctor/**/*.md"  # lint one plugin
+npx markdownlint-cli2 "plugins/triage/**/*.md"  # lint one plugin
 ```
 
 CI runs this on every push to `main` and on pull requests via `.github/workflows/lint.yml`. Config lives in `.markdownlint.yaml` at the repo root.

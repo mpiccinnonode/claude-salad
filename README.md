@@ -6,8 +6,8 @@ Claude Code plugins by mpiccinnonode -- task triage, code review, and more.
 
 | Plugin | Version | Description |
 | --- | --- | --- |
-| [triage](plugins/triage/) | 1.1.0 | Advisory task classifier that routes tasks to the best available skill, agent, or MCP server |
-| [review-then-dry](plugins/review-then-dry/) | 1.1.1 | Chained code-review + reuse audit producing one unified findings spec. Node-only, Windows-portable |
+| [triage](plugins/triage/) | 1.1.1 | Advisory task classifier that routes tasks to the best available skill, agent, or MCP server |
+| [review-then-dry](plugins/review-then-dry/) | 1.2.0 | Chained code-review + reuse audit producing one unified findings spec. Node-only, Windows-portable |
 
 ## Installation
 

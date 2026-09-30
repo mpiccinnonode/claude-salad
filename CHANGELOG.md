@@ -1,5 +1,22 @@
 # Changelog
 
+## review-then-dry 1.1.1 → 1.2.0
+
+- feat(review-then-dry): add security lens to the review pass
+- docs(review-then-dry): apply prompt-audit fixes (skill count, reactivation rules, stale spec references)
+
+## triage 1.1.0 → 1.1.1
+
+- docs(triage): apply prompt-audit fixes (schema contradictions, phase numbering, offload-scripts policy)
+
+## Removed plugins
+
+- chore: remove config-doctor and scrum-toolkit plugins (no longer in the marketplace)
+
+## General fixes
+
+- docs(release): runtime-read references and four-location version sync
+
 ## review-then-dry 1.1.0 → 1.1.1
 
 - fix(review-then-dry): replace source-extension allowlist with non-source denylist in get-review-targets

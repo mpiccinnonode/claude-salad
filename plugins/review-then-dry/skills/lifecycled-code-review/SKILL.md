@@ -4,7 +4,7 @@ description: >
   Use when reviewing code after implementing or modifying a feature, component, service, store,
   or page. Use before creating a pull request. Use when the user says "review", "check my code",
   "anything wrong?", or "look over this". Use proactively after writing significant code to
-  catch correctness, standards, and verbosity issues early.
+  catch correctness, security, standards, and verbosity issues early.
   Do NOT use for: reuse/extraction audits (use /dry skill), design-only reviews (use design skill),
   visual/UX review (use ui-ux-review skill).
 allowed-tools:
@@ -24,7 +24,7 @@ argument-hint: "[file paths, folder, or glob] [--seed] [--simplify-only]"
 
 # Code Review Skill
 
-Two-pass review with lifecycle-managed checklist. The **code-reviewer** agent runs twice with different lenses: first for correctness and standards compliance, then for verbosity (Simplification Lens). A dynamic checklist (`.claude/review-checklist.yaml`) guides the agent and evolves through use.
+Two-pass review with lifecycle-managed checklist. The **code-reviewer** agent runs twice with different lenses: first for correctness, security, and standards compliance, then for verbosity (Simplification Lens). A dynamic checklist (`.claude/review-checklist.yaml`) guides the agent and evolves through use.
 
 For reuse, extraction, or deduplication audits, run `/dry` separately — that is a dedicated read-only audit dispatched against the `reusability-refactor-expert` agent. The two skills are deliberately decoupled; chain them via `/review-then-dry` when you want both passes plus a unified findings spec.
 
@@ -71,7 +71,7 @@ Rule evaluation (prune / freeze / expire / glob-mismatch) is offloaded to `${CLA
    node "${CLAUDE_PLUGIN_ROOT}/skills/lifecycled-code-review/scripts/lifecycle-pass.mjs" .claude/review-checklist.yaml $(date -u +%Y-%m-%d)
    ```
 
-   - **On zero exit:** parse the JSON payload from stdout. Shape: `{prune: [...], freeze: [...], expire: [...], glob_warnings: [...]}` (see spec §1.2.1 / the script's header comment for the per-array entry schema).
+   - **On zero exit:** parse the JSON payload from stdout. Shape: `{prune: [...], freeze: [...], expire: [...], glob_warnings: [...]}` (see the script's header comment for the per-array entry schema).
    - **On non-zero exit:** surface the one-line stderr diagnostic to the user verbatim, follow the Safety Protocol (restore `.bak` if the YAML is corrupt, or rename to `.corrupt` if the script could not parse it), and proceed to Phase 1 without checklist. Do not attempt to recompute lifecycle rules in the skill body — that defeats the offload and bypasses the audited implementation.
 
 4. **If all four arrays are empty:** delete `.bak`, proceed to Phase 1. No user-visible Phase 0 output.
@@ -100,7 +100,7 @@ Rule evaluation (prune / freeze / expire / glob-mismatch) is offloaded to `${CLA
 
 ## Spec Context Lookup
 
-Offloaded to `${CLAUDE_PLUGIN_ROOT}/skills/lifecycled-code-review/scripts/get-spec-context.mjs` (spec §1.2.5):
+Offloaded to `${CLAUDE_PLUGIN_ROOT}/skills/lifecycled-code-review/scripts/get-spec-context.mjs`:
 
 ```bash
 node "${CLAUDE_PLUGIN_ROOT}/skills/lifecycled-code-review/scripts/get-spec-context.mjs" --repo "$(pwd)"
@@ -112,7 +112,7 @@ If `spec_path` is non-null, read the **Intent** section of that file. Use it to 
 
 ## Determine Target Files
 
-Offloaded to `${CLAUDE_PLUGIN_ROOT}/scripts/get-review-targets.mjs` (spec §1.2.2):
+Offloaded to `${CLAUDE_PLUGIN_ROOT}/scripts/get-review-targets.mjs`:
 
 ```bash
 node "${CLAUDE_PLUGIN_ROOT}/scripts/get-review-targets.mjs" --repo "$(pwd)" [--args "$ARGUMENTS"]
@@ -122,13 +122,13 @@ Contract: stdout JSON array of file paths. Strategy ranking inside the script: u
 
 State which files you are reviewing and how you determined the set (user-args / diff / recent) before starting analysis.
 
-## Phase 1 — Standards and Correctness
+## Phase 1 — Standards, Correctness, and Security
 
 Dispatch the **code-reviewer** agent (subagent type: `review-then-dry:code-reviewer`) with the target files. Do NOT compose an inline system prompt — use the existing agent configuration.
 
 **Checklist injection:** If Phase 0 produced a valid checklist (or the file existed and Phase 0 was skipped because no changes were needed), include in the agent dispatch prompt:
 
-> "The review checklist at `.claude/review-checklist.yaml` is available. Read it and follow the Checklist Protocol in your agent configuration. Tag all findings with the appropriate tags: `[check:{id}]`, `[organic]`, `[staged]`, `[suppressed:{id}]`. Phase 1 covers correctness and standards only — verbosity is handled in Phase 2; do not pre-emptively flag verbosity here."
+> "The review checklist at `.claude/review-checklist.yaml` is available. Read it and follow the Checklist Protocol in your agent configuration. Tag all findings with the appropriate tags: `[check:{id}]`, `[organic]`, `[staged]`, `[suppressed:{id}]`. Phase 1 covers correctness, security (run your Security Lens), and standards only — verbosity is handled in Phase 2; do not pre-emptively flag verbosity here."
 
 **If no checklist exists (cold start):** dispatch the agent without checklist instructions. The agent falls back to `.claude/rules/` as its knowledge base. Do NOT mention the checklist or tags — the agent's existing behavior handles this.
 
@@ -174,7 +174,18 @@ Present a single unified report with this structure:
 
 - **Files reviewed:** list each file path
 - **Overall rating:** Excellent / Good / Needs Improvement / Requires Refactoring
-- 2-3 sentence assessment covering correctness, standards, and verbosity
+- 2-3 sentence assessment covering correctness, security, standards, and verbosity
+
+### Security Issues
+
+Security findings from the Phase 1 Security Lens, listed first because they outrank everything else at the same severity. For each:
+
+- `[tag]` `[security:{category}]` — **Issue** — what is wrong and where (file + line range)
+- **Severity** — Critical / Major / Minor
+- **Exploit path** — how untrusted input or an attacker reaches it
+- **Fix** — specific action with a code example
+
+Write "None found" when clean — the explicit line shows the pass ran.
 
 ### Critical Issues
 

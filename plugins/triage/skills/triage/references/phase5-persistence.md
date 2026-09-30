@@ -8,7 +8,7 @@ Triage produces a durable artifact: one YAML file per task at `.claude/triage/<s
 
 ## When to fire Phase 5
 
-- **High confidence** → fire automatically, immediately after the Phase 4 output. Write with `status: draft` and the filename suffix `.draft.yaml`. The draft exists so nothing is lost if the user walks away; it's explicitly marked so it doesn't pollute `--active` results as a decided plan.
+- **High confidence** → fire automatically, immediately after the Phase 4 output. Write with `status: draft` and the filename suffix `.draft.yaml`. The draft exists so nothing is lost if the user walks away; it's explicitly marked so it is distinguishable in git diffs and in recall output.
 - **Medium / Low confidence** → wait for the user to pick an interpretation (from the "If I Misclassified" block or the two-interpretation surface), then fire with `status: draft`.
 
 ## Confirmation gate (promotes draft → in_progress)

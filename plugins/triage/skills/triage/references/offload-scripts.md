@@ -1,8 +1,7 @@
 # Offload Scripts — Contract
 
 **Status:** Active
-**Established:** 2026-04-22
-**Scope:** Scripts that offload deterministic work from skill bodies to colocated executables. Governs the files introduced by the Script Offloading plan (`~/.claude/plans/2026-04-21-script-offloading-plan.md`).
+**Scope:** Scripts that offload deterministic work from skill bodies to colocated executables.
 
 ---
 
@@ -11,11 +10,10 @@
 Scripts live **inside the owning skill's folder**:
 
 ```text
-~/.claude/skills/<skill>/scripts/<operation>.sh
-~/.claude/skills/<skill>/scripts/<operation>.mjs
+skills/<skill>/scripts/<operation>.mjs
 ```
 
-A script is only ever called by its owning SKILL.md. Cross-skill calls are forbidden — if two skills need the same logic, each gets its own copy. This keeps the skill folder the unit of audit, revert, and removal.
+A script is called by its owning SKILL.md. Across plugins, cross-skill calls are forbidden — if two plugins need the same logic, each gets its own copy. Within a single plugin, a skill may call another skill's script only where the plugin's `CLAUDE.md` lists it as a sanctioned reference. This keeps the skill folder the unit of audit, revert, and removal.
 
 ### Exception: shared parsing within one plugin
 
@@ -25,28 +23,21 @@ That divergence is not hypothetical. `yamlField` was duplicated across `triage-r
 
 Scope of the exception, deliberately narrow:
 
-- **Shared:** the definition of the artifact's shape — field extraction and the schema's allowed values (`skills/triage/scripts/yaml-fields.mjs`).
+- **Shared:** the definition of the artifact's shape — field extraction and the schema's allowed values (`skills/triage/scripts/yaml-fields.mjs`) — and where records live (`skills/triage/scripts/resolve-triage-path.mjs`).
 - **Not shared:** anything a skill decides. Staleness rules, confidence, thresholds, and deletion jails stay in the owning skill's own scripts.
 - Only within one plugin. Across plugins, copy.
 - The sharing must be named in the plugin's `CLAUDE.md`, so it stays a listed decision rather than a habit.
 
 ## Extension choice
 
-- `.sh` — pure glob / grep / `wc` / shell arithmetic / `jq` one-liners.
-- `.mjs` — YAML parsing, structured text manipulation, JSON emission more complex than a single `jq` expression. Node is assumed available (see spec §1.5).
-
-Borderline cases get decided at authoring time. Do not introduce other runtimes.
+Scripts are Node `.mjs`, dependency-free. No shell, `jq`, python or `yq`.
 
 ## Header
 
 Every script begins with a one-line comment naming the SKILL.md section it serves. This is the only explicit link between script and skill body and makes the pair auditable at grep-speed.
 
-```sh
-# Serves: code-review SKILL.md — Phase 0 Lifecycle Pass (§1.2.1)
-```
-
 ```js
-// Serves: distill SKILL.md — Consolidate Mode, Prune Candidates (§1.2.10)
+// Serves: triage-cleanup SKILL.md — Phase 6 confirmed deletion
 ```
 
 ## Inputs
@@ -62,17 +53,17 @@ Every script begins with a one-line comment naming the SKILL.md section it serve
 ## Exit codes
 
 - `0` — success. stdout contains the payload.
-- Any non-zero — failure. stderr contains one diagnostic line. The skill body **must halt and surface the diagnostic**; it must not silently fall back to the pre-offload path (see plan Cross-cutting → Failure handling).
+- Any non-zero — failure. stderr contains one diagnostic line. The skill body **must halt and surface the diagnostic**; it must not silently fall back to doing the work inline.
 
 Empty/malformed input is a failure, not a zero-value success. Example: a recurrence-count script receiving empty input exits non-zero; it does not emit `{count: 0}`.
 
 ## Idempotency
 
-Where the pre-offload skill body is idempotent, the script must be too. Re-running on already-processed input is a no-op: no filesystem mutations, stable output. Idempotency is verified as part of each slice's stop gate where applicable (see plan Slice 4).
+Where the pre-offload skill body is idempotent, the script must be too. Re-running on already-processed input is a no-op: no filesystem mutations, stable output. Verify idempotency in the script's tests where it applies.
 
 ## What scripts must not do
 
-- Call other scripts in other skills' folders — except importing a same-plugin shared parsing module, per the exception above.
+- Call other scripts in other skills' folders — except the same-plugin sharing listed in the plugin's `CLAUDE.md` (a shared parsing module, or a script invoked by another skill's body).
 - Mutate state outside the skill folder or the explicit file paths passed via argv.
 - Read from the environment.
 - Write to stdout on failure, or to stderr on success.
@@ -84,4 +75,4 @@ Skills that invoke scripts need `Bash` in their `allowed-tools`. Adding `Bash` i
 
 ## Non-scope
 
-The non-offloadable surface defined in spec §1.4 — library matching, adversarial reasoning, classification, finding interpretation, semantic grouping — stays in the skill body. Scripts are for deterministic work only.
+The non-offloadable surface — library matching, adversarial reasoning, classification, finding interpretation, semantic grouping — stays in the skill body. Scripts are for deterministic work only.

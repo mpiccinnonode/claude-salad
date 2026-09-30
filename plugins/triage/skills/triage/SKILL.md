@@ -38,7 +38,7 @@ node "${CLAUDE_PLUGIN_ROOT}/skills/triage/scripts/triage-recall.mjs" \
   --find "<2-4 key words from the task>" --json
 ```
 
-If a returned record's `task` is a strong semantic match, show it with its phase statuses and ask: resume, or start fresh? On resume, skip to the Phase 4 output and jump to the first `pending` phase. If the resolver returns `{"path":null}` there is nowhere to persist and nothing to recall — continue silently.
+If a returned record's `task` is a strong semantic match, show it with its phase statuses and ask: resume, or start fresh? On resume, skip to the Phase 4 output and jump to the first `pending` phase. If the resolver prints an empty line there is nowhere to persist and nothing to recall — skip the recall call and continue silently.
 
 ### 1b. Candidate list
 
@@ -66,6 +66,20 @@ Classify the task, then derive the phase sequence from the work itself, scaled t
 
 `classification` is a schema enum — write one of `UI Feature`, `Logic Feature`, `Mixed Feature`, `Bug Fix`, `Refactor`, `Design`, `Review`, `Other` (see `references/triage-schema.md`). Two boundaries are genuinely counterintuitive and worth stating: exploring requirements for a feature is **not** `Design` — that value is for visual and design-system work only; and `Other` means stop and ask one clarifying question rather than force a fit.
 
+### Bug Fix — settle reproducibility before deriving the flow
+
+A `Bug Fix` classification carries one extra field, `reproducibility`, and it decides the flow:
+
+| Value | Meaning | Flow |
+| --- | --- | --- |
+| `confirmed` | the failure has been observed — by the user, or in this session | Debugging → Fix → Review |
+| `unreproducible` | reported, never observed | Debugging only |
+| `unknown` | not yet established | Debugging only |
+
+While the value is not `confirmed`, the flow must **not** contain `Implementation` or `Fix`: the deliverable is a reproduction, or a documented failure to reproduce — not a patch. Scope the Debugging phase to match ("reproduce X under conditions Y", not "fix X"), and say so in the Why This Flow block. `validate-record.mjs` rejects a record that breaks this, so persisting a guessed fix path is not possible.
+
+Never infer `confirmed` from the confidence of the report. A user saying "it definitely crashes" is a claim about the bug, not an observation of it.
+
 Two signals worth flagging explicitly, because they change the work and are easy to miss:
 
 - A bug in components with mobile-framework prefixes (`ion-*`, `Native*`) may be a platform-compat issue, not app logic.
@@ -78,7 +92,7 @@ Two signals worth flagging explicitly, because they change the work and are easy
 For each phase, pick the best-matching candidate by the **intent** in its description, not by name substring:
 
 | Phase | Descriptions mentioning… |
-|---|---|
+| --- | --- |
 | **Exploration** | brainstorm, intent, requirements, scope, options, pre-implementation, stress-test, pressure-test, adversarial spec review |
 | **Planning** | writing a plan, spec authoring, decomposition, phased plan, sprint plan, roadmap, acceptance criteria |
 | **Implementation** | executing a plan, test-driven workflow, implement-from-spec, parallel subagent execution |
@@ -112,6 +126,7 @@ Confidence: **High** = one clean reading; **Medium** = real alternative interpre
 ```text
 ## Task: [description]
 **Classification:** [type]   **Confidence:** High / Medium / Low
+**Reproducibility:** confirmed / unreproducible / unknown   ← Bug Fix only
 
 ### Flow
 [phase] → [phase] → [phase]

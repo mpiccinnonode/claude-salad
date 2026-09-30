@@ -29,7 +29,7 @@ Triage never dispatches agents or edits code — it recommends and records a tri
 
 Finds finished, abandoned, and forgotten records — plus the specs and plans belonging to work that's over — and deletes only what you confirm. Nothing is removed before you've seen the list: a deterministic scan decides what *could* be stale, you decide what actually goes.
 
-You don't have to remember to run it. A `SessionStart` hook checks the triage directory once a day and mentions it only when something is actually actionable, staying quiet otherwise. It never deletes anything itself. To change the cadence or how insistent it is, edit `hooks/hooks.json`:
+You don't have to remember to run it. A `SessionStart` hook checks the triage directory once a day and mentions it only when something is actually actionable, staying quiet otherwise. It never deletes anything itself. To change the cadence or how insistent it is, edit the args in `hooks/hooks.json` (a plugin update overwrites local edits):
 
 ```text
 --frequency 24     hours between checks (0 checks every session)

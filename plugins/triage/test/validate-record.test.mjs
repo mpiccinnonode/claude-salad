@@ -97,3 +97,44 @@ test("bad argv exits 2", () => {
   assert.equal(run(["--file", "/nope/missing.yaml"]).status, 2);    // unreadable
   assert.equal(run(["--file", record(VALID), "--bogus"]).status, 2); // unknown arg
 });
+
+// --- reproducibility gate --------------------------------------------------
+
+const BUG = (repro, phases) =>
+  `task: "Login crashes"\nclassification: Bug Fix\nstatus: in_progress\ncreated: 2026-08-24\n${repro ? `reproducibility: ${repro}\n` : ""}phases:\n${phases.map((n) => `  - phase: ${n}\n    status: pending\n`).join("")}`;
+
+test("a confirmed bug may carry a Fix phase", () => {
+  const r = run(["--file", record(BUG("confirmed", ["Debugging", "Fix", "Review"]))]);
+  assert.equal(r.status, 0);
+});
+
+test("a Bug Fix with no reproducibility is a violation", () => {
+  const r = run(["--file", record(BUG(null, ["Debugging", "Fix"])), "--json"]);
+  assert.equal(r.status, 1);
+  const out = JSON.parse(r.stdout);
+  assert.ok(out.violations.some((v) => v.field === "reproducibility" && /missing/.test(v.message)));
+});
+
+test("off-schema reproducibility is a violation", () => {
+  const r = run(["--file", record(BUG("maybe", ["Debugging"])), "--json"]);
+  assert.equal(r.status, 1);
+  const out = JSON.parse(r.stdout);
+  assert.ok(out.violations.some((v) => v.field === "reproducibility" && /off-schema/.test(v.message)));
+});
+
+test("an unreproducible bug may not route to Implementation or Fix", () => {
+  const r = run(["--file", record(BUG("unreproducible", ["Debugging", "Implementation", "Fix"])), "--json"]);
+  assert.equal(r.status, 1);
+  const banned = JSON.parse(r.stdout).violations.filter((v) => v.field === "phases[].phase");
+  assert.deepEqual(banned.map((v) => v.value), ["Implementation", "Fix"]);
+});
+
+test("an unknown-reproducibility bug is evidence-gathering only", () => {
+  assert.equal(run(["--file", record(BUG("unknown", ["Debugging"]))]).status, 0);
+  assert.equal(run(["--file", record(BUG("unknown", ["Debugging", "Fix"]))]).status, 1);
+});
+
+test("non-bug classifications need no reproducibility", () => {
+  const r = run(["--file", record('task: "Extract a service"\nclassification: Refactor\nstatus: in_progress\ncreated: 2026-08-24\nphases:\n  - phase: Implementation\n    status: pending\n')]);
+  assert.equal(r.status, 0);
+});

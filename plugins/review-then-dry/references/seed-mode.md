@@ -44,7 +44,7 @@ Also deduplicate within the generated candidates — if two rules from different
 
 ## Step 5 — Enforce Staged Cap
 
-Offloaded to `${CLAUDE_PLUGIN_ROOT}/skills/lifecycled-code-review/scripts/evict-staged.mjs` (spec §1.2.3). Same contract as Phase 3 Step 4.
+Offloaded to `${CLAUDE_PLUGIN_ROOT}/skills/lifecycled-code-review/scripts/evict-staged.mjs`. Same contract as Phase 3 Step 4.
 
 ```bash
 node "${CLAUDE_PLUGIN_ROOT}/skills/lifecycled-code-review/scripts/evict-staged.mjs" --yaml <scratch-yaml-abs> --cap 30

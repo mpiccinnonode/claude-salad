@@ -71,7 +71,7 @@ Rule evaluation (prune / freeze / expire / glob-mismatch) is offloaded to `${CLA
    node "${CLAUDE_PLUGIN_ROOT}/skills/lifecycled-code-review/scripts/lifecycle-pass.mjs" .claude/review-checklist.yaml $(date -u +%Y-%m-%d)
    ```
 
-   - **On zero exit:** parse the JSON payload from stdout. Shape: `{prune: [...], freeze: [...], expire: [...], glob_warnings: [...]}` (see spec §1.2.1 / the script's header comment for the per-array entry schema).
+   - **On zero exit:** parse the JSON payload from stdout. Shape: `{prune: [...], freeze: [...], expire: [...], glob_warnings: [...]}` (see the script's header comment for the per-array entry schema).
    - **On non-zero exit:** surface the one-line stderr diagnostic to the user verbatim, follow the Safety Protocol (restore `.bak` if the YAML is corrupt, or rename to `.corrupt` if the script could not parse it), and proceed to Phase 1 without checklist. Do not attempt to recompute lifecycle rules in the skill body — that defeats the offload and bypasses the audited implementation.
 
 4. **If all four arrays are empty:** delete `.bak`, proceed to Phase 1. No user-visible Phase 0 output.
@@ -100,7 +100,7 @@ Rule evaluation (prune / freeze / expire / glob-mismatch) is offloaded to `${CLA
 
 ## Spec Context Lookup
 
-Offloaded to `${CLAUDE_PLUGIN_ROOT}/skills/lifecycled-code-review/scripts/get-spec-context.mjs` (spec §1.2.5):
+Offloaded to `${CLAUDE_PLUGIN_ROOT}/skills/lifecycled-code-review/scripts/get-spec-context.mjs`:
 
 ```bash
 node "${CLAUDE_PLUGIN_ROOT}/skills/lifecycled-code-review/scripts/get-spec-context.mjs" --repo "$(pwd)"
@@ -112,7 +112,7 @@ If `spec_path` is non-null, read the **Intent** section of that file. Use it to 
 
 ## Determine Target Files
 
-Offloaded to `${CLAUDE_PLUGIN_ROOT}/scripts/get-review-targets.mjs` (spec §1.2.2):
+Offloaded to `${CLAUDE_PLUGIN_ROOT}/scripts/get-review-targets.mjs`:
 
 ```bash
 node "${CLAUDE_PLUGIN_ROOT}/scripts/get-review-targets.mjs" --repo "$(pwd)" [--args "$ARGUMENTS"]

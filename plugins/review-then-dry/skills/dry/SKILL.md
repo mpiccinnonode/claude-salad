@@ -39,7 +39,7 @@ Contract: stdout JSON array of file paths. Strategy: user `$ARGUMENTS` (paths/gl
 
 State which files are being audited and how the set was determined (user-args / diff / recent) before dispatching.
 
-If the resolved set is empty: report "No target files detected (no diff vs main, no recent commits with source files). Pass paths/globs as arguments to scope the audit." and stop.
+If the resolved set is empty: report "No target files detected (no diff vs the default branch, no recent commits with source files). Pass paths/globs as arguments to scope the audit." and stop.
 
 ## Dispatch
 

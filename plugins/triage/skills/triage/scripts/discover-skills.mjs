@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Serves: triage SKILL.md — Phase 1 Context & Config Discovery (§1.2.12)
+// Serves: triage SKILL.md — Phase 1b candidate list
 //
 // Walk six globs across three scopes (project-local, user-global,
 // plugin-installed), extract `name` + `description` from each file's YAML
@@ -11,7 +11,7 @@
 //
 // Both arguments must be absolute paths. `home-dir` is passed explicitly
 // (rather than read from $HOME) to honour the contract's no-env rule
-// (~/.claude/skills/_conventions/offload-scripts.md §Inputs).
+// (references/offload-scripts.md §Inputs).
 //
 // Exit 0 + JSON on stdout on success. Exit non-zero + one-line stderr
 // diagnostic on: bad argv, unreadable file, missing or malformed

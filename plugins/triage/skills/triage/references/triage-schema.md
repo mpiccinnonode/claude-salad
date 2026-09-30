@@ -16,6 +16,7 @@ task: "<full task description as the user phrased it>"
 created: "<ISO-8601 date, e.g. 2026-04-23>"
 classification: "<UI Feature|Logic Feature|Mixed Feature|Bug Fix|Refactor|Design|Review|Other>"
 confidence: "<High|Medium|Low>"
+reproducibility: "<confirmed|unreproducible|unknown>"   # required when classification is Bug Fix
 status: "<draft|in_progress|complete|abandoned>"
 abstract_flow: ["Exploration", "Planning", "Implementation", "Review"]
 phases:
@@ -49,6 +50,11 @@ notes:                                       # optional free-form
   - `pending` — not started.
   - `complete` — finished (user confirmed or the skill marked it on re-invocation).
   - `skipped` — intentionally bypassed (e.g., Exploration on a trivial scope).
+- **`reproducibility`**: required on `Bug Fix` records, omitted on every other classification.
+  - `confirmed` — the failure has been observed, by the user or by a session. Only this value permits a fix phase.
+  - `unreproducible` — reported but never observed.
+  - `unknown` — not yet established.
+  - While the value is not `confirmed`, the flow may not contain `Implementation` or `Fix`: the deliverable is a reproduction, not a patch. `validate-record.mjs` rejects the record otherwise.
 - **`alternative`**: populated only when Phase 3's tie-breaker left two plausible skills for the same phase. The triage output surfaces it as `_Alternative: X — use if Y_`.
 - **`supporting_skills`**: tool-shaped skills (code-structure search, library-docs lookup, cross-session memory recall) that augment any phase rather than owning one. Populated by Phase 3's second pass. Omitted entirely if no tool-shaped skill matched. `when` is a per-task trigger condition, not the skill's generic description.
 
@@ -56,18 +62,19 @@ notes:                                       # optional free-form
 
 `skills/triage/scripts/validate-record.mjs --file <abs>` is the enforcement point for everything above: exit 0 conformant, exit 1 with the violations printed, exit 2 on bad argv. It checks that `status` and every `phases[].status` are on-schema, that `task` is present, and that the date lives in `created` as `YYYY-MM-DD`.
 
-Three field-level rules exist because breaking them makes a record permanently invisible — unreadable by `triage-recall --active` (so it can never be resumed) *and* unclassifiable by `scan-stale` (so cleanup can never close it):
+These field-level rules keep the lifecycle intact. All but the last exist because breaking them makes a record permanently invisible — unreadable by `triage-recall --active` (so it can never be resumed) *and* unclassifiable by `scan-stale` (so cleanup can never close it):
 
 - **`created` is the only accepted spelling.** `created_at` is tolerated on read for the sake of records already in the wild, and rejected on write.
 - **`status` must be one of the four values.** Anything else (`implementation_complete`, `resolved`, …) satisfies no lifecycle rule.
 - **`status` must be present.** A record with no status has no lifecycle at all.
 - **`phases[].status` must be one of the three values.** Readers normalize the known synonyms (`completed`/`done`/`finished` → `complete`; `deferred`/`rejected`/`n/a` → `skipped`) so existing records grade correctly, and writes are rejected — the tolerance exists to absorb history, not to widen the vocabulary. Anything *unrecognised* counts as not-done, which can only keep a record out of the delete set, never push it in.
+- **`reproducibility` gates the flow.** A `Bug Fix` with no `reproducibility`, or any record whose `reproducibility` is not `confirmed` while a `Implementation`/`Fix` phase is present, is rejected. This one is not about visibility — it is the deterministic stop between "nobody reproduced it" and "here is a patch". The schema is enforced on write, and `in_progress` records are append-only in every field but `status`, `phases[].status`, and `notes`.
 
 ## Invariants
 
 - `abstract_flow` length == `phases` length; entries align by index.
 - `phases[].phase` matches the string in `abstract_flow` at the same index.
-- A record with top-level `status: draft` is never read by `--active` unless `draft` is explicitly requested (the recall script's `--active` mode includes drafts by design — they represent unfinished planning the next session should resume).
+- `triage-recall --active` returns records whose status is `draft` or `in_progress`; drafts are included by design because they are unfinished planning the next session should resume.
 - Records are **append-only** in the git sense: once `in_progress`, don't rewrite `task`/`classification`/`created`. Only `status`, `phases[].status`, and `notes` may change.
 
 ## Why YAML and not Markdown

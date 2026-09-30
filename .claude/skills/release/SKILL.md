@@ -28,8 +28,10 @@ Classify each changed file as **functional** or **non-functional**:
 
 - **Functional**: agent definitions, skill definitions, plugin.json —
   anything that affects behavior.
-- **Non-functional**: `CLAUDE.md`, `.markdownlint.yaml`, `references/`
-  subdirectories — documentation and lint config only.
+- **Non-functional**: `CLAUDE.md`, `README.md`, `.markdownlint.yaml`, and
+  `references/` files that are only human-facing docs. A `references/` file
+  that a skill, agent, or script reads at runtime (schemas, routing maps) is
+  functional.
 
 For each changed plugin, read its current version from
 `plugins/<name>/.claude-plugin/plugin.json` — that file is the version
@@ -39,10 +41,10 @@ Present the results as a table, distinguishing functional from non-functional
 changes:
 
 ```text
-| Plugin         | Current | Functional | Docs-only | Status          |
-|----------------|---------|------------|-----------|-----------------|
-| config-doctor  | 1.1.0   | 7          | 2         | ready           |
-| scrum-toolkit  | 0.1.0   | 0          | 2         | docs-only ⚠️    |
+| Plugin          | Current | Functional | Docs-only | Status          |
+|-----------------|---------|------------|-----------|-----------------|
+| triage          | 1.1.0   | 7          | 2         | ready           |
+| review-then-dry | 1.1.1   | 0          | 2         | docs-only ⚠️    |
 ```
 
 Plugins marked "docs-only" have no functional changes. Ask the user whether
@@ -54,7 +56,7 @@ Use the AskUserQuestion tool to ask the user which semver bump to apply to
 each changed plugin. Offer three options per plugin: **patch**, **minor**,
 **major**. Show the current version and what each bump would produce.
 
-For example, if config-doctor is at 1.1.0:
+For example, if triage is at 1.1.0:
 
 - patch → 1.1.1
 - minor → 1.2.0
@@ -68,7 +70,7 @@ ask one question per plugin.
 Branch from `develop`. The branch name depends on what changed:
 
 - **Single plugin**: `release/<plugin-name>-v<new-version>`
-  Example: `release/config-doctor-v1.2.0`
+  Example: `release/triage-v1.2.0`
 - **Multiple plugins**: `release/<date>`
   Example: `release/2026-03-20`
 
@@ -80,14 +82,16 @@ git checkout -b <branch-name>
 
 ## Phase 4 — Bump versions
 
-For each plugin being released, update the version in **all three locations**:
+For each plugin being released, update the version in **all four locations**:
 
 1. **`plugins/<name>/.claude-plugin/plugin.json`** — the `"version"` field
 2. **`.claude-plugin/marketplace.json`** — the matching plugin entry's `"version"` field
-3. **Skill frontmatter** (if the plugin has skills) — the `version:` field in
+3. **`README.md`** — the plugin's row in the plugins table
+4. **Skill frontmatter** (only if the skill declares one; triage and
+   review-then-dry skills have no `version:` field) — the `version:` field in
    each `SKILL.md` under `plugins/<name>/skills/`
 
-Use the Edit tool for each file. After editing, verify all three locations
+Use the Edit tool for each file. After editing, verify all locations
 match by reading the changed values back.
 
 ## Phase 5 — Generate changelog
@@ -109,12 +113,12 @@ git diff-tree --no-commit-id --name-only -r <sha> -- plugins/
 Assign each commit to one of three buckets:
 
 - **Plugin-specific**: touches files under exactly one plugin's directory
-  (excluding `references/` subdirectories and documentation-only files like
+  (excluding docs-only `references/` files and documentation-only files like
   `CLAUDE.md`, `.markdownlint.yaml`).
 - **Shared**: touches files under two or more plugins.
 - **General fixes**: touches only non-functional files — documentation
-  (`CLAUDE.md`), lint config (`.markdownlint.yaml`), or `references/`
-  subdirectories. These are not code changes and should be noted but do not
+  (`CLAUDE.md`), lint config (`.markdownlint.yaml`), or docs-only
+  `references/` files. These are not code changes and should be noted but do not
   by themselves justify a version bump.
 
 If a plugin's only changes are general fixes (no plugin-specific or shared
@@ -124,19 +128,19 @@ the release or skip it.
 ### Format the changelog
 
 ```markdown
-## config-doctor 1.1.0 → 1.2.0
+## triage 1.1.0 → 1.2.0
 
-- feat: add new audit phase for hooks
-- fix: correct model assignment in skill-evaluator
+- feat: add stale-record reporting to triage-cleanup
+- fix: correct path resolution when no triage directory exists
 
-## scrum-toolkit 0.1.0 → 0.2.0
+## review-then-dry 1.1.1 → 1.2.0
 
-- feat: add velocity tracking to sprint plans
+- feat: add security lens to the review pass
 
 ## Shared
 
-- chore: agents format (config-doctor, scrum-toolkit)
-- fix: md lint (config-doctor, scrum-toolkit)
+- chore: agents format (triage, review-then-dry)
+- fix: md lint (triage, review-then-dry)
 
 ## General fixes
 
@@ -160,13 +164,14 @@ Stage all changed files and commit:
 git add .claude-plugin/marketplace.json
 git add plugins/*/.claude-plugin/plugin.json
 git add plugins/*/skills/*/SKILL.md
+git add README.md
 git add CHANGELOG.md
 git commit -m "release: <summary of bumps>"
 git push -u origin <branch-name>
 ```
 
 The commit message should list each plugin and its version bump, for example:
-`release: config-doctor 1.1.0 → 1.2.0, scrum-toolkit 0.1.0 → 0.2.0`
+`release: triage 1.1.0 → 1.2.0, review-then-dry 1.1.1 → 1.2.0`
 
 ## Phase 7 — Open PR to main
 
@@ -198,12 +203,12 @@ and merged.
 
 ### Tagging
 
-```bash
 After merging the release PR, run:
 
+```bash
 git checkout main
 git pull origin main
-git tag -a config-doctor/v1.2.0 -m "config-doctor v1.2.0"
+git tag -a triage/v1.2.0 -m "triage v1.2.0"
 git push origin --tags
 ```
 

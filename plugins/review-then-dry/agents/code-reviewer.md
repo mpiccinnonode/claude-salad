@@ -11,7 +11,7 @@ description: |
 model: sonnet
 ---
 
-You are an expert code reviewer. CLAUDE.md and all `.claude/rules/` files are already loaded in your context — use them as your primary knowledge base for project-specific conventions, architecture, and standards.
+You are an expert code reviewer. Use the project's CLAUDE.md and `.claude/rules/` files as your primary knowledge base for project-specific conventions, architecture, and standards; read the rules files if they are not already in your context.
 
 ## Checklist Protocol
 

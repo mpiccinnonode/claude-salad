@@ -59,13 +59,13 @@ project_context:
 - **Staged → Active:** when `hit_count >= 2` (violations in 2+ separate reviews)
 - **Staged → Removed:** when `added_date > 45 days` ago AND `hit_count == 0`
 - **Active → Frozen:** when `miss_streak` exceeds severity threshold
-- **Frozen → Active:** manual reset OR agent finds matching violation via `.claude/rules/` fallback
+- **Frozen → Active:** manual reset OR an accepted `[organic]` finding matches the frozen check (see Phase 3 Step 1)
 - **Suppression → Expired:** when `last_relevant > 90 days` ago
 - **Staged cap:** maximum 30 staged checks; when exceeded, evict oldest with `hit_count == 0` (FIFO)
 
 ## Safety Protocol
 
-Every write to `review-checklist.yaml` is performed by `${CLAUDE_PLUGIN_ROOT}/skills/lifecycled-code-review/scripts/safe-write-yaml.mjs` (spec §1.2.4):
+Every write to `review-checklist.yaml` is performed by `${CLAUDE_PLUGIN_ROOT}/skills/lifecycled-code-review/scripts/safe-write-yaml.mjs`:
 
 ```bash
 cat <<'YAML' | node "${CLAUDE_PLUGIN_ROOT}/skills/lifecycled-code-review/scripts/safe-write-yaml.mjs" --path <abs-path>

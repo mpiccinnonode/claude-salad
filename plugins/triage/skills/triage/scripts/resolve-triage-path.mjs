@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-// Serves: triage SKILL.md — storage path detection (Phase 6, Phase 1a active check).
+// Serves: triage SKILL.md — storage path detection (Phase 5 persist, Phase 1a active check).
 // Inputs (argv): --root <abs> --home <abs> [--path-only]
 // stdout (default): {"path":"<abs>","scope":"project"|"user"} | {"path":null,"scope":null}
-// stdout (--path-only): the resolved path, or an empty line if null (replaces the old python3 pluck).
+// stdout (--path-only): the resolved path, or an empty line if null.
 // Precedence: <root>/.claude/triage/  >  <root>/.claude/ exists  >  <home>/.claude/projects/<slug>/triage/  >  null.
 // slug = <root> with '/' -> '-'. Exit 0 on success; exit 2 + stderr on bad argv.
 import { statSync } from "node:fs";

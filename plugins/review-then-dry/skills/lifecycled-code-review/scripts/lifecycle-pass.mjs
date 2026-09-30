@@ -23,8 +23,7 @@
 //     "glob_warnings": [{ "id" }, ...]
 //   }
 //
-// Note on shape vs spec §1.2.1: spec shows `freeze` entries without `rule`,
-// but SKILL.md §Phase 0 step 5 presents "{id, rule, miss_streak, threshold}".
+// Note on shape: SKILL.md §Phase 0 step 5 presents "{id, rule, miss_streak, threshold}".
 // Including `rule` here preserves presentation parity; removing it would force
 // the skill body to re-parse the YAML, defeating the offload.
 
@@ -63,7 +62,7 @@ function loadYaml(path) {
   if (!statSync(path).isFile()) die(`not a regular file: ${path}`);
   let doc;
   try {
-    // JSON_SCHEMA keeps date-like strings as strings; plain data only, no custom type construction (decision #11).
+    // JSON_SCHEMA keeps date-like strings as strings; plain data only, no custom type construction.
     doc = yaml.load(readFileSync(path, "utf8"), { schema: yaml.JSON_SCHEMA });
   } catch (e) {
     const line = (e && e.message ? e.message : "unknown error").split("\n").pop();

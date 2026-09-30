@@ -36,7 +36,7 @@ Any staged check that now has `hit_count >= 2`: propose promotion to `active`.
 
 ## Step 4 — Enforce Staged Cap
 
-Offloaded to `${CLAUDE_PLUGIN_ROOT}/skills/lifecycled-code-review/scripts/evict-staged.mjs` (spec §1.2.3). First, merge new candidates into a scratch copy of the checklist, then run:
+Offloaded to `${CLAUDE_PLUGIN_ROOT}/skills/lifecycled-code-review/scripts/evict-staged.mjs`. First, merge new candidates into a scratch copy of the checklist, then run:
 
 ```bash
 node "${CLAUDE_PLUGIN_ROOT}/skills/lifecycled-code-review/scripts/evict-staged.mjs" --yaml <scratch-yaml-abs> --cap 30

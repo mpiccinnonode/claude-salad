@@ -66,7 +66,7 @@ Invoke `dry` via the `Skill` tool, passing the resolved file list from Step 1 as
 Skill(skill="review-then-dry:dry", args="<space-separated resolved file list from Step 1>")
 ```
 
-`/dry` accepts file paths as `$ARGUMENTS` and will skip its own resolution step when they are present, guaranteeing scope identity with Step 1.
+`/dry` resolves paths given as `$ARGUMENTS` first (no extension filter), guaranteeing scope identity with Step 1.
 
 Follow /dry's flow, including its "Present the Report" step — show the agent's full report verbatim, as /dry's own instructions require. Only **after** the complete report is on screen, override /dry's "end the turn" rule and add a triage loop (which /dry does not normally have). Do not collapse the report into the triage prompt — the condensed finding list in the triage message supplements the full report, it does not replace it:
 

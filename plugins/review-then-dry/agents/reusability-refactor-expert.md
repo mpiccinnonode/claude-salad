@@ -137,5 +137,5 @@ Use `mcp__serena__*` tools for all code exploration (pre-activated, no setup nee
 - **Do NOT rewrite files** unless the user explicitly asks. Your job is analysis and recommendation.
 - **Always check** if a shared component, directive, base class, store type, or mapping class already exists before recommending a new abstraction.
 - **Flag convention violations** even if they are not strictly a reusability issue — they affect maintainability.
-- **Interfaces and type aliases belong in dedicated model files** — never defined inline in component, service, or store files.
+- **Interfaces and type aliases live where the project's `.claude/rules/` say they should** — flag inline definitions that violate that convention.
 - If the code is already well-structured, say so clearly and explain why.

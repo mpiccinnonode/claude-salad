@@ -32,7 +32,7 @@ The split matters: the script can't be talked into deleting the wrong thing, and
 ### Triage records (`.claude/triage/*.yaml`)
 
 | Situation | Verdict | Confidence |
-|---|---|---|
+| --- | --- | --- |
 | `status: abandoned` | stale — explicitly given up | **high** |
 | `status: complete` AND every phase closed out | stale — work finished | **high** |
 | `status: complete` but a phase is still open | stale, but odd — surface the mismatch | medium |
@@ -49,7 +49,7 @@ Ages come from **git's last-commit date** for tracked files, falling back to mti
 ### Specs & plans (`specs/`, `plans/`, `docs/**/plans/`)
 
 | Situation | Verdict | Confidence |
-|---|---|---|
+| --- | --- | --- |
 | Path referenced by a `complete`/`abandoned` triage | stale — the work it described is over | **high** |
 | *Filename* matches a reference, but not the path | stale, but the match is a guess | medium |
 | Referenced by any non-finished triage | not a candidate — live work | — |

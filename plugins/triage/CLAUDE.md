@@ -5,7 +5,7 @@ storage-path convention — cleanup reads from exactly where triage writes.
 
 - Skill bodies: `skills/triage/SKILL.md`, `skills/triage-cleanup/SKILL.md`. In-plugin paths use `${CLAUDE_PLUGIN_ROOT}`.
 - Helper scripts: `skills/<skill>/scripts/*.mjs` — Node only, no shell/jq/python/yq.
-- Each script has a fixed argv signature + stdout contract documented in its header. Three triage scripts were ported 1:1 from POSIX `.sh`; parity is locked by golden-output tests in `test/`.
+- Each script has a fixed argv signature + stdout contract documented in its header. Golden-output tests in `test/` lock the behavior of the three scripts ported from POSIX `.sh`.
 - `discover-skills.mjs` additionally discovers MCP servers (project `.mcp.json`, `~/.claude.json` per-project entry, and plugin `.mcp.json`).
 - `triage-cleanup` is built on report → confirm → delete: `scan-stale.mjs` classifies stale candidates (deterministic; takes `--now` for testable age math, never deletes), the skill body presents and gates, and `delete-targets.mjs` removes only the confirmed list — refusing any path outside its `--allow-root` jails. Git-merged/tracked checks stay in the skill body (heuristic, not deterministic).
 - Two sanctioned cross-skill references, both because the skills must agree or they silently diverge (see `skills/triage/references/offload-scripts.md` §Exception):

@@ -42,7 +42,7 @@ function main() {
   let doc;
   try {
     // JSON_SCHEMA keeps date-like strings as strings (DEFAULT_SCHEMA coerces them to Date objects).
-    // Plain data only, no custom type construction (decision #11).
+    // Plain data only, no custom type construction.
     doc = yaml.load(readFileSync(yamlPath, "utf8"), { schema: yaml.JSON_SCHEMA });
   } catch (e) {
     die(`failed to parse yaml: ${yamlPath}`, 1);

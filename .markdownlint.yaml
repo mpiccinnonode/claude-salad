@@ -1,5 +1,5 @@
 # markdownlint config for claude-salad
-# A pure-markdown Claude Code plugin marketplace — files use YAML frontmatter and HTML tags in agent descriptions.
+# Claude Code plugin marketplace, mostly markdown — files use YAML frontmatter and HTML tags in agent descriptions.
 
 default: true
 

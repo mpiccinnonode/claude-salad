@@ -2,7 +2,7 @@
 name: review-then-dry
 description: |
   Use to run /lifecycled-code-review and /dry in sequence on the same target files and produce a single
-  unified findings spec covering correctness, standards, verbosity, and reuse/extraction.
+  unified findings spec covering correctness, security, standards, verbosity, and reuse/extraction.
 
   Fire when the user:
   - Types `/review-then-dry`
@@ -20,8 +20,8 @@ Orchestrator that runs `/lifecycled-code-review` and `/dry` in sequence on the s
 
 ## When this fires vs adjacent skills
 
-- **`/review-then-dry` (this skill):** Correctness + verbosity + reuse in one flow, one unified spec at the end.
-- **`/lifecycled-code-review`:** Correctness, standards, verbosity. Writes its own findings spec.
+- **`/review-then-dry` (this skill):** Correctness + security + verbosity + reuse in one flow, one unified spec at the end.
+- **`/lifecycled-code-review`:** Correctness, security, standards, verbosity. Writes its own findings spec.
 - **`/dry`:** Reuse, extraction, deduplication. Read-only, no spec.
 
 If the user only wants one of the two passes, fire the underlying skill directly — do not invoke this orchestrator.
@@ -53,7 +53,7 @@ Before /lifecycled-code-review's instructions take over, prepend the following f
 
 Follow /lifecycled-code-review's flow including the user triage loop. When you reach the point where Findings Spec Generation would start, **stop and return to this skill's instructions** — do not let /lifecycled-code-review emit its own spec or its own session-end "next steps" message. Retain in working memory:
 
-- The full review report (Critical / Major / Minor / Simplification / Well-Structured Patterns / Action Summary)
+- The full review report (Security / Critical / Major / Minor / Simplification / Well-Structured Patterns / Action Summary)
 - The user's triage decisions per finding (Accept / Reject / Skip)
 - The branch slug
 - The **resolved target file list** — the actual paths /lifecycled-code-review audited, not the raw `$ARGUMENTS`. You will pass these to /dry verbatim.
@@ -66,7 +66,7 @@ Invoke `dry` via the `Skill` tool, passing the resolved file list from Step 1 as
 Skill(skill="review-then-dry:dry", args="<space-separated resolved file list from Step 1>")
 ```
 
-`/dry` accepts file paths as `$ARGUMENTS` and will skip its own resolution step when they are present, guaranteeing scope identity with Step 1.
+`/dry` resolves paths given as `$ARGUMENTS` first (no extension filter), guaranteeing scope identity with Step 1.
 
 Follow /dry's flow, including its "Present the Report" step — show the agent's full report verbatim, as /dry's own instructions require. Only **after** the complete report is on screen, override /dry's "end the turn" rule and add a triage loop (which /dry does not normally have). Do not collapse the report into the triage prompt — the condensed finding list in the triage message supplements the full report, it does not replace it:
 
@@ -103,7 +103,7 @@ spec-type: review-then-dry-findings
 
 Unified findings from `/lifecycled-code-review` + `/dry` on branch `{branch}`, reviewed {YYYY-MM-DD}.
 
-- **Correctness/standards/verbosity fixes:** {N_cr} ({accepted_cr} accepted, {skipped_cr} deferred, {rejected_cr} rejected)
+- **Security/correctness/standards/verbosity fixes:** {N_cr} ({accepted_cr} accepted, {skipped_cr} deferred, {rejected_cr} rejected)
 - **Reuse/extraction fixes:** {N_dry} ({accepted_dry} accepted, {skipped_dry} deferred, {rejected_dry} rejected)
 
 Resolve in a future session by setting `status: approved`, then implementing the accepted fixes from the spec.
@@ -125,11 +125,12 @@ Resolve in a future session by setting `status: approved`, then implementing the
 
 Ordering rule for the merged list:
 
-1. Critical correctness from `/lifecycled-code-review`
-2. Major correctness/standards from `/lifecycled-code-review`
-3. Reuse/extraction fixes from `/dry` (these typically touch shared abstractions — group them so the refactor lands cohesively)
-4. Verbosity fixes from `/lifecycled-code-review` (low-risk leanness changes, safe to do last)
-5. Minor correctness from `/lifecycled-code-review`
+1. Security fixes from `/lifecycled-code-review`, by severity (a vulnerability outranks any bug of the same severity)
+2. Critical correctness from `/lifecycled-code-review`
+3. Major correctness/standards from `/lifecycled-code-review`
+4. Reuse/extraction fixes from `/dry` (these typically touch shared abstractions — group them so the refactor lands cohesively)
+5. Verbosity fixes from `/lifecycled-code-review` (low-risk leanness changes, safe to do last)
+6. Minor correctness from `/lifecycled-code-review`
 
 The Deferred, Execution Order, and Implementation Plan sections follow `/lifecycled-code-review`'s format. The Execution Order section should reflect the ordering rule above and group interdependent reuse fixes together.
 

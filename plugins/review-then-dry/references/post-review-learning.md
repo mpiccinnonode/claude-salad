@@ -12,10 +12,11 @@ If no checklist file exists AND no findings were accepted/rejected, skip Phase 3
 For each finding from the review, based on the user's action and the finding's tag:
 
 | User Action | Finding Tag | Checklist Update |
-|---|---|---|
+| --- | --- | --- |
 | Accepted | `[check:{id}]` | **Hit:** increment `hit_count`, reset `miss_streak` to 0, set `last_hit` to today |
 | Accepted | `[staged]` + `[check:{id}]` | Same as above — staged checks track hits identically |
 | Accepted | `[organic]` | **New check candidate:** generate a staged check from this finding |
+| Accepted | `[organic]` + `[security:{category}]` | **Security check candidate:** as `[organic]`, but severity `critical` and tags `[security]` so it takes the slowest freeze threshold |
 | Accepted | `[verbosity:{pattern}]` | **Verbosity check candidate:** if a `verbosity-{pattern}` check already exists, treat as a hit. Otherwise generate a staged check with id `verbosity-{pattern}`, severity `minor`, tags `[verbosity]`, rule text summarizing the pattern |
 | Rejected | `[verbosity:{pattern}]` | **Suppression candidate:** generate a suppression scoped to that verbosity pattern (prevents re-flagging in future reviews where the verbosity is intentional — e.g., boundary validation the agent misread as defensive-duplicate) |
 | Rejected | Any other tag | **Suppression candidate:** generate a suppression entry |
@@ -35,7 +36,7 @@ Any staged check that now has `hit_count >= 2`: propose promotion to `active`.
 
 ## Step 4 — Enforce Staged Cap
 
-Offloaded to `${CLAUDE_PLUGIN_ROOT}/skills/lifecycled-code-review/scripts/evict-staged.mjs` (spec §1.2.3). First, merge new candidates into a scratch copy of the checklist, then run:
+Offloaded to `${CLAUDE_PLUGIN_ROOT}/skills/lifecycled-code-review/scripts/evict-staged.mjs`. First, merge new candidates into a scratch copy of the checklist, then run:
 
 ```bash
 node "${CLAUDE_PLUGIN_ROOT}/skills/lifecycled-code-review/scripts/evict-staged.mjs" --yaml <scratch-yaml-abs> --cap 30

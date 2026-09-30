@@ -1,9 +1,0 @@
-{
-  "name": "scrum-toolkit",
-  "version": "2.2.0",
-  "description": "Full SCRUM lifecycle toolkit — ceremonies, PM/PO authoring, and DevOps actions with GitHub integration.",
-  "author": { "name": "mpiccinnonode" },
-  "repository": "https://github.com/mpiccinnonode/claude-salad",
-  "license": "MIT",
-  "keywords": ["scrum", "agile", "roadmap", "sprint", "planning", "devops", "github", "ceremonies", "retrospective", "standup"]
-}

@@ -11,6 +11,13 @@
 export const TRIAGE_STATUSES = ["draft", "in_progress", "complete", "abandoned"];
 export const PHASE_STATUSES = ["pending", "complete", "skipped"];
 
+// Reproducibility of a Bug Fix. Anything but `confirmed` means nobody has watched it
+// fail, so the flow may only gather evidence — see FIX_PHASES.
+export const REPRODUCIBILITY = ["confirmed", "unreproducible", "unknown"];
+
+// Phases that produce a patch. Forbidden while reproducibility is not `confirmed`.
+export const FIX_PHASES = ["Implementation", "Fix"];
+
 // Extract a single top-level scalar `^field: value`; strip a leading and a trailing
 // quote independently (mirrors the original awk gsub behavior, which golden-output
 // tests lock). Does NOT trim — callers that want trimming ask for it.
@@ -25,6 +32,13 @@ export function yamlField(content, field) {
 // (the top-level record status has no indent).
 export function phaseStatuses(content) {
   return [...content.matchAll(/^[ \t]+status:[ \t]*(\S+)/gm)].map((m) => m[1].replace(/["']/g, ""));
+}
+
+// Phase names under `phases:` — the flow as actually recorded (abstract_flow mirrors
+// it by invariant, so reading one is enough).
+export function phaseNames(content) {
+  return [...content.matchAll(/^[ \t]*-[ \t]+phase:[ \t]*(.+)$/gm)]
+    .map((m) => m[1].trim().replace(/^["']/, "").replace(/["']$/, ""));
 }
 
 // The record's creation date. Records in the wild use both spellings; `created` is

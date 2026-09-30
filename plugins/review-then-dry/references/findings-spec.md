@@ -93,7 +93,7 @@ Guidelines for writing each fix section:
 - **{title}** — {one-line reason for deferral}
 ```
 
-Include findings from the review that were identified but explicitly recommended for deferral (from the Refactoring Opportunities section or findings the agents flagged as low-priority). Also include any finding the user marked as **Skip** with a note that it was deferred by the reviewer.
+Include findings the agents flagged as low-priority or recommended for deferral. Also include any finding the user marked as **Skip** with a note that it was deferred by the reviewer.
 
 **Execution order section:**
 

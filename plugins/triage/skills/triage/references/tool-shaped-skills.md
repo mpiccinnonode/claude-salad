@@ -6,7 +6,7 @@ are not phase-shaped — tools that augment whichever phase the user is in.
 Some skills aren't phase-shaped. They're tools that augment whichever phase the user is in: a code-structure search skill speeds up Exploration, Debugging, and Implementation alike; a library-docs lookup fires whenever the task touches a named framework. After the per-phase mapping above, run a second pass against the same candidate list using these intent signals:
 
 | Tool shape | Match on descriptions mentioning… |
-|---|---|
+| --- | --- |
 | **Code understanding** | code structure search, AST traversal, symbol lookup, "instead of reading full files", structural code exploration, tree-sitter |
 | **Library docs** | library/framework/SDK documentation, API syntax lookup, version migration, library-specific debugging, "use when user asks about <lib>" |
 | **Memory recall** | persistent cross-session memory, prior-session lookup, "did we solve this before", cross-session search |

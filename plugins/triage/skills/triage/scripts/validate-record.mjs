@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Serves: triage SKILL.md — Phase 6 post-write check on a triage record.
+// Serves: triage SKILL.md — Phase 5 post-write check on a triage record.
 // The deterministic guard on the schema: a record that passes here stays readable by
 // triage-recall (--active) and classifiable by scan-stale (cleanup). Without it the
 // lifecycle drifts — off-schema statuses and misspelled date fields make a record
@@ -12,7 +12,7 @@
 // violations, 2 + stderr on bad argv or unreadable file.
 import { readFileSync, statSync } from "node:fs";
 import { isAbsolute } from "node:path";
-import { yamlField, phaseStatuses, PHASE_STATUS_ALIASES, TRIAGE_STATUSES, PHASE_STATUSES } from "./yaml-fields.mjs";
+import { yamlField, phaseStatuses, phaseNames, PHASE_STATUS_ALIASES, TRIAGE_STATUSES, PHASE_STATUSES, REPRODUCIBILITY, FIX_PHASES } from "./yaml-fields.mjs";
 
 function die(msg) { process.stderr.write(`validate-record: ${msg}\n`); process.exit(2); }
 
@@ -75,6 +75,34 @@ for (const s of phaseStatuses(content)) {
       ? `off-schema synonym — write "${canonical}" instead`
       : `off-schema — must be one of ${PHASE_STATUSES.join("|")}`,
   });
+}
+
+// --- reproducibility gate --------------------------------------------------
+// A bug nobody has watched fail cannot be patched, only investigated. Letting the
+// record carry a fix phase anyway is exactly how a guess ships as a patch, so the
+// flow is rejected here rather than left to the reader's judgement.
+const classification = yamlField(content, "classification").trim();
+const repro = yamlField(content, "reproducibility").trim();
+if (repro && !REPRODUCIBILITY.includes(repro)) {
+  violations.push({
+    field: "reproducibility",
+    value: repro,
+    message: `off-schema — must be one of ${REPRODUCIBILITY.join("|")}`,
+  });
+} else if (classification === "Bug Fix" && !repro) {
+  violations.push({
+    field: "reproducibility",
+    value: "",
+    message: "missing — required on Bug Fix records, so an unreproduced bug cannot route to a patch",
+  });
+} else if (repro && repro !== "confirmed") {
+  for (const p of phaseNames(content).filter((n) => FIX_PHASES.includes(n))) {
+    violations.push({
+      field: "phases[].phase",
+      value: p,
+      message: `reproducibility is "${repro}" — the flow may only gather evidence; drop this phase or confirm the reproduction first`,
+    });
+  }
 }
 
 if (json) {

@@ -15,15 +15,16 @@ at the plugin root `scripts/` folder:
 "${CLAUDE_PLUGIN_ROOT}"/scripts/<operation>.mjs        # shared across skills in this plugin
 ```
 
-A script is only ever called by its owning SKILL.md. Cross-skill calls are forbidden — if two
-skills need the same logic, each gets its own copy. **Exception:** `scripts/get-review-targets.mjs`
-is shared between `lifecycled-code-review` and `dry` (decision #7 in the design spec). This is the
-sole permitted cross-skill call in this plugin; all other scripts are skill-local.
+A script is called by its owning SKILL.md. Cross-skill calls are avoided; if two skills need the
+same logic, share the one script rather than copying it. Shared scripts in use:
+`scripts/get-review-targets.mjs` (`lifecycled-code-review` and `dry`), and `lifecycle-pass.mjs`
+and `safe-write-yaml.mjs` (`lifecycled-code-review` and `checklist-lifecycle`). All other scripts
+are skill-local.
 
 ## Extension choice
 
 This plugin is **Node-only** — no `.sh` files, no `jq`, no `yq`. YAML parsing is done via the
-vendored `scripts/vendor/js-yaml.mjs` (decision #2 and #11 in the design spec). All scripts use
+vendored `scripts/vendor/js-yaml.mjs`. All scripts use
 the `.mjs` extension.
 
 Do not introduce other runtimes or external binaries.

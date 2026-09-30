@@ -6,7 +6,7 @@ claude-salad is a multi-plugin marketplace for Claude Code. Most plugins are pur
 
 ```bash
 npx markdownlint-cli2 "**/*.md"        # lint all markdown (matches CI)
-npx markdownlint-cli2 "plugins/config-doctor/**/*.md"  # lint one plugin
+npx markdownlint-cli2 "plugins/triage/**/*.md"  # lint one plugin
 ```
 
 CI runs this on every push to `main` and on pull requests via `.github/workflows/lint.yml`. Config lives in `.markdownlint.yaml` at the repo root.
@@ -21,7 +21,7 @@ plugins/<plugin-name>/    # Each plugin is self-contained
   .claude-plugin/
     plugin.json           # Plugin metadata (name, version, author, repo)
   CLAUDE.md               # Plugin-specific conventions (agent frontmatter, skill flags, etc.)
-  agents/                 # Agent definitions — deployed to user's .claude/agents/ on install
+  agents/                 # Agent definitions — loaded from the plugin, namespaced <plugin>:<agent>
   skills/                 # Skill definitions (not all plugins have skills)
   scripts/ or test/       # Optional — runtime helper scripts + their tests, for plugins with executable logic
   package.json            # Optional — only for plugins that ship a Node test suite (e.g. triage)
@@ -30,7 +30,7 @@ plugins/<plugin-name>/    # Each plugin is self-contained
 ## Conventions
 
 - **Plugin independence**: each plugin under `plugins/` is fully self-contained with its own CLAUDE.md, agents, skills, and plugin.json. No shared agents across plugins.
-- **Version sync**: a plugin's version appears in three places that must stay in sync — `plugins/<name>/.claude-plugin/plugin.json` (source of truth), the matching entry in `.claude-plugin/marketplace.json`, and any `version:` field in skill frontmatter. Update all three together.
+- **Version sync**: a plugin's version appears in four places that must stay in sync — `plugins/<name>/.claude-plugin/plugin.json` (source of truth), the matching entry in `.claude-plugin/marketplace.json`, the plugin's row in the root `README.md` table, and any `version:` field in skill frontmatter (not every plugin has one). Update all together.
 - **Agent frontmatter**: every agent `.md` file requires `name:`, `description:` (with `<example>` blocks), and `model:` fields in YAML frontmatter. See each plugin's CLAUDE.md for model assignments.
 - **Runtime scripts & tests are allowed**: a plugin may ship runtime helper scripts (Node `.mjs`, no transpile step) and a self-contained test suite (`node --test`, zero deps) when its skill needs executable logic. Keep them minimal and dependency-free — avoid heavyweight build tooling, bundlers, or compiled artifacts. Markdown-only plugins remain the norm.
 - **Markdown lint**: all markdown files are validated by CI. Run `npx markdownlint-cli2 "**/*.md"` locally before pushing.

@@ -8,6 +8,7 @@ Claude Code plugins by mpiccinnonode -- task triage, code review, and more.
 | --- | --- | --- |
 | [triage](plugins/triage/) | 1.1.1 | Advisory task classifier that routes tasks to the best available skill, agent, or MCP server |
 | [review-then-dry](plugins/review-then-dry/) | 1.2.0 | Chained code-review + reuse audit producing one unified findings spec. Node-only, Windows-portable |
+| [capabilities](plugins/capabilities/) | 1.0.0 | Answers "have we already built this?" by reading every CAPABILITIES.md in the GitHub org. Needs `gh` logged in |
 
 ## Installation
 
@@ -31,6 +32,10 @@ claude
 
 ```bash
 /plugin install review-then-dry
+```
+
+```bash
+/plugin install capabilities
 ```
 
 ### 4. Restart Claude Code

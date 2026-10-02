@@ -28,7 +28,7 @@ node "${CLAUDE_PLUGIN_ROOT}/skills/capabilities/scripts/fetch-index.mjs"
 ## 2. Match the request
 
 - If the request is too vague to match (one generic word), ask one short question about what it is for, then continue.
-- Match by meaning: "firma dei documenti" matches "FEA", "OTP", "firma digitale"; "app per i soci" matches a mobile app for members. Consider capabilities, integrations, domain, client and notes.
+- Match by meaning: "firma dei documenti" matches "FEA", "OTP", "firma digitale"; "app per i soci" matches a mobile app for members. Consider "Cosa sa fare", "Servizi esterni", "Da sapere", domain and client.
 - Apply frontmatter filters the user states: stack, client, domain, `status` (e.g. "solo progetti attivi").
 - Grade every hit:
   - **Stessa cosa** — the capability does what was asked.
@@ -47,7 +47,7 @@ The reader may not be technical. Write in the user's language, plain words first
    ### <Project name> — <client> · <Stessa cosa | Simile | Stesso ambito>
    <One or two sentences on what it does there, without jargon.>
    - Dove guardare: [<path>](<blob-url>/<path>)
-   - Da sapere: <relevant item from Note, if any>
+   - Da sapere: <relevant item from "Da sapere", if any>
    ```
 
 3. Mention a `dormant` status ("progetto fermo da oltre un anno") — the code may be outdated.

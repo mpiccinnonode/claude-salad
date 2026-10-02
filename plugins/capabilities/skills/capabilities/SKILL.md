@@ -38,7 +38,7 @@ node "${CLAUDE_PLUGIN_ROOT}/skills/capabilities/scripts/fetch-index.mjs"
 
 ## 3. Answer
 
-The reader may not be technical. Write in the user's language, plain words first, technical detail last.
+The reader is usually not technical. Write in the user's language, in plain words.
 
 1. One opening sentence: yes / partially / no, and where.
 2. One block per project, best match first, at most 5:
@@ -46,11 +46,10 @@ The reader may not be technical. Write in the user's language, plain words first
    ```markdown
    ### <Project name> — <client> · <Stessa cosa | Simile | Stesso ambito>
    <One or two sentences on what it does there, without jargon.>
-   - Dove guardare: [<path>](<blob-url>/<path>)
    - Da sapere: <relevant item from "Da sapere", if any>
    ```
 
 3. Mention a `dormant` status ("progetto fermo da oltre un anno") — the code may be outdated.
 4. If nothing matches, say so plainly and name the closest domain, if any, so the user knows whom to ask.
 
-Skip the stack and the paths' internals unless the user is clearly technical or asks for them.
+No file paths, code links or stack by default. Add them — as `[<path>](<blob-url>/<path>)` links — only when the user asks where the code is or is clearly a developer.

@@ -41,3 +41,15 @@ Four-skill suite backported from personal `~/.claude` skills: `lifecycled-code-r
     `?`, `{a,b}`, and comma-separated globs, which real checklists use.
   - Mod tests are `hooks/*.test.ts`, run by `claude plugin test plugins/review-then-dry`; `npm test`
     is scoped to `test/*.test.mjs` because Node ≥ 22 would otherwise pick up the `.ts` files.
+- The same module holds the report-relay gate (`hooks/relay.ts`), which enforces Post-Review Flow
+  step 1 ("present the report") instead of only describing it. Agent tool results never reach
+  the user, and two rounds of skill rewording didn't stop the model from triaging a report it
+  had only read.
+  - A main-loop `Agent` call to a `review-then-dry:*` agent marks its report pending, by length.
+  - Assistant text appended on the main loop (`session.append`, door `response`) counts toward
+    relaying it: 30% of the report's length, capped at 1,500 chars.
+  - While a report is pending, the first `AskUserQuestion` is denied with a "present the report
+    first" reason. Only one deny per report, so a wrong guess costs one retry and never loops.
+  - Inline triage questions (plain text, no `AskUserQuestion`) are not gated.
+  - Tests raise `session.append` and swallow its rejection: the test kit has no bottom for that
+    event, and the hook has already counted the row before calling `next`.

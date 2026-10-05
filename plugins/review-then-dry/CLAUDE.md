@@ -26,3 +26,18 @@ Four-skill suite backported from personal `~/.claude` skills: `lifecycled-code-r
   Claude is supposed to relay.
 - Run tests: `npm test` (uses node:test). Run `npm install` first to pull the js-yaml
   devDependency for the parity test.
+- `hooks/register.ts` (named under `modules` in `hooks/hooks.json`, beside the command hook) is
+  the checklist-whisper mod: after an `Edit`/`Write` succeeds on a file matching an `active`
+  check's `applies_to`, it appends `Project rule <id> (<severity>): <rule>` as model-only
+  context, once per file per check per load. Never denies. Needs Claude Code ≥ 2.1.287; older
+  builds ignore `modules` and keep the heartbeat.
+  - `active` only: a `staged` check earns promotion by real review hits, and whispering it would
+    pre-empt exactly the violations that prove it. `frozen` checks are frozen because nobody
+    violates them.
+  - It imports the vendored `scripts/vendor/js-yaml.mjs` (pure ESM, runs in the mod sandbox)
+    instead of a sidecar or a hand parser: one source of truth, and real checklists use folded
+    `>` and multi-line scalars. Unparseable YAML → silence; the review flow reports it.
+  - Glob matching is a small glob→regex in `hooks/whisper.ts` (`$` has none): `**/`, `**`, `*`,
+    `?`, `{a,b}`, and comma-separated globs, which real checklists use.
+  - Mod tests are `hooks/*.test.ts`, run by `claude plugin test plugins/review-then-dry`; `npm test`
+    is scoped to `test/*.test.mjs` because Node ≥ 22 would otherwise pick up the `.ts` files.

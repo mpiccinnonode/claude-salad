@@ -1,0 +1,18 @@
+{
+  "name": "done-gate",
+  "version": "0.1.0",
+  "description": "Mod that keeps Claude from calling a coding turn done when it edited source files and ran none of the project's checks afterwards.",
+  "author": { "name": "mpiccinnonode" },
+  "repository": "https://github.com/mpiccinnonode/claude-salad",
+  "license": "MIT",
+  "keywords": ["verification", "tests", "lint", "stop-hook", "mod"],
+  "userConfig": {
+    "mode": {
+      "type": "string",
+      "title": "When checks were skipped",
+      "description": "off: do nothing. warn: one line under the answer. block: send Claude back once to run the checks (then warn).",
+      "options": ["off", "warn", "block"],
+      "default": "warn"
+    }
+  }
+}

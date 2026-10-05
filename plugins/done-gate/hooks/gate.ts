@@ -7,6 +7,9 @@ const DETECT: [marker: RegExp, label: string, re: RegExp][] = [
   [/\.(csproj|sln|slnx)$/, 'dotnet test|build', /\bdotnet\s+(test|build)\b/],
   [/^pubspec\.yaml$/, 'flutter test|analyze', /\bflutter\s+(test|analyze)\b/],
   [/^package\.json$/, 'npm test|run lint', /\bnpm\s+(test|t|run\s+lint)\b/],
+  // ponytail: the tool name anywhere counts, so `uv run`/`poetry run`/`python -m` wrappers pass too
+  [/^(pyproject\.toml|setup\.(py|cfg)|tox\.ini|pytest\.ini|requirements[\w.-]*\.txt)$/, 'pytest|ruff check|mypy|tox',
+    /(?<![\w.-])(pytest|tox|nox|mypy|pyright|flake8)(?![\w.-])|\bruff\s+check\b|-m\s+unittest\b/],
 ]
 
 const DOCS = /(^|\/)(docs?|\.claude)\/|\.(md|mdx|txt|rst|adoc)$/i

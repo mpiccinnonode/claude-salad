@@ -8,6 +8,7 @@ Claude Code plugins by mpiccinnonode -- task triage, code review, and more.
 | --- | --- | --- |
 | [triage](plugins/triage/) | 1.1.1 | Advisory task classifier that routes tasks to the best available skill, agent, or MCP server |
 | [review-then-dry](plugins/review-then-dry/) | 1.2.0 | Chained code-review + reuse audit producing one unified findings spec. Node-only, Windows-portable |
+| [context-diet](plugins/context-diet/) | 0.1.0 | Mod that trims session-start context: hides chosen skills from the listing and, opt-in, strips the superpowers gatekeeper. Needs Claude Code >= 2.1.287 |
 | [done-gate](plugins/done-gate/) | 0.1.0 | Mod that flags (or blocks) a coding turn that edited sources without running the project's checks afterwards. Needs Claude Code >= 2.1.287 |
 
 ## Installation
@@ -32,6 +33,10 @@ claude
 
 ```bash
 /plugin install review-then-dry
+```
+
+```bash
+/plugin install context-diet
 ```
 
 ```bash

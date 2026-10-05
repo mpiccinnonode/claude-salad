@@ -35,3 +35,16 @@ You don't have to remember to run it. A `SessionStart` hook checks the triage di
 --frequency 24     hours between checks (0 checks every session)
 --min-flagged 5    how many likely-dead records alone are worth mentioning
 ```
+
+### Record check
+
+Every triage record is checked against the schema when it's written, because a record with an off-schema `status` or a misspelled date field becomes invisible to recall and cleanup. The skill already runs that check as a step. In Claude Code ≥ 2.1.287 a mod also runs it automatically after every `Write` or `Edit` to a record, and hands any violations straight to Claude to fix, so the check no longer depends on Claude remembering the step. Older builds silently ignore the mod and keep the skill's own step. It runs a command through the mod API, which is documented as CLI-only. Wherever that isn't available, the mod stays silent and the skill's step still covers it.
+
+Mods are not sandboxed, so this is what you install. From `claude plugin validate plugins/triage`:
+
+```text
+❯ ./register.ts hooks: tool.call{tool=Write}, tool.call{tool=Edit}
+❯ ./register.ts calls: $.process.run (via check)
+```
+
+The one command it runs is `node <plugin>/skills/triage/scripts/validate-record.mjs --file <record>`. It never blocks a write.

@@ -18,3 +18,14 @@ storage-path convention — cleanup reads from exactly where triage writes.
   - Speaks only when something is actionable: `autoDeletable ≥ 1`, or `needsRepair ≥ 1`, or flagged records ≥ `--min-flagged` (default 5). A directory whose every candidate is flag-only has no safe move behind it, and offering cleanup anyway is a recurring nag.
   - `needsRepair` is keyed on the schema's own field names, not on the tolerant read, so it reaches the same verdict as `validate-record.mjs`. Repair cases are never counted as "likely dead".
 - Run tests: `npm test` (uses node:test, no deps).
+- `hooks/register.ts` (named under `modules` in `hooks/hooks.json`, beside the heartbeat) is a mod
+  that runs `validate-record.mjs` after every successful `Write`/`Edit` to a record, meaning a
+  `.yaml` directly under `.claude/triage/` or `~/.claude/projects/<slug>/triage/`. On exit 1 it
+  hands the violations to the model as context (the user doesn't see it). This is the measured drift above, caught at the
+  write instead of left to the skill remembering Phase 5's validate step. That step stays, for
+  builds older than 2.1.287 and for renames done with `mv`, which raise no `Write`.
+  - It shells out through `$.process.run` (`node` + the script), because a mod has no Node and the
+    validator needs `yaml-fields.mjs`. `$.process` is documented CLI-only: where the call fails, the
+    mod stays silent.
+  - Mod tests are `hooks/*.test.ts`, run by `claude plugin test plugins/triage`; `npm test` is
+    scoped to `test/*.test.mjs` because Node ≥ 22 would otherwise pick up the `.ts` files.

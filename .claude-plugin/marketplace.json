@@ -19,6 +19,12 @@
       "version": "1.2.0",
       "source": "./plugins/review-then-dry",
       "description": "Chained code-review + reuse audit producing one unified findings spec. Node-only, Windows-portable."
+    },
+    {
+      "name": "done-gate",
+      "version": "0.1.0",
+      "source": "./plugins/done-gate",
+      "description": "Mod that flags (or blocks) a coding turn that edited sources without running the project's checks afterwards. Needs Claude Code >= 2.1.287."
     }
   ]
 }

@@ -1,0 +1,33 @@
+name: Mods
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  mods:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # Pinned: the function-hooks API is early access; bump deliberately (mods need >= 2.1.287).
+      - name: Install Claude Code
+        run: npm install -g @anthropic-ai/claude-code@2.1.289
+
+      - name: Validate and test every plugin that ships a hooks module
+        run: |
+          for f in plugins/*/hooks/hooks.json; do
+            grep -q '"modules"' "$f" || continue
+            dir=$(dirname "$(dirname "$f")")
+            echo "::group::$dir"
+            claude plugin validate "$dir"
+            # --strict minus one warning: plugin CLAUDE.md files are repo dev notes, deliberately not loaded.
+            claude plugin validate --json "$dir" | jq -e '[.manifest, .contents[]] | map(.errors + [.warnings[] | select(.message | startswith("CLAUDE.md at the plugin root") | not)]) | add | length == 0' > /dev/null
+            claude plugin test "$dir"
+            echo "::endgroup::"
+          done

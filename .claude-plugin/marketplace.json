@@ -19,6 +19,12 @@
       "version": "1.2.0",
       "source": "./plugins/review-then-dry",
       "description": "Chained code-review + reuse audit producing one unified findings spec. Node-only, Windows-portable."
+    },
+    {
+      "name": "context-diet",
+      "version": "0.1.0",
+      "source": "./plugins/context-diet",
+      "description": "Mod that trims session-start context: hides chosen skills from the listing and, opt-in, strips the superpowers gatekeeper. Needs Claude Code >= 2.1.287."
     }
   ]
 }

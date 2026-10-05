@@ -45,6 +45,7 @@ With no config, done-gate looks at the project root:
 | `*.sln`, `*.slnx`, `*.csproj` | `dotnet test`, `dotnet build` |
 | `pubspec.yaml` | `flutter test`, `flutter analyze` |
 | `package.json` | `npm test`, `npm run lint` |
+| `pyproject.toml`, `setup.py`, `setup.cfg`, `tox.ini`, `pytest.ini`, `requirements*.txt` | `pytest`, `ruff check`, `mypy`, `pyright`, `flake8`, `tox`, `nox`, `python -m unittest` (also through `uv run`, `poetry run`, `python -m`) |
 
 A root with none of these means done-gate stays silent: it can't tell what "checked" would mean.
 

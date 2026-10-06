@@ -1,0 +1,11 @@
+{
+  "name": "capabilities-plugin",
+  "version": "1.0.0",
+  "description": "Finds what the team already built across the org's projects by reading each repo's CAPABILITIES.md.",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "test": "node --test"
+  }
+}

@@ -31,6 +31,12 @@
       "version": "0.1.0",
       "source": "./plugins/done-gate",
       "description": "Mod that flags (or blocks) a coding turn that edited sources without running the project's checks afterwards. Needs Claude Code >= 2.1.287."
+    },
+    {
+      "name": "capabilities",
+      "version": "1.0.0",
+      "source": "./plugins/capabilities",
+      "description": "Answers \"have we already built this?\" by reading every CAPABILITIES.md in the GitHub org. For technical and non-technical colleagues."
     }
   ]
 }

@@ -1,5 +1,9 @@
 # Changelog
 
+## capabilities 1.0.0
+
+- feat(capabilities): add /capabilities — finds what the team already built by reading every CAPABILITIES.md in the GitHub org
+
 ## review-then-dry 1.1.1 → 1.2.0
 
 - feat(review-then-dry): add security lens to the review pass

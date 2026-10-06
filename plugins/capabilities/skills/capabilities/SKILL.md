@@ -52,4 +52,4 @@ The reader is usually not technical. Write in the user's language, in plain word
 3. Mention a `dormant` status ("progetto fermo da oltre un anno") — the code may be outdated.
 4. If nothing matches, say so plainly and name the closest domain, if any, so the user knows whom to ask.
 
-No file paths, code links or stack by default. Add them — as `[<path>](<blob-url>/<path>)` links — only when the user asks where the code is or is clearly a developer.
+Technologies may be named, names only: "app in Ionic", "backend .NET" — no versions, no technical detail. No file paths or code links by default; add them — as `[<path>](<blob-url>/<path>)` links — only when the user asks where the code is or is clearly a developer.

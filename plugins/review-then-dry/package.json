@@ -6,7 +6,7 @@
   "type": "module",
   "engines": { "node": ">=18" },
   "scripts": {
-    "test": "node --test",
+    "test": "node --test test/*.test.mjs",
     "migrate": "node ../../scripts/migrate-review-then-dry.mjs"
   },
   "devDependencies": {

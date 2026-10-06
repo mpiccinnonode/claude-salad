@@ -1,5 +1,23 @@
 # Changelog
 
+## triage 1.1.1 → 1.2.0
+
+- feat(triage): validate triage records on write via a mod
+
+## review-then-dry 1.2.0 → 1.3.0
+
+- feat(review-then-dry): add checklist-whisper mod
+- feat(review-then-dry): add report-relay gate mod
+
+## context-diet 0.1.0
+
+- feat(context-diet): add context-diet mod plugin — hides chosen skills and, opt-in, strips the superpowers gatekeeper
+
+## done-gate 0.1.0
+
+- feat(done-gate): add done-gate mod plugin
+- feat(done-gate): detect Python projects
+
 ## capabilities 1.0.0
 
 - feat(capabilities): add /capabilities — finds what the team already built by reading every CAPABILITIES.md in the GitHub org

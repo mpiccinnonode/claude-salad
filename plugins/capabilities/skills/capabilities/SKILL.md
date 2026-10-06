@@ -4,7 +4,7 @@ description: Use when someone asks whether the team has already built something 
 allowed-tools:
   - Bash
   - Read
-argument-hint: "[cosa ti serve, in parole tue]"
+argument-hint: "[breve descrizione della ricerca]"
 ---
 
 # Capabilities
@@ -22,8 +22,21 @@ node "${CLAUDE_PLUGIN_ROOT}/skills/capabilities/scripts/fetch-index.mjs"
 - Line 1 of the output is the index path. Read that file in full — it holds every project's `CAPABILITIES.md`, each after a `<!-- ==== repo: <name> | <blob-url> ==== -->` header.
 - Add `--refresh` when the user says a file was just added or changed. The cache otherwise lasts 24h.
 - Add `--org <login>` only if the user names a different GitHub organization.
-- If the script exits 1, tell the user in plain words what is missing: GitHub CLI not installed (`gh`), not logged in (`gh auth login`), or no access to the org. Do not guess an answer without the index.
 - If the index is empty, say no project has a `CAPABILITIES.md` yet, and stop.
+
+### Fallback: Claude chat, Cowork
+
+If the script cannot run or exits 1 (no Bash, no Node, no `gh` — typical in Claude chat), use the first source that works:
+
+**Project knowledge.** If `CAPABILITIES-INDEX.md` is in the project's knowledge, it is the index, in the same format. Use it and skip the rest.
+
+**GitHub connector**, if a GitHub tool is available:
+
+1. List the org's non-archived repositories (default org `nodesoccoop`).
+2. For each one, read `CAPABILITIES.md` at the root of the default branch. Skip repos that have none — that is normal, not an error.
+3. Treat the collected files as the index, with `https://github.com/<org>/<repo>/blob/<branch>` as each project's blob URL.
+
+If neither is available, tell the user in plain words: in Claude chat, open the shared project that holds `CAPABILITIES-INDEX.md` and ask again there; in Claude Code, install the GitHub CLI (`gh`) and run `gh auth login`. Do not guess an answer without the index.
 
 ## 2. Match the request
 

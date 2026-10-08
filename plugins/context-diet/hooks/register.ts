@@ -9,7 +9,7 @@ export const register: Register = (on, options) => {
   )
 
   on('prompt.attachment', ($, e, next) =>
-    options.stripGatekeeper && e.origin.kind === 'hook' && e.origin.event === 'SessionStart'
+    (options.stripGatekeeper ?? true) && e.origin.kind === 'hook' && e.origin.event === 'SessionStart'
       ? next({ ...e, text: stripGatekeeper(e.text) })
       : next(e),
   )

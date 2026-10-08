@@ -31,7 +31,7 @@ test('leaves the skill listing untouched by default', async ($, on) => {
   expect(text).toBe(LISTING)
 })
 
-test('strips the gatekeeper from SessionStart context when opted in', { options: { stripGatekeeper: true } }, async ($, on) => {
+test('strips the gatekeeper from SessionStart context by default', async ($, on) => {
   on('prompt.attachment', ($, e) => ({ text: e.text }))
   const { text } = await $.prompt.attachment({
     type: 'hook_additional_context',
@@ -41,7 +41,7 @@ test('strips the gatekeeper from SessionStart context when opted in', { options:
   expect(text).toBe('# recent context')
 })
 
-test('leaves the gatekeeper by default', async ($, on) => {
+test('leaves the gatekeeper when opted out', { options: { stripGatekeeper: false } }, async ($, on) => {
   on('prompt.attachment', ($, e) => ({ text: e.text }))
   const { text } = await $.prompt.attachment({
     type: 'hook_additional_context',

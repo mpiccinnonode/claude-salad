@@ -1,13 +1,15 @@
 import type { On } from 'claude-code'
 import { expect, test } from 'claude-code/testing'
-import { parseConfig } from './gate.ts'
+import { detect } from './gate.ts'
 
 const file = (name: string) => ({ name, kind: 'file' as const, size: 1, mtimeMs: 0, isLink: false })
 
-function engine(on: On, doneGateJson?: string) {
+const ROOT_ONLY = { '/repo': ['package.json', 'README.md'] }
+
+function engine(on: On, doneGateJson?: string, tree: Record<string, string[]> = ROOT_ONLY) {
   on('session.root', () => ({ value: '/repo' }))
   on('fs.read', ($, e) => (doneGateJson && e.path === '/repo/.claude/done-gate.json' ? { value: doneGateJson } : { deny: 'ENOENT' }))
-  on('fs.list', () => ({ value: [file('package.json'), file('README.md')] }))
+  on('fs.list', ($, e) => ({ value: (tree[e.path] ?? []).map(file) }))
   on('tool.call', () => ({ result: {} }))
   on('turn.start', ($, e) => ({ turnId: e.turnId }))
   on('classic.Stop', () => ({}))
@@ -49,6 +51,26 @@ test('docs-only edits → silent', async ($, on) => {
   await $.turn.start({ text: 'docs', turnId: 't' })
   await $.tool.call(edit('/repo/README.md'))
   await $.tool.call({ tool: 'Write', file_path: '/repo/docs/guide.txt', content: '' })
+  expect((await $.turn.complete(complete)).text).toBe('Done.')
+})
+
+const NESTED = { '/repo/app/web': ['package.json'], '/repo/app/api': ['Api.sln'] }
+
+test('nested projects: the nearest markers above the edit decide the check', async ($, on) => {
+  engine(on, undefined, NESTED)
+  await $.turn.start({ text: 'x', turnId: 't' })
+  await $.tool.call(edit('/repo/app/web/src/a.ts'))
+  expect((await $.turn.complete(complete)).text).toBe('done-gate: edited 1 source file, no npm test|run lint ran after the last edit')
+  await $.tool.call(bash('cd app/web && npm test'))
+  expect((await $.turn.complete(complete)).text).toBe('Done.')
+  await $.tool.call(edit('/repo/app/api/src/A.cs'))
+  expect((await $.turn.complete(complete)).text).toContain('no npm test|run lint / dotnet test|build ran')
+})
+
+test('an edit with no markers anywhere above it → silent', async ($, on) => {
+  engine(on, undefined, NESTED)
+  await $.turn.start({ text: 'x', turnId: 't' })
+  await $.tool.call(edit('/repo/scripts/tool.ts'))
   expect((await $.turn.complete(complete)).text).toBe('Done.')
 })
 
@@ -103,7 +125,7 @@ test('off mode does nothing', { options: { mode: 'off' } }, async ($, on) => {
 })
 
 test('detection: each marker accepts its commands', async () => {
-  const ran = (names: string[], cmd: string) => parseConfig('', names).checks.some(c => c.re.test(cmd))
+  const ran = (names: string[], cmd: string) => detect(names).some(c => c.re.test(cmd))
   expect(ran(['nx.json'], 'npx nx affected -t lint,test')).toBe(true)
   expect(ran(['nx.json'], 'nx run-many --targets=test')).toBe(true)
   expect(ran(['nx.json'], 'nx affected -t build')).toBe(false)
@@ -115,5 +137,5 @@ test('detection: each marker accepts its commands', async () => {
   expect(ran(['setup.py'], 'poetry run ruff check .')).toBe(true)
   expect(ran(['pyproject.toml'], 'ruff format .')).toBe(false)
   expect(ran(['pyproject.toml'], 'cat pytest.ini')).toBe(false)
-  expect(parseConfig('', ['README.md']).checks).toEqual([])
+  expect(detect(['README.md'])).toEqual([])
 })

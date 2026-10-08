@@ -40,7 +40,7 @@ Non-zero + stderr on missing/relative `--root` or `--home`. Halt on non-zero and
 
 ## File contents
 
-Write the file using the schema in `references/triage-schema.md` — that document is the source of truth for fields, lifecycle states, and invariants. Read it before writing.
+Write the file using the schema in `references/triage-schema.md` — that document is the source of truth for fields, lifecycle states, and invariants. Read it before writing. Create and update the file with the Write or Edit tool, never a Bash heredoc or `cat >`: the plugin's record-check hook only sees those two tools.
 
 ## Validate every write
 

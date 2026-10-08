@@ -1,7 +1,7 @@
 {
   "name": "context-diet",
-  "version": "0.1.0",
-  "description": "Trims what the model reads at session start: unused skills in the skill listing and, opt-in, the superpowers gatekeeper block.",
+  "version": "0.2.0",
+  "description": "Trims what the model reads at session start: unused skills in the skill listing and, by default, the superpowers gatekeeper block.",
   "author": { "name": "mpiccinnonode" },
   "repository": "https://github.com/mpiccinnonode/claude-salad",
   "license": "MIT",
@@ -17,7 +17,7 @@
       "type": "boolean",
       "title": "Strip the superpowers gatekeeper",
       "description": "Removes the <EXTREMELY_IMPORTANT> using-superpowers block injected at SessionStart; the skills stay.",
-      "default": false
+      "default": true
     }
   }
 }

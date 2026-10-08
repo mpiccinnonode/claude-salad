@@ -1,11 +1,11 @@
 # context-diet
 
-Trims what the model reads at session start. Two independent knobs, both off by default:
+Trims what the model reads at session start. Two independent knobs: the gatekeeper strip is on by default, skill hiding is off.
 
 - **Hide skills from the listing** — skills you never want auto-triggered stop costing listing tokens. You can still type them as `/commands`.
 - **Strip the superpowers gatekeeper** — removes the `<EXTREMELY_IMPORTANT>` using-superpowers block a SessionStart hook injects. The superpowers skills themselves stay installed and listed.
 
-With no options set it does nothing.
+With no options set it only strips the gatekeeper; set `stripGatekeeper: false` to turn that off.
 
 ## Requirements
 
@@ -23,7 +23,7 @@ With no options set it does nothing.
 | Option | Type | Default | Effect |
 | --- | --- | --- | --- |
 | `dropSkills` | string | `""` | Comma-separated skill names to leave out of the skill listing, exactly as the listing spells them (`ponytail:ponytail-gain,claude-mem:wowerpoint`). |
-| `stripGatekeeper` | boolean | `false` | Removes the using-superpowers gatekeeper block from SessionStart hook context. |
+| `stripGatekeeper` | boolean | `true` | Removes the using-superpowers gatekeeper block from SessionStart hook context. |
 
 Set them in `/config` (each option is a row there; a change reloads the mod), or in `settings.json` under `pluginConfigs`, keyed by the plugin id as `/plugin` lists it:
 

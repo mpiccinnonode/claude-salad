@@ -17,7 +17,7 @@
       "type": "boolean",
       "title": "Strip the superpowers gatekeeper",
       "description": "Removes the <EXTREMELY_IMPORTANT> using-superpowers block injected at SessionStart; the skills stay.",
-      "default": false
+      "default": true
     }
   }
 }

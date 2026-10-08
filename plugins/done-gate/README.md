@@ -37,9 +37,9 @@ One option, `mode`, set in `/config` (a picker) or in `settings.json` under `plu
 
 ## Which commands count as checks
 
-With no config, done-gate looks at the project root:
+With no config, done-gate looks for markers next to each edited file, walking up to the project root; the nearest directory with one wins, so nested apps (`frontend/package.json`, `backend/App.sln`) work without setup:
 
-| Root has | Counts as a check |
+| Directory has | Counts as a check |
 | --- | --- |
 | `nx.json` | `nx affected` / `nx run-many` with a `test` or `lint` target |
 | `*.sln`, `*.slnx`, `*.csproj` | `dotnet test`, `dotnet build` |
@@ -47,7 +47,7 @@ With no config, done-gate looks at the project root:
 | `package.json` | `npm test`, `npm run lint` |
 | `pyproject.toml`, `setup.py`, `setup.cfg`, `tox.ini`, `pytest.ini`, `requirements*.txt` | `pytest`, `ruff check`, `mypy`, `pyright`, `flake8`, `tox`, `nox`, `python -m unittest` (also through `uv run`, `poetry run`, `python -m`) |
 
-A root with none of these means done-gate stays silent: it can't tell what "checked" would mean.
+An edit with none of these anywhere above it is ignored: done-gate can't tell what "checked" would mean. When one turn edits two subprojects, a check from either one is enough.
 
 To be explicit, commit `.claude/done-gate.json`:
 
@@ -69,7 +69,7 @@ Mods are not sandboxed, so this is what you install. From `claude plugin validat
 
 ```text
 ❯ ./register.ts hooks: turn.start, tool.call, classic.Stop, turn.complete
-❯ ./register.ts calls: $.fs.list (via config), $.fs.read (via config), $.session.root (via config)
+❯ ./register.ts calls: $.fs.list (via nearestChecks), $.fs.read (via config), $.session.root (via config)
 ```
 
-It reads `.claude/done-gate.json` and lists the project root. It writes nothing and never denies a tool call.
+It reads `.claude/done-gate.json` and lists the directories between each edited file and the project root. It writes nothing and never denies a tool call.

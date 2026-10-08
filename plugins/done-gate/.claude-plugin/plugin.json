@@ -1,6 +1,6 @@
 {
   "name": "done-gate",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Mod that keeps Claude from calling a coding turn done when it edited source files and ran none of the project's checks afterwards.",
   "author": { "name": "mpiccinnonode" },
   "repository": "https://github.com/mpiccinnonode/claude-salad",

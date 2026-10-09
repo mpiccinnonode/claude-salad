@@ -3,7 +3,7 @@
 The `/buddy` companion Claude Code shipped in April 2026 and removed in 2.1.97, brought back as a mod. Your buddy sits above the prompt, animated, and reacts to your work.
 
 - **Your original buddy.** It reads the name and personality your buddy hatched with from `~/.claude.json`, and re-rolls its body from your account id with the original algorithm: species (one of 18), rarity ★ to ★★★★★, eyes, hat and five stats (DEBUGGING, PATIENCE, CHAOS, WISDOM, SNARK).
-- **Animated part by part.** It blinks, looks around, hops, flaps, wags and twitches. While Claude works it waddles, and after about 30 seconds of quiet it dozes off.
+- **Animated part by part.** It blinks, looks around, hops, flaps, wags and twitches. Every species has its own body language when petted, poked or asleep: a cat flattens its ears, a turtle hides in its shell, a cactus blooms. While Claude works it waddles, and after about 30 seconds of quiet it dozes off.
 - **Reacts to your work.** It has canned lines for failed commands, failing tests, commits and late-night commits, drawn from its species and its strongest stat. Every few turns Haiku writes it a fresh in-character quip.
 - **Clickable.** Click the buddy (or press `1`) to pet it. `2` pokes it, `3` asks it to talk, `4` shows its stats card, `×` hides it.
 

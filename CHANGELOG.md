@@ -1,5 +1,11 @@
 # Changelog
 
+## buddy 0.1.0 → 0.2.0
+
+- feat(buddy): `language` option (`it` default, `en`) for canned lines, labels and Haiku quips
+- feat(buddy): dialogue is per session; quip and turn counter no longer leak across sessions
+- fix(buddy): re-hatch from ~/.claude.json and reset dialogue after /clear
+
 ## buddy 0.1.0
 
 - feat(buddy): revive the /buddy companion as a mod — each user's original buddy, rolled from their account id, animated part by part above the prompt

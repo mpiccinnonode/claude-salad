@@ -40,7 +40,7 @@
     },
     {
       "name": "buddy",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "source": "./plugins/buddy",
       "description": "Mod that brings back the /buddy companion: your original species, rarity, hat and stats, animated above the prompt, reacting to your work. Needs Claude Code >= 2.1.295."
     }

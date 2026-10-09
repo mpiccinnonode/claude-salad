@@ -2,6 +2,7 @@ import { expect, mock, test } from 'claude-code/testing'
 
 const BAND = { component: 'AbovePrompt', props: { hasSurvey: false, isWorking: false, maxRows: 10, bodyColumns: 80, scroll: { offset: 0, bodyRows: 10 }, view: {} } } as const
 const TURN = { reason: 'answer', answer: 'Fixed the bug.', durationMs: 10, isAborted: false, turnId: 't' } as const
+import { line } from './lines.ts'
 
 test('speaks every N turns and the band shows the quip', { options: { everyNTurns: 2 } }, async ($, on) => {
   mock.store(on)
@@ -31,7 +32,7 @@ test('speaks every N turns and the band shows the quip', { options: { everyNTurn
   await ui.unmount()
 })
 
-test('/buddy toggles the band', async ($, on) => {
+test('/buddy toggles the band', { options: { language: 'en' } }, async ($, on) => {
   mock.store(on)
   on('ui.render', ($, e) => { const { Box } = $.ui.resolve(e); return <Box key="engine" /> })
   const run = { command: 'buddy', args: '', origin: { kind: 'user' } } as never
@@ -70,7 +71,7 @@ test('the ticker started at session.start animates the band', async ($, on) => {
   expect(await eyes()).toBe('shut')
 })
 
-test('clicks: pet, poke and the buddy itself say a line; stats toggles, any other click closes it', async ($, on) => {
+test('clicks: pet, poke and the buddy itself say a line; stats toggles, any other click closes it', { options: { language: 'en' } }, async ($, on) => {
   mock.store(on)
   on('ui.render', ($, e) => { const { Box } = $.ui.resolve(e); return <Box key="engine" /> })
   const ui = await $.ui.mount({ plugin: 'buddy', surface: 'terminal', ...BAND })
@@ -111,7 +112,7 @@ test('a failing Bash call gets a canned line, a quiet one does not', async ($, o
   expect(await bubble()).toBe('spoke')
 })
 
-test('the species option swaps the art and the lines', { options: { species: 'duck' } }, async ($, on) => {
+test('the species option swaps the art and the lines', { options: { species: 'duck', language: 'en' } }, async ($, on) => {
   mock.store(on)
   on('ui.render', ($, e) => { const { Box } = $.ui.resolve(e); return <Box key="engine" /> })
   const ui = await $.ui.mount({ plugin: 'buddy', surface: 'terminal', ...BAND })
@@ -140,4 +141,12 @@ test('hatches from ~/.claude.json: own name, and bones rolled from the account i
   await ui.press({ key: 'stats' })
   expect(await ui.find({ type: 'Text', text: /PAT 78/ })).toBeDefined()
   await ui.unmount()
+})
+
+test('language it: command text and canned lines are Italian', { options: { language: 'it' } }, async ($, on) => {
+  mock.store(on)
+  on('ui.render', ($, e) => { const { Box } = $.ui.resolve(e); return <Box key="engine" /> })
+  const run = { command: 'buddy', args: '', origin: { kind: 'user' } } as never
+  expect((await $.command.run(run)).text).toContain('ondeggiando')
+  expect(line('commit', 'SNARK', 'cat', 0, 'it')).toContain('tastiera')
 })

@@ -39,6 +39,7 @@ The number keys work while the band has focus (`ctrl+x tab`, or click it). Click
 | `personality` | string | `""` | Overrides the personality the quips are written in. |
 | `everyNTurns` | number | `3` | Finished turns between Haiku quips. |
 | `species` | string | `auto` | `auto` keeps your rolled species; pick any of the 18 to try another. |
+| `language` | string | `it` | `it` or `en`: canned lines, labels and Haiku quips all follow it. |
 
 Set them in `/config`, or in `settings.json` under `pluginConfigs`, keyed `buddy@mpiccinnonode`.
 

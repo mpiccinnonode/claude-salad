@@ -1,6 +1,6 @@
 {
   "name": "buddy",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "The /buddy companion, revived as a mod: your original species, rarity, hat and stats, animated above the prompt, reacting to your work.",
   "types": "./types/index.d.ts",
   "userConfig": {
@@ -47,6 +47,16 @@
         "rabbit",
         "mushroom",
         "chonk"
+      ]
+    },
+    "language": {
+      "type": "string",
+      "title": "Language",
+      "description": "Language of the buddy's lines and of its Haiku quips.",
+      "default": "it",
+      "options": [
+        "en",
+        "it"
       ]
     }
   },

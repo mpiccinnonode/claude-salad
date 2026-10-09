@@ -11,7 +11,7 @@ Claude Code plugins by mpiccinnonode -- task triage, code review, and more.
 | [context-diet](plugins/context-diet/) | 0.2.0 | Mod that trims session-start context: hides chosen skills from the listing and, by default, strips the superpowers gatekeeper. Needs Claude Code >= 2.1.287 |
 | [done-gate](plugins/done-gate/) | 0.2.0 | Mod that flags (or blocks) a coding turn that edited sources without running the project's checks afterwards. Needs Claude Code >= 2.1.287 |
 | [capabilities](plugins/capabilities/) | 1.0.0 | Answers "have we already built this?" by reading every CAPABILITIES.md in the GitHub org. Needs `gh` logged in |
-| [buddy](plugins/buddy/) | 0.1.0 | Mod that brings back the /buddy companion: your original species, rarity, hat and stats, animated above the prompt, reacting to your work. Needs Claude Code >= 2.1.295 |
+| [buddy](plugins/buddy/) | 0.2.0 | Mod that brings back the /buddy companion: your original species, rarity, hat and stats, animated above the prompt, reacting to your work. Needs Claude Code >= 2.1.295 |
 
 ## Installation
 

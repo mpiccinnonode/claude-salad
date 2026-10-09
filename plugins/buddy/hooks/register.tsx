@@ -3,7 +3,7 @@ import type { EngineInterface, Register } from 'claude-code'
 import type { Bones, Pressed, Quip, StatName } from '../types'
 import { RARITIES, roll, STAT_NAMES } from './bones.ts'
 import { line, reasonFor } from './lines.ts'
-import type { Reason } from './lines.ts'
+import type { Lang, Reason } from './lines.ts'
 import { ACTION_TICKS, drawBuddy } from './sprite.ts'
 
 const quip = atom({ plugin: 'buddy', key: 'quip' } as const, null as Quip)
@@ -16,6 +16,30 @@ const isStats = atom({ plugin: 'buddy', key: 'isStats' } as const, false)
 // Until ~/.claude.json is read (or when it can't be), a plain common blob stands in.
 const FALLBACK: Bones = { rarity: 'common', species: 'blob', eye: '·', hat: 'none', isShiny: false, stats: { DEBUGGING: 30, PATIENCE: 30, CHAOS: 30, WISDOM: 30, SNARK: 30 }, peak: 'PATIENCE' }
 const SOUL = { name: 'Buddy', personality: 'A small, curious terminal companion who comments on your work.' }
+const WORDS: Record<Lang, { thinks: string; off: (n: string) => string; on: (n: string) => string; toggle: (n: string) => string; chatAnswer: string; chatEmpty: string; turnDone: string; reply: string; labels: [string, string, string, string] }> = {
+  en: {
+    thinks: '*thinks*',
+    off: n => `${n} waddles off.`,
+    on: n => `${n} is back.`,
+    toggle: n => `Show or hide ${n}`,
+    chatAnswer: 'Someone clicked you to chat. What the assistant last said:',
+    chatEmpty: 'Someone clicked you to chat. Say something.',
+    turnDone: 'The coding assistant just finished a turn. Its final message:',
+    reply: 'Always reply in English, whatever language the text below is in.',
+    labels: ['pet', 'poke', 'talk', 'stats'],
+  },
+  it: {
+    thinks: '*pensa*',
+    off: n => `${n} se ne va ondeggiando.`,
+    on: n => `${n} è tornato.`,
+    toggle: n => `Mostra o nascondi ${n}`,
+    chatAnswer: 'Qualcuno ti ha cliccato per chiacchierare. Ultima cosa detta dall\'assistente:',
+    chatEmpty: 'Qualcuno ti ha cliccato per chiacchierare. Di\' qualcosa.',
+    turnDone: 'L\'assistente di codice ha appena finito un turno. Il suo messaggio finale:',
+    reply: 'Rispondi sempre in italiano, qualunque sia la lingua del testo qui sotto.',
+    labels: ['coccola', 'pungola', 'parla', 'stat'],
+  },
+}
 const RARITY_COLOR: Record<Bones['rarity'], string> = { common: 'gray', uncommon: 'green', rare: 'cyan', epic: 'magenta', legendary: 'yellow' }
 const STARS = (rarity: Bones['rarity']) => '★'.repeat(RARITIES.indexOf(rarity) + 1)
 const SHORT: Record<StatName, string> = { DEBUGGING: 'DBG', PATIENCE: 'PAT', CHAOS: 'CHA', WISDOM: 'WIS', SNARK: 'SNK' }
@@ -27,7 +51,6 @@ async function setHidden($: EngineInterface, hidden: boolean) {
 
 async function say($: EngineInterface, text: string) {
   await update($, quip, () => text)
-  void $.store.set('quip', text)
 }
 
 // The original /buddy kept its soul (name, personality) in ~/.claude.json and rolled its bones from the account id.
@@ -41,22 +64,30 @@ async function hatch($: EngineInterface) {
   }
 }
 
-async function react($: EngineInterface, reason: Reason, species: string) {
-  const [b, now] = await Promise.all([read($, bones), read($, tick)])
-  await say($, line(reason, (b ?? FALLBACK).peak, species, now))
+// Fills the session's atoms from disk; safe to call again whenever they come back empty (a /clear starts them over).
+async function hatchInto($: EngineInterface) {
+  const hatched = await hatch($)
+  const wasHidden = (await $.store.get('isHidden')) === true
+  await Promise.all([update($, bones, () => hatched.bones), update($, isHidden, () => wasHidden)])
+  return hatched.soul
 }
 
-async function press($: EngineInterface, kind: 'pet' | 'poke', species: string) {
+async function react($: EngineInterface, reason: Reason, species: string, lang: Lang) {
+  const [b, now] = await Promise.all([read($, bones), read($, tick)])
+  await say($, line(reason, (b ?? FALLBACK).peak, species, now, lang))
+}
+
+async function press($: EngineInterface, kind: 'pet' | 'poke', species: string, lang: Lang) {
   const [b, now] = await Promise.all([read($, bones), read($, tick)])
   const { peak } = b ?? FALLBACK
-  await Promise.all([update($, pressed, () => ({ kind, at: now })), update($, isStats, () => false), say($, line(kind, peak, species, now))])
+  await Promise.all([update($, pressed, () => ({ kind, at: now })), update($, isStats, () => false), say($, line(kind, peak, species, now, lang))])
 }
 
-async function quipFromModel($: EngineInterface, name: string, personality: string, about: string, isAsked = false) {
-  if (isAsked) await Promise.all([update($, quip, () => '*thinks*'), update($, isStats, () => false)])
+async function quipFromModel($: EngineInterface, name: string, personality: string, about: string, lang: Lang, isAsked = false) {
+  if (isAsked) await Promise.all([update($, quip, () => WORDS[lang].thinks), update($, isStats, () => false)])
   const r = await $.model.complete({
     model: 'haiku',
-    system: `You are ${name}, a tiny terminal companion. ${personality} Reply with ONE short in-character quip (max 15 words). No quotes, no emoji.`,
+    system: `You are ${name}, a tiny terminal companion. ${personality} Reply with ONE short in-character quip (max 15 words). ${WORDS[lang].reply} No quotes, no emoji.`,
     prompt: about,
     maxTokens: 60,
   })
@@ -67,32 +98,44 @@ export const register: Register = (on, options) => {
   let name = String(options.name || SOUL.name)
   let personality = String(options.personality || SOUL.personality)
   const every = Math.max(1, Number(options.everyNTurns ?? 3))
+  const lang: Lang = options.language === 'en' ? 'en' : 'it'
   const forced = String(options.species ?? 'auto')
   const speciesOf = (b: Bones | null) => (forced === 'auto' ? (b ?? FALLBACK).species : forced)
+  const adopt = (soul: typeof SOUL) => {
+    name = String(options.name || soul.name)
+    personality = String(options.personality || soul.personality)
+  }
+  let turns = 0
   let lastAnswer = ''
   let lastCannedAt = -Infinity
   let lastActiveAt = 0
 
   on('session.start', async ($, e, next) => {
-    const hatched = await hatch($)
-    name = String(options.name || hatched.soul.name)
-    personality = String(options.personality || hatched.soul.personality)
-    await $.command.register({ name: 'buddy', description: `Show or hide ${name}` })
-    const saved = await $.store.get('quip')
-    if (typeof saved === 'string') await update($, quip, () => saved)
-    const wasHidden = (await $.store.get('isHidden')) === true
-    await update($, isHidden, () => wasHidden)
-    await update($, bones, () => hatched.bones)
+    adopt(await hatchInto($))
+    await $.command.register({ name: 'buddy', description: WORDS[lang].toggle(name) })
     // ponytail: band redraws ~3x/s forever; pause the ticker while hidden if that ever shows up in profiles
     lastActiveAt = await read($, tick)
-    $.clock.every(300, () => void update($, tick, n => n + 1))
+    $.clock.every(300, async () => {
+      await update($, tick, n => n + 1)
+      if (!(await read($, bones))) adopt(await hatchInto($))
+    })
+    return next(e)
+  })
+
+  // /clear ends the session without a new session.start: drop this conversation's dialogue, keep the rest.
+  on('session.end', async ($, e, next) => {
+    if (e.reason === 'clear') {
+      lastAnswer = ''
+      turns = 0
+      await Promise.all([update($, quip, () => null), update($, pressed, () => null)])
+    }
     return next(e)
   })
 
   on('command.run', { command: 'buddy' }, async $ => {
     const hidden = !(await read($, isHidden))
     await setHidden($, hidden)
-    return { text: hidden ? `${name} waddles off.` : `${name} is back.` }
+    return { text: hidden ? WORDS[lang].off(name) : WORDS[lang].on(name) }
   })
 
   on('tool.call', { tool: 'Bash' }, async ($, e, next) => {
@@ -103,7 +146,7 @@ export const register: Register = (on, options) => {
     // ponytail: one canned line per ~10s so a failing loop doesn't spam the bubble
     if (reason && now - lastCannedAt >= 33) {
       lastCannedAt = now
-      await react($, reason, speciesOf(await read($, bones)))
+      await react($, reason, speciesOf(await read($, bones)), lang)
     }
     return result
   })
@@ -115,11 +158,9 @@ export const register: Register = (on, options) => {
     lastActiveAt = await read($, tick)
     lastAnswer = e.answer.slice(-1500)
 
-    const count = Number((await $.store.get('turns')) ?? 0) + 1
-    await $.store.set('turns', count)
-    if (count % every !== 0) return result
+    if (++turns % every !== 0) return result
 
-    await quipFromModel($, name, personality, `The coding assistant just finished a turn. Its final message:\n\n${lastAnswer}`)
+    await quipFromModel($, name, personality, `${WORDS[lang].turnDone}\n\n${lastAnswer}`, lang)
     return result
   })
 
@@ -142,7 +183,7 @@ export const register: Register = (on, options) => {
       <Box flexDirection="row">
         <Box flexDirection="column">
           {drawBuddy(species, frame, { isWorking: e.props.isWorking, eye: b.eye, hat: b.hat, action, isAsleep }, RARITY_COLOR[b.rarity]).map((row, i) => (
-            <Button key={`body-${i}`} plain onPress={() => press($, 'pet', species)}>
+            <Button key={`body-${i}`} plain onPress={() => press($, 'pet', species, lang)}>
               {row.map(([text, color], j) => <Text key={`p${i}-${j}`} color={color}>{text}</Text>)}
             </Button>
           ))}
@@ -164,10 +205,10 @@ export const register: Register = (on, options) => {
             <Text dimColor={said === null}>{said ?? '...'}</Text>
           )}
           <Box flexDirection="row" gap={1}>
-            <Button key="pet" plain dimColor hotkey="1" label="pet" onPress={() => press($, 'pet', species)} />
-            <Button key="poke" plain dimColor hotkey="2" label="poke" onPress={() => press($, 'poke', species)} />
-            <Button key="talk" plain dimColor hotkey="3" label="talk" onPress={() => quipFromModel($, name, personality, lastAnswer ? `Someone clicked you to chat. What the assistant last said:\n\n${lastAnswer}` : 'Someone clicked you to chat. Say something.', true)} />
-            <Button key="stats" plain dimColor hotkey="4" label="stats" onPress={() => update($, isStats, v => !v)} />
+            <Button key="pet" plain dimColor hotkey="1" label={WORDS[lang].labels[0]} onPress={() => press($, 'pet', species, lang)} />
+            <Button key="poke" plain dimColor hotkey="2" label={WORDS[lang].labels[1]} onPress={() => press($, 'poke', species, lang)} />
+            <Button key="talk" plain dimColor hotkey="3" label={WORDS[lang].labels[2]} onPress={() => quipFromModel($, name, personality, lastAnswer ? `${WORDS[lang].chatAnswer}\n\n${lastAnswer}` : WORDS[lang].chatEmpty, lang, true)} />
+            <Button key="stats" plain dimColor hotkey="4" label={WORDS[lang].labels[3]} onPress={() => update($, isStats, v => !v)} />
           </Box>
         </Box>
         <Button key="hide" label="×" onPress={() => setHidden($, true)} />

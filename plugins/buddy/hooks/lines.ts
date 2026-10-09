@@ -1,7 +1,9 @@
 import type { StatName } from '../types'
+import { GENERIC_IT, PEAK_IT, SPECIES_LINES_IT } from './it.ts'
 import { SPECIES_LINES } from './roster.ts'
 
 // Canned lines, picked from ramarivera/coding-buddy (MIT): the species' own, the generic pool, and the peak stat's.
+export type Lang = 'en' | 'it'
 export type Reason = 'pet' | 'poke' | 'error' | 'test-fail' | 'commit' | 'late-night'
 
 const GENERIC: Record<Reason, readonly string[]> = {
@@ -39,8 +41,9 @@ const PEAK: Partial<Record<StatName, Partial<Record<Reason, readonly string[]>>>
   },
 }
 
-export function line(reason: Reason, peak: StatName, species: string, n: number): string {
-  const pool = [...(SPECIES_LINES[species]?.[reason] ?? []), ...GENERIC[reason], ...(PEAK[peak]?.[reason] ?? [])]
+export function line(reason: Reason, peak: StatName, species: string, n: number, lang: Lang = 'en'): string {
+  const [own, generic, peaks] = lang === 'it' ? [SPECIES_LINES_IT, GENERIC_IT, PEAK_IT] : [SPECIES_LINES, GENERIC, PEAK]
+  const pool = [...(own[species]?.[reason] ?? []), ...generic[reason], ...(peaks[peak]?.[reason] ?? [])]
   return pool[n % pool.length] ?? '...'
 }
 

@@ -48,6 +48,16 @@
         "mushroom",
         "chonk"
       ]
+    },
+    "language": {
+      "type": "string",
+      "title": "Language",
+      "description": "Language of the buddy's lines and of its Haiku quips.",
+      "default": "it",
+      "options": [
+        "en",
+        "it"
+      ]
     }
   },
   "author": {

@@ -1,5 +1,17 @@
 # Changelog
 
+## context-diet 0.1.0 → 0.2.0
+
+- feat(context-diet): strip superpowers gatekeeper by default
+
+## done-gate 0.1.0 → 0.2.0
+
+- feat(done-gate): detect checks from the nearest markers above each edited file
+
+## triage 1.2.0 → 1.2.1
+
+- fix(triage): write records with Write/Edit so the record-check hook sees them
+
 ## triage 1.1.1 → 1.2.0
 
 - feat(triage): validate triage records on write via a mod

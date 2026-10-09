@@ -16,7 +16,7 @@ const isStats = atom({ plugin: 'buddy', key: 'isStats' } as const, false)
 // Until ~/.claude.json is read (or when it can't be), a plain common blob stands in.
 const FALLBACK: Bones = { rarity: 'common', species: 'blob', eye: '·', hat: 'none', isShiny: false, stats: { DEBUGGING: 30, PATIENCE: 30, CHAOS: 30, WISDOM: 30, SNARK: 30 }, peak: 'PATIENCE' }
 const SOUL = { name: 'Buddy', personality: 'A small, curious terminal companion who comments on your work.' }
-const RARITY_COLOR: Record<Bones['rarity'], string> = { common: 'gray', uncommon: 'green', rare: 'blue', epic: 'magenta', legendary: 'yellow' }
+const RARITY_COLOR: Record<Bones['rarity'], string> = { common: 'gray', uncommon: 'green', rare: 'cyan', epic: 'magenta', legendary: 'yellow' }
 const STARS = (rarity: Bones['rarity']) => '★'.repeat(RARITIES.indexOf(rarity) + 1)
 const SHORT: Record<StatName, string> = { DEBUGGING: 'DBG', PATIENCE: 'PAT', CHAOS: 'CHA', WISDOM: 'WIS', SNARK: 'SNK' }
 

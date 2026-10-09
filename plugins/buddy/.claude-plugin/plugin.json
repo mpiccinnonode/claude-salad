@@ -1,0 +1,56 @@
+{
+  "name": "buddy",
+  "version": "0.1.0",
+  "description": "The /buddy companion, revived as a mod: your original species, rarity, hat and stats, animated above the prompt, reacting to your work.",
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "name": {
+      "type": "string",
+      "title": "Name override",
+      "description": "Leave empty to use the name your buddy hatched with (~/.claude.json).",
+      "default": ""
+    },
+    "personality": {
+      "type": "string",
+      "title": "Personality override",
+      "description": "Leave empty to use the personality your buddy hatched with (~/.claude.json).",
+      "default": ""
+    },
+    "everyNTurns": {
+      "type": "number",
+      "title": "Speak every N turns",
+      "description": "How many finished turns between quips (each quip is one Haiku call).",
+      "default": 3
+    },
+    "species": {
+      "type": "string",
+      "title": "Species",
+      "description": "auto = the one your account rolled in the original /buddy; or pick any of the 18.",
+      "default": "auto",
+      "options": [
+        "auto",
+        "duck",
+        "goose",
+        "blob",
+        "cat",
+        "dragon",
+        "octopus",
+        "owl",
+        "penguin",
+        "turtle",
+        "snail",
+        "ghost",
+        "axolotl",
+        "capybara",
+        "cactus",
+        "robot",
+        "rabbit",
+        "mushroom",
+        "chonk"
+      ]
+    }
+  },
+  "author": {
+    "name": "mpiccinnonode"
+  }
+}

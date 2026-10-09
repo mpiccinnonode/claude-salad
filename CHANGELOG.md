@@ -1,5 +1,11 @@
 # Changelog
 
+## buddy 0.1.0
+
+- feat(buddy): revive the /buddy companion as a mod — each user's original buddy, rolled from their account id, animated part by part above the prompt
+- feat(buddy): per-species body language for pet, poke and sleep
+- fix(buddy): rare is cyan, blue had too little contrast on dark terminals
+
 ## context-diet 0.1.0 → 0.2.0
 
 - feat(context-diet): strip superpowers gatekeeper by default

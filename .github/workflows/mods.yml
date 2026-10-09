@@ -15,9 +15,9 @@ jobs:
         with:
           node-version: 22
 
-      # Pinned: the function-hooks API is early access; bump deliberately (mods need >= 2.1.287).
+      # Pinned: the function-hooks API is early access; bump deliberately (mods need >= 2.1.287, buddy >= 2.1.295).
       - name: Install Claude Code
-        run: npm install -g @anthropic-ai/claude-code@2.1.289
+        run: npm install -g @anthropic-ai/claude-code@2.1.295
 
       - name: Validate and test every plugin that ships a hooks module
         run: |

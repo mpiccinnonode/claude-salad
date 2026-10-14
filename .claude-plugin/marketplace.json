@@ -40,9 +40,9 @@
     },
     {
       "name": "buddy",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "source": "./plugins/buddy",
-      "description": "Mod that brings back the /buddy companion: your original species, rarity, hat and stats, animated above the prompt, reacting to your work. Needs Claude Code >= 2.1.295."
+      "description": "Mod that brings back the /buddy companion: random buddies hatched from eggs you earn, each with its own species, rarity, stats and Haiku-written personality, animated above the prompt, reacting to your work. Needs Claude Code >= 2.1.295."
     }
   ]
 }

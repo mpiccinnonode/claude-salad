@@ -1,5 +1,14 @@
 # Changelog
 
+## buddy 0.2.0 → 0.3.0
+
+- feat(buddy): several buddies, eggs every N sessions, random hatching, left/right position
+- feat(buddy): buddies live in a JSON file, hatch from eggs, and get dreamt-up personalities
+- feat(buddy): random name and personality wherever the user gives none
+- feat(buddy): a ready egg hatches with a bare /buddy, and the name is the surprise
+- fix(buddy): hatching a file buddy writes only the dreamt-up personality; tighter personality prompt
+- docs(buddy): describe 0.3.0 in the manifest, marketplace and option help
+
 ## buddy 0.1.0 → 0.2.0
 
 - feat(buddy): `language` option (`it` default, `en`) for canned lines, labels and Haiku quips

@@ -152,7 +152,7 @@ async function dreamUp($: EngineInterface, name: string, b: Bones, lang: Lang): 
   const r = await $.model.complete({
     model: 'haiku',
     maxTokens: 700,
-    system: `You invent personalities for tiny terminal companions who watch a programmer work. Make each one layered, specific and odd: contradictions, concrete small details, a voice nobody else has. No generic cute-pet clichés. ${WORDS[lang].dream} Answer with one JSON object and nothing else: {"tone": string, "traits": 3-5 strings, "quirks": 2-3 strings, "backstory": 2 sentences, "speech": how it talks, "catchphrase": string, "likes": 2-3 strings, "dislikes": 2-3 strings}`,
+    system: `You invent personalities for tiny terminal companions who watch a programmer work. Make each one layered, specific and odd: contradictions, concrete small details, a voice nobody else has. No generic cute-pet clichés. Keep it tight: one sentence for tone and speech, two for the backstory, a few words per list item. Never mention stats or numbers. ${WORDS[lang].dream} Answer with one JSON object and nothing else: {"tone": string, "traits": 3-5 strings, "quirks": 2-3 strings, "backstory": 2 sentences, "speech": how it talks, "catchphrase": string, "likes": 2-3 strings, "dislikes": 2-3 strings}`,
     prompt: `Name: ${name}. Species: ${b.species}. Rarity: ${b.rarity}. Stats out of 100: ${STAT_NAMES.map(s => `${s} ${b.stats[s]}`).join(', ')}. Weave in ${twists.join(' and ')}.`,
   }).catch(() => undefined)
   if (!r?.isAnswered) return undefined
@@ -170,8 +170,10 @@ async function hatchNew($: EngineInterface, o: Opts, friend: Friend, lang: Lang)
   const book = await readBook($, path)
   if (book.error) return book.error
   const rolled = roll(String(Math.random()))
-  const personality = friend.personality ?? (await dreamUp($, friend.name, { ...rolled, species: friend.species ?? rolled.species }, lang))
-  await $.fs.write(path, `${JSON.stringify(upsert(book.raw, friend.name, { ...friend, personality }), null, 2)}\n`)
+  const dreamt = friend.personality ? undefined : await dreamUp($, friend.name, { ...rolled, species: friend.species ?? rolled.species }, lang)
+  // A file entry gets only what was dreamt up; its own fields stay as written. A new one is written whole.
+  const isNew = !findFriend(book.friends, friend.name)
+  if (isNew || dreamt) await $.fs.write(path, `${JSON.stringify(upsert(book.raw, friend.name, isNew ? { ...friend, personality: friend.personality ?? dreamt } : { personality: dreamt }), null, 2)}\n`)
   const [born, hatched] = await Promise.all([$.store.get('born'), $.store.get('hatched')])
   await Promise.all([$.store.set('born', { ...(born as Births | undefined), [keyOf(friend.name)]: { bones: rolled } }), $.store.set('hatched', Number(hatched ?? 0) + 1)])
   return undefined

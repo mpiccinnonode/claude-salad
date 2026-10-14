@@ -228,6 +228,7 @@ test('buddies.json: its buddies are eggs until /buddy use spends one; a missing 
   await start()
   expect(await run('use Pippo')).toContain('Pippo hops in')
   expect(systems.filter(s => s.includes('invent personalities'))).toHaveLength(1)
+  expect(book()[1]).toEqual({ name: 'Pippo', personality: { tone: 'anxious', traits: 'always' } })
   const ui = await $.ui.mount({ plugin: 'buddy', surface: 'terminal', ...BAND })
   await ui.press({ key: 'talk' })
   await ui.unmount()

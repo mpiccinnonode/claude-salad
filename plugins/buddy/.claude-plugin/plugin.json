@@ -1,6 +1,6 @@
 {
   "name": "buddy",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "The /buddy companion, revived as a mod: random buddies hatched from eggs you earn, each with its own species, rarity, stats and Haiku-written personality, animated above the prompt and reacting to your work.",
   "types": "./types/index.d.ts",
   "userConfig": {

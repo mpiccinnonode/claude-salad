@@ -25,7 +25,7 @@
     "species": {
       "type": "string",
       "title": "Species",
-      "description": "auto = the one your account rolled in the original /buddy; or pick any of the 18.",
+      "description": "Species of your original buddy: auto = the one your account rolled in the original /buddy; or pick any of the 18.",
       "default": "auto",
       "options": [
         "auto",
@@ -58,6 +58,34 @@
         "en",
         "it"
       ]
+    },
+    "position": {
+      "type": "string",
+      "title": "Position",
+      "description": "Which side of the band the buddy sits on.",
+      "default": "left",
+      "options": [
+        "left",
+        "right"
+      ]
+    },
+    "buddies": {
+      "type": "string",
+      "title": "Extra buddies",
+      "description": "Name:species[:personality], separated by ';' — e.g. Nino:duck; Pippo:cat:Anxious, always. /buddy add adds more.",
+      "default": ""
+    },
+    "active": {
+      "type": "string",
+      "title": "Active buddy",
+      "description": "Name of the buddy to show; empty = your original one. /buddy use <name> overrides it.",
+      "default": ""
+    },
+    "sessionsPerHatch": {
+      "type": "number",
+      "title": "Sessions per egg",
+      "description": "Sessions together before /buddy add can hatch one more buddy.",
+      "default": 20
     }
   },
   "author": {

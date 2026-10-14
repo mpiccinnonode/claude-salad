@@ -306,3 +306,20 @@ test('no companion in ~/.claude.json: the original is random, name and personali
   expect(book()).toEqual([{ name: 'Quillon', personality: { tone: 'dry', traits: ['odd'] } }])
   expect(await run('add')).toContain('1 more session')
 })
+
+test('with an egg ready, a bare /buddy hatches a surprise named by Haiku and brings it out; then it toggles again', { options: { language: 'en', sessionsPerHatch: 1 } }, async ($, on) => {
+  const { run, start, shows, book } = rig($, on, {})
+  const toasts: string[] = []
+  on('ui.toast', ($, e) => { toasts.push(e.text); return { value: undefined } })
+  const names = ['Brisa', 'Tortellino']
+  on('model.complete', ($, e) => answer(e.system?.includes('invent personalities') ? JSON.stringify({ name: names.shift(), tone: 'grand' }) : 'Hm.'))
+
+  await start()
+  expect(toasts).toEqual(['An egg is wobbling! Type /buddy to find out who hatches.'])
+  expect(await shows(/Brisa/)).toBe(true)
+  expect(await run('')).toContain('Crack! Say hi to Tortellino.')
+  expect(await shows(/Tortellino/)).toBe(true)
+  expect(await shows(/Crack!/)).toBe(true)
+  expect(book().map(b => b.name)).toEqual(['Tortellino'])
+  expect(await run('')).toContain('Tortellino waddles off')
+})

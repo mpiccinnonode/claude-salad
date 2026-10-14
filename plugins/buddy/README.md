@@ -26,7 +26,7 @@ The `/buddy` companion Claude Code shipped in April 2026 and removed in 2.1.97, 
 
 | Action | What happens |
 | --- | --- |
-| `/buddy` | Shows or hides the buddy (remembered across sessions). |
+| `/buddy` | Shows or hides the buddy (remembered across sessions). When an egg is ready, it hatches a surprise instead: a new buddy, named by Haiku, comes straight out. |
 | `/buddy list` | Lists your buddies; `▸` marks the active one, `🥚` one still in its egg. Shows the progress to the next egg. |
 | `/buddy use <name>` | Brings out another buddy (remembered across sessions). If it is still an egg, this hatches it, when you have an egg to spend. A bare `/buddy use` goes back to the `active` option. |
 | `/buddy add [name] [species] [personality]` | Spends an egg to hatch a new buddy and writes it into the buddies file, e.g. `/buddy add Nino duck grumpy old bird`. No species: a random one. No name: Haiku names it. |
@@ -80,7 +80,7 @@ A JSON list. Only `name` is required; any other field you add is kept as is.
 ]
 ```
 
-Every buddy in the file starts as an egg: you earn one egg every `sessionsPerHatch` sessions (20 by default), and `/buddy use <name>` spends it. A toast, and the buddy itself, tell you when an egg is ready. Hatching rolls the rest at random. If the buddy has no personality, Haiku writes one into the file then. A file that is not valid JSON is reported by `/buddy list` and never written.
+Every buddy in the file starts as an egg: you earn one egg every `sessionsPerHatch` sessions (20 by default), and `/buddy use <name>` spends it. A toast, and the buddy itself, tell you when an egg is ready; a bare `/buddy` then hatches a brand-new one whose name is the surprise. Hatching rolls the rest at random. If the buddy has no personality, Haiku writes one into the file then. A file that is not valid JSON is reported by `/buddy list` and never written.
 
 ## What it hooks
 

@@ -21,7 +21,7 @@ const SOUL = { name: 'Buddy', personality: 'A small, curious terminal companion 
 type Opts = { name: string; personality: string; species: string; active: string; file: string }
 type Say = (n: string) => string
 const HINT = 'list | use <name> | add [name] [species] [personality] | rm <name>'
-const WORDS: Record<Lang, { thinks: string; off: Say; on: Say; toggle: Say; hello: Say; unknown: Say; added: Say; taken: Say; removed: Say; locked: Say; stillEgg: (n: string, left: string) => string; badFile: Say; noName: string; dream: string; ready: string; egg: (done: number, per: number) => string; usage: string; chatAnswer: string; chatEmpty: string; turnDone: string; reply: string; labels: [string, string, string, string] }> = {
+const WORDS: Record<Lang, { thinks: string; off: Say; on: Say; toggle: Say; hello: Say; unknown: Say; added: Say; taken: Say; removed: Say; locked: Say; stillEgg: (n: string, left: string) => string; badFile: Say; noName: string; dream: string; ready: string; born: Say; egg: (done: number, per: number) => string; usage: string; chatAnswer: string; chatEmpty: string; turnDone: string; reply: string; labels: [string, string, string, string] }> = {
   en: {
     thinks: '*thinks*',
     off: n => `${n} waddles off.`,
@@ -37,7 +37,8 @@ const WORDS: Record<Lang, { thinks: string; off: Say; on: Say; toggle: Say; hell
     badFile: e => `buddies.json can't be read, so it is left untouched: ${e}`,
     noName: 'Haiku could not name it, so no egg was spent. Try /buddy add <name>.',
     dream: 'Write every value in English.',
-    ready: 'An egg is ready: /buddy add <name>, or /buddy use a buddy from buddies.json still in its egg.',
+    ready: 'An egg is wobbling! Type /buddy to find out who hatches.',
+    born: n => `Crack! Say hi to ${n}.`,
     egg: (done, per) => `Next egg: ${done}/${per} sessions together.`,
     usage: `Usage: /buddy [${HINT}]`,
     chatAnswer: 'Someone clicked you to chat. What the assistant last said:',
@@ -61,7 +62,8 @@ const WORDS: Record<Lang, { thinks: string; off: Say; on: Say; toggle: Say; hell
     badFile: e => `buddies.json non si legge, quindi non lo tocco: ${e}`,
     noName: 'Haiku non è riuscito a dargli un nome, quindi nessun uovo è stato speso. Prova /buddy add <nome>.',
     dream: 'Scrivi ogni valore in italiano.',
-    ready: 'Un uovo è pronto: /buddy add <nome>, oppure /buddy use su un buddy di buddies.json ancora nell\'uovo.',
+    ready: 'Un uovo si sta muovendo! Scrivi /buddy e scopri chi nasce.',
+    born: n => `Crac! Saluta ${n}.`,
     egg: (done, per) => `Prossimo uovo: ${done}/${per} sessioni insieme.`,
     usage: `Uso: /buddy [${HINT}]`,
     chatAnswer: 'Qualcuno ti ha cliccato per chiacchierare. Ultima cosa detta dall\'assistente:',
@@ -297,10 +299,22 @@ export const register: Register = (on, options) => {
     const w = WORDS[lang]
     const [verb = '', ...words] = e.args.trim().split(/\s+/).filter(Boolean)
     const wanted = words.join(' ')
+    // With an egg ready, a bare /buddy hatches a surprise: Haiku picks the name. Otherwise it shows or hides.
+    let failed: string | undefined
+    if (!verb && (await eggs($, perEgg)).left <= 0) {
+      const hatched = await hatchNew($, o, { name: '' }, (await rosterOf($, o)).roster, lang)
+      if ('name' in hatched) {
+        await Promise.all([$.store.set('active', hatched.name), setHidden($, false)])
+        adopt(await hatchInto($, o, lang))
+        await say($, w.born(name))
+        return { text: w.born(name) }
+      }
+      failed = hatched.failed
+    }
     if (!verb) {
       const hidden = !(await read($, isHidden))
       await setHidden($, hidden)
-      return { text: hidden ? w.off(name) : w.on(name) }
+      return { text: [hidden ? w.off(name) : w.on(name), ...(failed ? [failed] : [])].join('\n') }
     }
     if (verb === 'list') {
       const [{ roster, born, error }, { done }] = await Promise.all([rosterOf($, o), eggs($, perEgg)])

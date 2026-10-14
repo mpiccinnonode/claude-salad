@@ -407,7 +407,7 @@ export const register: Register = (on, options) => {
         <Box flexDirection="column">
           {drawBuddy(species, frame, { isWorking: e.props.isWorking, eye: b.eye, hat: b.hat, action, isAsleep }, RARITY_COLOR[b.rarity]).map((row, i) => (
             <Button key={`body-${i}`} plain onPress={() => press($, 'pet', species, lang)}>
-              {row.map(([text, color], j) => <Text key={`p${i}-${j}`} color={color}>{text}</Text>)}
+              {row.map(([text, color], j) => <Text key={`p${i}-${j}`} color={color} mono>{text}</Text>)}
             </Button>
           ))}
         </Box>

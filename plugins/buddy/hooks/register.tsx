@@ -2,6 +2,8 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 import type { Bones, Pressed, Quip, StatName } from '../types'
 import { RARITIES, roll, STAT_NAMES } from './bones.ts'
+import { asPersonality, describe, findFriend, parseAdd, parseBook, upsert, without } from './friends.ts'
+import type { Friend, Personality, Soul } from './friends.ts'
 import { line, reasonFor } from './lines.ts'
 import type { Lang, Reason } from './lines.ts'
 import { ACTION_TICKS, drawBuddy } from './sprite.ts'
@@ -16,12 +18,29 @@ const isStats = atom({ plugin: 'buddy', key: 'isStats' } as const, false)
 // Until ~/.claude.json is read (or when it can't be), a plain common blob stands in.
 const FALLBACK: Bones = { rarity: 'common', species: 'blob', eye: '·', hat: 'none', isShiny: false, stats: { DEBUGGING: 30, PATIENCE: 30, CHAOS: 30, WISDOM: 30, SNARK: 30 }, peak: 'PATIENCE' }
 const SOUL = { name: 'Buddy', personality: 'A small, curious terminal companion who comments on your work.' }
-const WORDS: Record<Lang, { thinks: string; off: (n: string) => string; on: (n: string) => string; toggle: (n: string) => string; chatAnswer: string; chatEmpty: string; turnDone: string; reply: string; labels: [string, string, string, string] }> = {
+type Opts = { name: string; personality: string; species: string; active: string; file: string }
+type Say = (n: string) => string
+const HINT = 'list | use <name> | add [name] [species] [personality] | rm <name>'
+const WORDS: Record<Lang, { thinks: string; off: Say; on: Say; toggle: Say; hello: Say; unknown: Say; added: Say; taken: Say; removed: Say; locked: Say; stillEgg: (n: string, left: string) => string; badFile: Say; noName: string; dream: string; ready: string; born: Say; egg: (done: number, per: number) => string; usage: string; chatAnswer: string; chatEmpty: string; turnDone: string; reply: string; labels: [string, string, string, string] }> = {
   en: {
     thinks: '*thinks*',
     off: n => `${n} waddles off.`,
     on: n => `${n} is back.`,
-    toggle: n => `Show or hide ${n}`,
+    toggle: n => `Show or hide ${n}, or switch buddy`,
+    hello: n => `${n} hops in.`,
+    unknown: n => `No buddy called ${n}. Try /buddy list.`,
+    added: n => `${n} hatched. /buddy use ${n} to bring it out.`,
+    taken: n => `There is already a buddy called ${n}.`,
+    removed: n => `${n} waves goodbye.`,
+    locked: n => `No egg yet: ${n} more session${n === '1' ? '' : 's'} together and one hatches.`,
+    stillEgg: (n, left) => `${n} is still an egg: ${left} more session${left === '1' ? '' : 's'} together.`,
+    badFile: e => `buddies.json can't be read, so it is left untouched: ${e}`,
+    noName: 'Haiku could not name it, so no egg was spent. Try /buddy add <name>.',
+    dream: 'Write every value in English.',
+    ready: 'An egg is wobbling! Type /buddy to find out who hatches.',
+    born: n => `Crack! Say hi to ${n}.`,
+    egg: (done, per) => `Next egg: ${done}/${per} sessions together.`,
+    usage: `Usage: /buddy [${HINT}]`,
     chatAnswer: 'Someone clicked you to chat. What the assistant last said:',
     chatEmpty: 'Someone clicked you to chat. Say something.',
     turnDone: 'The coding assistant just finished a turn. Its final message:',
@@ -32,7 +51,21 @@ const WORDS: Record<Lang, { thinks: string; off: (n: string) => string; on: (n: 
     thinks: '*pensa*',
     off: n => `${n} se ne va ondeggiando.`,
     on: n => `${n} è tornato.`,
-    toggle: n => `Mostra o nascondi ${n}`,
+    toggle: n => `Mostra o nascondi ${n}, o cambia buddy`,
+    hello: n => `Arriva ${n}.`,
+    unknown: n => `Nessun buddy di nome ${n}. Prova /buddy list.`,
+    added: n => `${n} è nato. /buddy use ${n} per farlo uscire.`,
+    taken: n => `C'è già un buddy di nome ${n}.`,
+    removed: n => `${n} ti saluta e se ne va.`,
+    locked: n => `Ancora nessun uovo: ${n === '1' ? 'manca una sessione' : `mancano ${n} sessioni`} insieme perché se ne schiuda uno.`,
+    stillEgg: (n, left) => `${n} è ancora un uovo: ${left === '1' ? 'manca una sessione' : `mancano ${left} sessioni`} insieme.`,
+    badFile: e => `buddies.json non si legge, quindi non lo tocco: ${e}`,
+    noName: 'Haiku non è riuscito a dargli un nome, quindi nessun uovo è stato speso. Prova /buddy add <nome>.',
+    dream: 'Scrivi ogni valore in italiano.',
+    ready: 'Un uovo si sta muovendo! Scrivi /buddy e scopri chi nasce.',
+    born: n => `Crac! Saluta ${n}.`,
+    egg: (done, per) => `Prossimo uovo: ${done}/${per} sessioni insieme.`,
+    usage: `Uso: /buddy [${HINT}]`,
     chatAnswer: 'Qualcuno ti ha cliccato per chiacchierare. Ultima cosa detta dall\'assistente:',
     chatEmpty: 'Qualcuno ti ha cliccato per chiacchierare. Di\' qualcosa.',
     turnDone: 'L\'assistente di codice ha appena finito un turno. Il suo messaggio finale:',
@@ -53,23 +86,138 @@ async function say($: EngineInterface, text: string) {
   await update($, quip, () => text)
 }
 
-// The original /buddy kept its soul (name, personality) in ~/.claude.json and rolled its bones from the account id.
-async function hatch($: EngineInterface) {
+type Born = { bones: Bones; name?: string; personality?: Personality }
+type Births = Record<string, Born>
+const keyOf = (name: string) => name.trim().toLowerCase()
+
+// The original /buddy kept its soul in ~/.claude.json and rolled its bones from the account id; no companion, nothing to keep.
+async function readLegacy($: EngineInterface): Promise<Born | undefined> {
   try {
     const config = JSON.parse(await $.fs.read(`${await $.env.get('HOME')}/.claude.json`))
-    const soul = { name: String(config.companion?.name ?? SOUL.name), personality: String(config.companion?.personality ?? SOUL.personality) }
-    return { bones: roll(String(config.oauthAccount?.accountUuid ?? config.userID ?? 'anon')), soul }
+    if (!config.companion) return undefined
+    const { name, personality } = config.companion
+    return { bones: roll(String(config.oauthAccount?.accountUuid ?? config.userID ?? 'anon')), name: name && String(name), personality: personality && String(personality) }
   } catch {
-    return { bones: FALLBACK, soul: SOUL }
+    return undefined
   }
 }
 
+// The original buddy hatches free; ~/.claude.json is read once, so users of 0.2.0 keep theirs, else it is random, name and soul too.
+async function bornOriginal($: EngineInterface, lang: Lang): Promise<Born> {
+  let born = ((await $.store.get('born')) ?? {}) as Births
+  if ((await $.store.get('migrated')) !== true) {
+    const legacy = await readLegacy($)
+    if (legacy && !born['']) born = { ...born, '': legacy }
+    await Promise.all([$.store.set('born', born), $.store.set('migrated', true)])
+  }
+  if (born['']) return born['']
+  const bones = roll(String(Math.random()))
+  const dreamt = await dreamUp($, undefined, bones, lang)
+  const fresh = { bones, name: dreamt?.name, personality: dreamt?.soul }
+  await $.store.set('born', { ...born, '': fresh })
+  return fresh
+}
+
+async function pathOf($: EngineInterface, o: Opts) {
+  return o.file.startsWith('~/') ? `${await $.env.get('HOME')}${o.file.slice(1)}` : o.file
+}
+
+// A missing file is an empty list; a broken one reports its error and is never written.
+type Book = { raw: unknown[]; friends: Friend[]; error?: string }
+
+async function readBook($: EngineInterface, path: string): Promise<Book> {
+  let text: string
+  try {
+    text = String(await $.fs.read(path))
+  } catch {
+    return { raw: [], friends: [] }
+  }
+  try {
+    return parseBook(text)
+  } catch (err) {
+    return { raw: [], friends: [], error: err instanceof Error ? err.message : String(err) }
+  }
+}
+
+async function rosterOf($: EngineInterface, o: Opts) {
+  const [born, book] = await Promise.all([$.store.get('born').then(b => (b ?? {}) as Births), pathOf($, o).then(path => readBook($, path), (): Book => ({ raw: [], friends: [] }))])
+  const original: Friend = { name: o.name || born['']?.name || SOUL.name, personality: o.personality || born['']?.personality, species: o.species === 'auto' ? undefined : o.species }
+  return { roster: [original, ...book.friends] as [Friend, ...Friend[]], born, error: book.error }
+}
+
+// Spices for the personality writer, two per hatch, so no two buddies come out alike.
+const TWISTS = [
+  'a former life it half-remembers', 'an irrational fear', 'a secret hobby', 'a strong opinion about something trivial',
+  'a rivalry with an inanimate object', 'a philosophy it misapplies', 'outdated slang it overuses', 'a collection it is proud of',
+  'a grudge it cannot explain', 'a soft spot it hides badly', 'a superstition about code', 'a dream job it will never get',
+  'a gap between what it says and what it does', 'a habit of its species taken too far', 'an unexpected area of expertise', 'a ritual before every commit',
+]
+
+// One Haiku call at hatch time; undefined when it fails, and the buddy falls back to the plain default.
+async function dreamUp($: EngineInterface, name: string | undefined, b: Bones, lang: Lang): Promise<{ name: string; soul?: Soul } | undefined> {
+  const first = Math.floor(Math.random() * TWISTS.length)
+  const twists = [TWISTS[first], TWISTS[(first + 1 + Math.floor(Math.random() * (TWISTS.length - 1))) % TWISTS.length]]
+  const r = await $.model.complete({
+    model: 'haiku',
+    maxTokens: 700,
+    system: `You invent personalities for tiny terminal companions who watch a programmer work. Make each one layered, specific and odd: contradictions, concrete small details, a voice nobody else has. No generic cute-pet clichés. Keep it tight: one sentence for tone and speech, two for the backstory, a few words per list item. Never mention stats or numbers. ${WORDS[lang].dream} Answer with one JSON object and nothing else: {"name": string, "tone": string, "traits": 3-5 strings, "quirks": 2-3 strings, "backstory": 2 sentences, "speech": how it talks, "catchphrase": string, "likes": 2-3 strings, "dislikes": 2-3 strings}`,
+    prompt: `${name ? `Name: ${name}.` : 'It has no name yet: invent a short, unusual one.'} Species: ${b.species}. Rarity: ${b.rarity}. Stats out of 100: ${STAT_NAMES.map(s => `${s} ${b.stats[s]}`).join(', ')}. Weave in ${twists.join(' and ')}.`,
+  }).catch(() => undefined)
+  if (!r?.isAnswered) return undefined
+  try {
+    const data = JSON.parse(r.text.slice(r.text.indexOf('{'), r.text.lastIndexOf('}') + 1))
+    const soul = asPersonality(data)
+    const named = name || (typeof data.name === 'string' ? data.name.trim() : '')
+    return named ? { name: named, soul: typeof soul === 'object' ? soul : undefined } : undefined
+  } catch {
+    return undefined
+  }
+}
+
+// Spends an egg: random bones, a name and personality dreamt up when missing, written back into buddies.json.
+// The egg is spent only on success; `failed` is the line to show otherwise.
+async function hatchNew($: EngineInterface, o: Opts, friend: Friend, roster: Friend[], lang: Lang): Promise<{ name: string; failed?: undefined } | { failed: string }> {
+  const w = WORDS[lang]
+  const path = await pathOf($, o)
+  const book = await readBook($, path)
+  if (book.error) return { failed: w.badFile(book.error) }
+  const rolled = roll(String(Math.random()))
+  const dreamt = friend.name && friend.personality ? undefined : await dreamUp($, friend.name || undefined, { ...rolled, species: friend.species ?? rolled.species }, lang)
+  const name = friend.name || dreamt?.name
+  if (!name) return { failed: w.noName }
+  if (!friend.name && findFriend(roster, name)) return { failed: w.taken(name) }
+  // A file entry gets only what was dreamt up; its own fields stay as written. A new one is written whole.
+  const isNew = !findFriend(book.friends, name)
+  const soul = friend.personality ? undefined : dreamt?.soul
+  if (isNew || soul) await $.fs.write(path, `${JSON.stringify(upsert(book.raw, name, isNew ? { ...friend, name, personality: friend.personality ?? soul } : { personality: soul }), null, 2)}\n`)
+  const [born, hatched] = await Promise.all([$.store.get('born'), $.store.get('hatched')])
+  await Promise.all([$.store.set('born', { ...(born as Births | undefined), [keyOf(name)]: { bones: rolled } }), $.store.set('hatched', Number(hatched ?? 0) + 1)])
+  return { name }
+}
+
+async function hatch($: EngineInterface, o: Opts, lang: Lang) {
+  const { roster, born } = await rosterOf($, o)
+  // /buddy use wins over the `active` option; an unknown name, or one still in its egg, falls back to the original.
+  const wanted = findFriend(roster, String((await $.store.get('active')) ?? o.active))
+  const friend = wanted && born[keyOf(wanted.name)] ? wanted : roster[0]
+  const b = friend === roster[0] ? await bornOriginal($, lang) : born[keyOf(friend.name)]!
+  const named = friend === roster[0] ? { ...friend, name: o.name || b.name || SOUL.name } : friend
+  return { friend: { ...named, personality: named.personality ?? b.personality }, bones: { ...b.bones, species: friend.species ?? b.bones.species } }
+}
+
 // Fills the session's atoms from disk; safe to call again whenever they come back empty (a /clear starts them over).
-async function hatchInto($: EngineInterface) {
-  const hatched = await hatch($)
+async function hatchInto($: EngineInterface, o: Opts, lang: Lang) {
+  const hatched = await hatch($, o, lang)
   const wasHidden = (await $.store.get('isHidden')) === true
-  await Promise.all([update($, bones, () => hatched.bones), update($, isHidden, () => wasHidden)])
-  return hatched.soul
+  await Promise.all([update($, bones, () => hatched.bones), update($, isHidden, () => wasHidden), update($, quip, () => null), update($, pressed, () => null)])
+  return hatched.friend
+}
+
+// Every `per` sessions earns one egg; `hatched` only grows, so removing a buddy frees no slot.
+async function eggs($: EngineInterface, per: number) {
+  const sessions = Number((await $.store.get('sessions')) ?? 0)
+  const hatched = Number((await $.store.get('hatched')) ?? 0)
+  return { hatched, done: Math.min(per, sessions - hatched * per), left: (hatched + 1) * per - sessions }
 }
 
 async function react($: EngineInterface, reason: Reason, species: string, lang: Lang) {
@@ -95,15 +243,24 @@ async function quipFromModel($: EngineInterface, name: string, personality: stri
 }
 
 export const register: Register = (on, options) => {
-  let name = String(options.name || SOUL.name)
-  let personality = String(options.personality || SOUL.personality)
+  const o: Opts = {
+    name: String(options.name ?? ''),
+    personality: String(options.personality ?? ''),
+    species: String(options.species ?? 'auto'),
+    active: String(options.active ?? ''),
+    file: String(options.buddiesFile || '~/.claude/buddy/buddies.json'),
+  }
+  let name = o.name || SOUL.name
+  let personality = o.personality || SOUL.personality
   const every = Math.max(1, Number(options.everyNTurns ?? 3))
+  const perEgg = Math.max(1, Number(options.sessionsPerHatch ?? 20))
   const lang: Lang = options.language === 'en' ? 'en' : 'it'
-  const forced = String(options.species ?? 'auto')
-  const speciesOf = (b: Bones | null) => (forced === 'auto' ? (b ?? FALLBACK).species : forced)
-  const adopt = (soul: typeof SOUL) => {
-    name = String(options.name || soul.name)
-    personality = String(options.personality || soul.personality)
+  const isRight = options.position === 'right'
+  // Before the first hatch the bones are empty: the species option still shows through.
+  const speciesOf = (b: Bones | null) => b?.species ?? (o.species === 'auto' ? FALLBACK.species : o.species)
+  const adopt = (friend: Friend) => {
+    name = friend.name
+    personality = describe(friend.personality ?? SOUL.personality)
   }
   let turns = 0
   let lastAnswer = ''
@@ -111,13 +268,19 @@ export const register: Register = (on, options) => {
   let lastActiveAt = 0
 
   on('session.start', async ($, e, next) => {
-    adopt(await hatchInto($))
-    await $.command.register({ name: 'buddy', description: WORDS[lang].toggle(name) })
+    await $.store.set('sessions', Number((await $.store.get('sessions')) ?? 0) + 1)
+    adopt(await hatchInto($, o, lang))
+    // Only on the session that completes the egg, so it is said once.
+    if ((await eggs($, perEgg)).left === 0) {
+      $.ui.toast(WORDS[lang].ready, { timeoutMs: 10000 })
+      await say($, WORDS[lang].ready)
+    }
+    await $.command.register({ name: 'buddy', description: WORDS[lang].toggle(name), argumentHint: HINT })
     // ponytail: band redraws ~3x/s forever; pause the ticker while hidden if that ever shows up in profiles
     lastActiveAt = await read($, tick)
     $.clock.every(300, async () => {
       await update($, tick, n => n + 1)
-      if (!(await read($, bones))) adopt(await hatchInto($))
+      if (!(await read($, bones))) adopt(await hatchInto($, o, lang))
     })
     return next(e)
   })
@@ -132,10 +295,70 @@ export const register: Register = (on, options) => {
     return next(e)
   })
 
-  on('command.run', { command: 'buddy' }, async $ => {
-    const hidden = !(await read($, isHidden))
-    await setHidden($, hidden)
-    return { text: hidden ? WORDS[lang].off(name) : WORDS[lang].on(name) }
+  on('command.run', { command: 'buddy' }, async ($, e) => {
+    const w = WORDS[lang]
+    const [verb = '', ...words] = e.args.trim().split(/\s+/).filter(Boolean)
+    const wanted = words.join(' ')
+    // With an egg ready, a bare /buddy hatches a surprise: Haiku picks the name. Otherwise it shows or hides.
+    let failed: string | undefined
+    if (!verb && (await eggs($, perEgg)).left <= 0) {
+      const hatched = await hatchNew($, o, { name: '' }, (await rosterOf($, o)).roster, lang)
+      if ('name' in hatched) {
+        await Promise.all([$.store.set('active', hatched.name), setHidden($, false)])
+        adopt(await hatchInto($, o, lang))
+        await say($, w.born(name))
+        return { text: w.born(name) }
+      }
+      failed = hatched.failed
+    }
+    if (!verb) {
+      const hidden = !(await read($, isHidden))
+      await setHidden($, hidden)
+      return { text: [hidden ? w.off(name) : w.on(name), ...(failed ? [failed] : [])].join('\n') }
+    }
+    if (verb === 'list') {
+      const [{ roster, born, error }, { done }] = await Promise.all([rosterOf($, o), eggs($, perEgg)])
+      const mark = (f: Friend) => (f.name === name ? '▸' : f === roster[0] || born[keyOf(f.name)] ? ' ' : '🥚')
+      return { text: [...roster.map(f => `${mark(f)} ${f.name}${f.species ? ` (${f.species})` : ''}`), w.egg(done, perEgg), ...(error ? [w.badFile(error)] : [])].join('\n') }
+    }
+    if (verb === 'use') {
+      const { roster, born } = await rosterOf($, o)
+      const friend = wanted ? findFriend(roster, wanted) : undefined
+      if (wanted && !friend) return { text: w.unknown(wanted) }
+      if (friend && friend !== roster[0] && !born[keyOf(friend.name)]) {
+        const { left } = await eggs($, perEgg)
+        if (left > 0) return { text: w.stillEgg(friend.name, String(left)) }
+        const { failed } = await hatchNew($, o, friend, roster, lang)
+        if (failed) return { text: failed }
+      }
+      // A bare `/buddy use` goes back to the `active` option.
+      await $.store.set('active', wanted || null)
+      adopt(await hatchInto($, o, lang))
+      return { text: w.hello(name) }
+    }
+    if (verb === 'add') {
+      // A bare `/buddy add` lets Haiku name it too.
+      const friend = parseAdd(words) ?? { name: '' }
+      const { roster, error } = await rosterOf($, o)
+      if (error) return { text: w.badFile(error) }
+      if (friend.name && findFriend(roster, friend.name)) return { text: w.taken(friend.name) }
+      const { left } = await eggs($, perEgg)
+      if (left > 0) return { text: w.locked(String(left)) }
+      const hatched = await hatchNew($, o, friend, roster, lang)
+      return { text: hatched.failed ?? w.added(hatched.name) }
+    }
+    if (verb === 'rm') {
+      const path = await pathOf($, o)
+      const book = await readBook($, path)
+      if (book.error) return { text: w.badFile(book.error) }
+      if (!wanted || !findFriend(book.friends, wanted)) return { text: w.unknown(wanted) }
+      const born = ((await $.store.get('born')) ?? {}) as Births
+      delete born[keyOf(wanted)]
+      await Promise.all([$.fs.write(path, `${JSON.stringify(without(book.raw, wanted), null, 2)}\n`), $.store.set('born', born)])
+      adopt(await hatchInto($, o, lang))
+      return { text: w.removed(wanted) }
+    }
+    return { text: w.usage }
   })
 
   on('tool.call', { tool: 'Bash' }, async ($, e, next) => {
@@ -180,7 +403,7 @@ export const register: Register = (on, options) => {
     const { Box, Button, Text } = $.ui.resolve(e)
 
     return (
-      <Box flexDirection="row">
+      <Box key="band" flexDirection={isRight ? 'row-reverse' : 'row'} width={isRight ? '100%' : undefined}>
         <Box flexDirection="column">
           {drawBuddy(species, frame, { isWorking: e.props.isWorking, eye: b.eye, hat: b.hat, action, isAsleep }, RARITY_COLOR[b.rarity]).map((row, i) => (
             <Button key={`body-${i}`} plain onPress={() => press($, 'pet', species, lang)}>

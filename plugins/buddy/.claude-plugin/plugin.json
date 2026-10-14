@@ -25,7 +25,7 @@
     "species": {
       "type": "string",
       "title": "Species",
-      "description": "auto = the one your account rolled in the original /buddy; or pick any of the 18.",
+      "description": "Species of your original buddy: auto = the one your account rolled in the original /buddy; or pick any of the 18.",
       "default": "auto",
       "options": [
         "auto",
@@ -58,6 +58,34 @@
         "en",
         "it"
       ]
+    },
+    "position": {
+      "type": "string",
+      "title": "Position",
+      "description": "Which side of the band the buddy sits on.",
+      "default": "left",
+      "options": [
+        "left",
+        "right"
+      ]
+    },
+    "active": {
+      "type": "string",
+      "title": "Active buddy",
+      "description": "Name of the buddy to show; empty = your original one. /buddy use <name> overrides it. A buddy still in its egg falls back to the original.",
+      "default": ""
+    },
+    "sessionsPerHatch": {
+      "type": "number",
+      "title": "Sessions per egg",
+      "description": "Sessions together before /buddy add can hatch one more buddy.",
+      "default": 20
+    },
+    "buddiesFile": {
+      "type": "string",
+      "title": "Buddies file",
+      "description": "JSON list of your extra buddies: { name, species?, personality? }; personality is a string or { tone, traits, quirks, backstory, speech, catchphrase, likes, dislikes }. /buddy add and rm write to it.",
+      "default": "~/.claude/buddy/buddies.json"
     }
   },
   "author": {

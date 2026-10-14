@@ -227,7 +227,8 @@ test('buddies.json: its buddies are eggs until /buddy use spends one; a missing 
   expect(await run('use Pippo')).toContain('Pippo is still an egg: 1 more session together')
   await start()
   expect(await run('use Pippo')).toContain('Pippo hops in')
-  expect(systems.filter(s => s.includes('invent personalities'))).toHaveLength(1)
+  // One for the original (no ~/.claude.json), one for Nino; none for Pippo, who brought his own.
+  expect(systems.filter(s => s.includes('invent personalities'))).toHaveLength(2)
   expect(book()[1]).toEqual({ name: 'Pippo', personality: { tone: 'anxious', traits: 'always' } })
   const ui = await $.ui.mount({ plugin: 'buddy', surface: 'terminal', ...BAND })
   await ui.press({ key: 'talk' })
@@ -291,4 +292,17 @@ test('hatching: ~/.claude.json is read once to keep the original, the others are
   await start()
   expect(await card()).toBe(zed)
   expect(reads.filter(p => p.endsWith('.claude.json'))).toHaveLength(1)
+})
+
+test('no companion in ~/.claude.json: the original is random, name and personality included; a bare /buddy add is named by Haiku', { options: { language: 'en', sessionsPerHatch: 1 } }, async ($, on) => {
+  const { run, start, shows, card, book } = rig($, on, { '/home/t/.claude.json': JSON.stringify({ oauthAccount: { accountUuid: 'rare-hunt-42' } }) })
+  const names = ['Brisa', 'Quillon']
+  on('model.complete', ($, e) => answer(e.system?.includes('invent personalities') ? JSON.stringify({ name: names.shift(), tone: 'dry', traits: ['odd'] }) : 'Hm.'))
+
+  await start()
+  expect(await shows(/Brisa/)).toBe(true)
+  expect(await card()).not.toContain('PAT 78')
+  expect(await run('add')).toContain('Quillon hatched')
+  expect(book()).toEqual([{ name: 'Quillon', personality: { tone: 'dry', traits: ['odd'] } }])
+  expect(await run('add')).toContain('1 more session')
 })

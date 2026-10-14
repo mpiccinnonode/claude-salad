@@ -2,7 +2,7 @@
 
 The `/buddy` companion Claude Code shipped in April 2026 and removed in 2.1.97, brought back as a mod. Your buddy sits above the prompt, animated, and reacts to your work.
 
-- **Random, and yours to keep.** Every buddy hatches from a random seed, the same odds for everyone: species (one of 18), rarity ★ to ★★★★★, eyes, hat and five stats (DEBUGGING, PATIENCE, CHAOS, WISDOM, SNARK). Whatever hatches is kept: a buddy looks the same every session.
+- **Random, and yours to keep.** Every buddy hatches from a random seed, the same odds for everyone: species (one of 18, equally likely), rarity (★ 60%, ★★ 25%, ★★★ 10%, ★★★★ 4%, ★★★★★ 1%), eyes, hat and five stats (DEBUGGING, PATIENCE, CHAOS, WISDOM, SNARK). A name or personality you don't give it, Haiku invents. Whatever hatches is kept: a buddy looks the same every session.
 - **Keeps the buddy you had.** On its first run it reads `~/.claude.json` once and keeps the buddy you had (from the original `/buddy` or buddy 0.2.0): its name, personality and body, re-rolled from your account id with the original algorithm. It never reads the file again.
 - **Animated part by part.** It blinks, looks around, hops, flaps, wags and twitches. Every species has its own body language when petted, poked or asleep: a cat flattens its ears, a turtle hides in its shell, a cactus blooms. While Claude works it waddles, and after about 30 seconds of quiet it dozes off.
 - **Reacts to your work.** It has canned lines for failed commands, failing tests, commits and late-night commits, drawn from its species and its strongest stat. Every few turns Haiku writes it a fresh in-character quip.
@@ -13,7 +13,7 @@ The `/buddy` companion Claude Code shipped in April 2026 and removed in 2.1.97, 
 ## Requirements
 
 - **Claude Code ≥ 2.1.295.** Older builds refuse the clickable sprite and the band stays empty.
-- One Haiku call every few turns (`everyNTurns`, default 3), plus one each time you press `talk`, plus one when a buddy without a personality hatches.
+- One Haiku call every few turns (`everyNTurns`, default 3), plus one each time you press `talk`, plus one when a buddy without a name or personality hatches.
 
 ## Install
 
@@ -29,7 +29,7 @@ The `/buddy` companion Claude Code shipped in April 2026 and removed in 2.1.97, 
 | `/buddy` | Shows or hides the buddy (remembered across sessions). |
 | `/buddy list` | Lists your buddies; `▸` marks the active one, `🥚` one still in its egg. Shows the progress to the next egg. |
 | `/buddy use <name>` | Brings out another buddy (remembered across sessions). If it is still an egg, this hatches it, when you have an egg to spend. A bare `/buddy use` goes back to the `active` option. |
-| `/buddy add <name> [species] [personality]` | Spends an egg to hatch a new buddy and writes it into the buddies file, e.g. `/buddy add Nino duck grumpy old bird`. No species: a random one. |
+| `/buddy add [name] [species] [personality]` | Spends an egg to hatch a new buddy and writes it into the buddies file, e.g. `/buddy add Nino duck grumpy old bird`. No species: a random one. No name: Haiku names it. |
 | `/buddy rm <name>` | Removes a buddy from the buddies file. No egg back. |
 | click it, or `1` | Pet: happy eyes, a floating heart, a happy line. |
 | `2` | Poke: a startled hop, then a cross look and a grumpy line. |
@@ -54,7 +54,7 @@ The number keys work while the band has focus (`ctrl+x tab`, or click it). Click
 
 Set them in `/config`, or in `settings.json` under `pluginConfigs`, keyed `buddy@mpiccinnonode`.
 
-No buddy in `~/.claude.json`? Your first one is named Buddy and hatches random.
+No buddy in `~/.claude.json`? Your first one hatches random, and Haiku gives it a name and a personality (Buddy, with a plain personality, if that call fails).
 
 ## The buddies file
 

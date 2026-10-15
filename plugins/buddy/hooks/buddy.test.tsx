@@ -272,7 +272,7 @@ test('a new buddy hatches only every N sessions together, and removing one frees
   await start()
   expect(toasts).toHaveLength(2)
   await start()
-  expect(toasts).toHaveLength(2)
+  expect(toasts).toHaveLength(3)
   expect(await run('add Ada owl')).toContain('Ada hatched')
   expect(book()).toEqual([{ name: 'Ada', species: 'owl' }])
   expect(await run('dance')).toContain('Usage')

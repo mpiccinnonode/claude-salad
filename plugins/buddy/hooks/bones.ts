@@ -106,3 +106,11 @@ export function roll(userId: string): Bones {
   }
   return { rarity, species, eye, hat, isShiny, stats, peak }
 }
+
+// One evolution: a rarity up (legendary stays), a hat if it had none, every stat up and the peak most.
+export function evolve(b: Bones, rng = Math.random): Bones {
+  const rarity = RARITIES[Math.min(RARITIES.length - 1, RARITIES.indexOf(b.rarity) + 1)] ?? b.rarity
+  const hat = b.hat === 'none' ? (HATS[1 + Math.floor(rng() * (HATS.length - 1))] ?? 'crown') : b.hat
+  const stats = Object.fromEntries(STAT_NAMES.map(s => [s, Math.min(100, b.stats[s] + (s === b.peak ? 15 : 5))])) as Record<StatName, number>
+  return { ...b, rarity, hat, stats }
+}

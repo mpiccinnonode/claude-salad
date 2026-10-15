@@ -1,5 +1,5 @@
 import { expect, test } from 'claude-code/testing'
-import { roll, wyhash } from './bones.ts'
+import { evolve, roll, wyhash } from './bones.ts'
 
 // Computed by the reference implementation (coding-buddy core/engine.ts) with the 18 original species.
 const REF_EMPTY = 290873116282709081n
@@ -17,4 +17,12 @@ test('wyhash matches the reference port', async () => {
 test('roll is stable for an id and draws from the original tables', async () => {
   expect(roll('test-user-1friend')).toEqual(roll('test-user-1friend'))
   expect(roll(REF_ID)).toEqual(REF_BONES)
+})
+
+test('evolve: a rarity up, a hat, stats up with the peak most, capped at 100; legendary stays legendary', async () => {
+  const b = roll(REF_ID)
+  const grown = evolve(b, () => 0)
+  expect(grown).toEqual({ ...b, rarity: 'uncommon', hat: 'crown', stats: { DEBUGGING: 6, PATIENCE: 93, CHAOS: 27, WISDOM: 24, SNARK: 16 } })
+  const top = evolve({ ...grown, rarity: 'legendary', stats: { ...grown.stats, PATIENCE: 95 } })
+  expect([top.rarity, top.hat, top.stats.PATIENCE]).toEqual(['legendary', 'crown', 100])
 })

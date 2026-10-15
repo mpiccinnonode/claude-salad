@@ -1,7 +1,7 @@
 {
   "name": "buddy",
-  "version": "0.3.0",
-  "description": "The /buddy companion, revived as a mod: random buddies hatched from eggs you earn, each with its own species, rarity, stats and Haiku-written personality, animated above the prompt and reacting to your work.",
+  "version": "0.4.0",
+  "description": "The /buddy companion, revived as a mod: random buddies hatched from eggs you earn, each with its own species, rarity, stats and Haiku-written personality, animated above the prompt, reacting to your work, and evolving with you over time.",
   "types": "./types/index.d.ts",
   "userConfig": {
     "name": {
@@ -13,7 +13,7 @@
     "personality": {
       "type": "string",
       "title": "Personality override",
-      "description": "Overrides your original buddy's personality.",
+      "description": "Overrides your original buddy's personality, an evolved one included.",
       "default": ""
     },
     "everyNTurns": {
@@ -52,7 +52,7 @@
     "language": {
       "type": "string",
       "title": "Language",
-      "description": "Language of the buddy's lines and of its Haiku quips.",
+      "description": "Language of the buddy's lines, its Haiku quips and personalities, and which epithet it shows.",
       "default": "it",
       "options": [
         "en",
@@ -81,10 +81,16 @@
       "description": "Sessions together for each egg; a ready egg hatches with /buddy.",
       "default": 20
     },
+    "sessionsPerEvolve": {
+      "type": "number",
+      "title": "Sessions per evolution",
+      "description": "Sessions with a buddy out before it can evolve; /buddy evolve spends it.",
+      "default": 30
+    },
     "buddiesFile": {
       "type": "string",
       "title": "Buddies file",
-      "description": "JSON list of your extra buddies: { name, species?, personality? }; personality is a string or { tone, traits, quirks, backstory, speech, catchphrase, likes, dislikes }. /buddy add and rm write to it.",
+      "description": "JSON list of your extra buddies: { name, species?, personality? }; personality is a string or { tone, traits, quirks, backstory, speech, catchphrase, likes, dislikes }. /buddy add, rm and evolve write to it.",
       "default": "~/.claude/buddy/buddies.json"
     }
   },

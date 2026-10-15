@@ -323,3 +323,53 @@ test('with an egg ready, a bare /buddy hatches a surprise named by Haiku and bri
   expect(book().map(b => b.name)).toEqual(['Tortellino'])
   expect(await run('')).toContain('Tortellino waddles off')
 })
+
+test('evolution: a toast when ready, nothing until /buddy evolve, then a rarity up, a weirder soul and an epithet in the set language', { options: { language: 'it', sessionsPerEvolve: 2 } }, async ($, on) => {
+  const { run, start, shows, card } = rig($, on, { '/home/t/.claude.json': LEGACY })
+  const toasts: string[] = []
+  on('ui.toast', ($, e) => { toasts.push(e.text); return { value: undefined } })
+  const systems: string[] = []
+  const prompts: string[] = []
+  on('model.complete', ($, e) => {
+    systems.push(e.system ?? '')
+    prompts.push(e.prompt ?? '')
+    return answer(e.system?.includes('You evolve') ? JSON.stringify({ title_en: 'the Winged Sarcasm', title_it: 'Sarcasmo Alato', tone: 'feroce', traits: ['strano'] }) : 'Hm.')
+  })
+
+  await start()
+  expect(await shows(/^★$/)).toBe(true)
+  expect(await run('evolve')).toContain('Pebble si evolve dopo un\'altra sessione insieme')
+  await start()
+  expect(toasts).toEqual(['Pebble brilla! Scrivi /buddy evolve quando sei pronto.'])
+  expect(await card()).toContain('PAT 78')
+  expect(await run('evolve')).toContain('Pebble, Sarcasmo Alato si è evoluto!')
+  expect(prompts.at(-1)).toContain('Rarity now: uncommon')
+  expect(await shows(/Pebble, Sarcasmo Alato/)).toBe(true)
+  expect(await shows(/^★★$/)).toBe(true)
+  expect(await card()).toContain('PAT 93')
+  expect(await run('evolve')).toContain('altre 2 sessioni')
+
+  const ui = await $.ui.mount({ plugin: 'buddy', surface: 'terminal', ...BAND })
+  await ui.press({ key: 'talk' })
+  await ui.unmount()
+  expect(systems.at(-1)).toContain('You are Pebble, Sarcasmo Alato, a tiny terminal companion. Tone: feroce. Traits: strano.')
+  await start()
+  await start()
+  expect(toasts).toHaveLength(2)
+})
+
+test('evolution: if Haiku fails nothing changes; a file buddy gets its new soul written back', { options: { language: 'en', sessionsPerEvolve: 1, sessionsPerHatch: 1, active: 'Zed' } }, async ($, on) => {
+  const { run, start, shows, book } = rig($, on, { [FILE]: JSON.stringify([{ name: 'Zed', personality: 'Calm.' }]) })
+  let isBroken = true
+  on('model.complete', ($, e) => answer(isBroken ? 'not json' : JSON.stringify({ title_en: 'the Unbothered', title_it: 'l\'Imperturbabile', tone: 'eerily calm' })))
+
+  await start()
+  expect(await run('use Zed')).toContain('Zed hops in')
+  await start()
+  expect(await run('evolve')).toContain('nothing changed')
+  expect(book()).toEqual([{ name: 'Zed', personality: 'Calm.' }])
+  isBroken = false
+  expect(await run('evolve')).toContain('Zed, the Unbothered has evolved!')
+  expect(await shows(/Zed, the Unbothered/)).toBe(true)
+  expect(book()).toEqual([{ name: 'Zed', personality: { tone: 'eerily calm' } }])
+})

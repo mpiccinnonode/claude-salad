@@ -81,6 +81,12 @@
       "description": "Sessions together for each egg; a ready egg hatches with /buddy.",
       "default": 20
     },
+    "sessionsPerEvolve": {
+      "type": "number",
+      "title": "Sessions per evolution",
+      "description": "Sessions with a buddy out before it can evolve; /buddy evolve spends it.",
+      "default": 30
+    },
     "buddiesFile": {
       "type": "string",
       "title": "Buddies file",

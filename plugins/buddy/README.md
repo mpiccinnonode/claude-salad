@@ -8,6 +8,7 @@ The `/buddy` companion Claude Code shipped in April 2026 and removed in 2.1.97, 
 - **Reacts to your work.** It has canned lines for failed commands, failing tests, commits and late-night commits, drawn from its species and its strongest stat. Every few turns Haiku writes it a fresh in-character quip.
 - **Clickable.** Click the buddy (or press `1`) to pet it. `2` pokes it, `3` asks it to talk, `4` shows its stats card, `×` hides it.
 - **More than one.** Keep extra buddies in a JSON file, each with its own species, personality and random rarity, hat and stats, and pick which one is out. Each new one costs an egg, earned by sessions together. Put it on the left or the right of the band.
+- **Evolves.** Enough sessions together and a buddy can evolve when you say so: a rarity up, better stats, a stranger personality and an epithet after its name.
 - **Personalities with depth.** Write one as a sentence or field by field (tone, traits, quirks, backstory, speech, catchphrase, likes, dislikes). Leave it out and Haiku dreams one up when the buddy hatches, shaped by its species and stats, and writes it into the file for you to tweak.
 
 ## Requirements
@@ -31,6 +32,7 @@ The `/buddy` companion Claude Code shipped in April 2026 and removed in 2.1.97, 
 | `/buddy use <name>` | Brings out another buddy (remembered across sessions). If it is still an egg, this hatches it, when you have an egg to spend. A bare `/buddy use` goes back to the `active` option. |
 | `/buddy add [name] [species] [personality]` | Spends an egg to hatch a new buddy and writes it into the buddies file, e.g. `/buddy add Nino duck grumpy old bird`. No species: a random one. No name: Haiku names it. |
 | `/buddy rm <name>` | Removes a buddy from the buddies file. No egg back. |
+| `/buddy evolve` | Evolves the buddy that is out, once it is ready (see below). |
 | click it, or `1` | Pet: happy eyes, a floating heart, a happy line. |
 | `2` | Poke: a startled hop, then a cross look and a grumpy line. |
 | `3` | Talk: an in-character line about what Claude last said (one Haiku call). |
@@ -49,6 +51,7 @@ The number keys work while the band has focus (`ctrl+x tab`, or click it). Click
 | `buddiesFile` | string | `~/.claude/buddy/buddies.json` | Where your extra buddies live (see below). |
 | `active` | string | `""` | Which buddy is out; empty means your original one. `/buddy use` overrides it. One still in its egg falls back to the original. |
 | `sessionsPerHatch` | number | `20` | Sessions together for each egg. |
+| `sessionsPerEvolve` | number | `30` | Sessions with a buddy out before it can evolve. |
 | `position` | string | `left` | `left` or `right`: on the right the buddy sits against the right edge, its bubble to its left. |
 | `language` | string | `it` | `it` or `en`: canned lines, labels and Haiku quips all follow it. |
 
@@ -82,13 +85,17 @@ A JSON list. Only `name` is required; any other field you add is kept as is.
 
 Every buddy in the file starts as an egg: you earn one egg every `sessionsPerHatch` sessions (20 by default), and `/buddy use <name>` spends it. A toast, and the buddy itself, tell you when an egg is ready; a bare `/buddy` then hatches a brand-new one whose name is the surprise. Hatching rolls the rest at random. If the buddy has no personality, Haiku writes one into the file then. A file that is not valid JSON is reported by `/buddy list` and never written.
 
+## Evolution
+
+Every `sessionsPerEvolve` sessions (30 by default) with a buddy out, it is ready to evolve: a toast, and the buddy itself, say so. Nothing happens until you type `/buddy evolve`. Then its rarity goes up one step (legendary stays legendary), it gets a hat if it had none, every stat goes up (its strongest one most), and Haiku rewrites its personality: the same buddy, only stranger, pushed along its stats. It also earns an epithet after its name, in the language you set, e.g. "Urchin, the Winged Sarcasm" or "Urchin, Sarcasmo Alato"; each evolution replaces it with a grander one. A file buddy's new personality is written into the buddies file. If Haiku fails, nothing changes and you can try again.
+
 ## What it hooks
 
 Mods are not sandboxed, so this is what you install. From `claude plugin validate plugins/buddy`:
 
 ```text
 ❯ ./register.tsx hooks: session.start, session.end, command.run{command=buddy}, tool.call{tool=Bash}, turn.complete, ui.render{component=AbovePrompt}
-❯ ./register.tsx calls: $.clock.every, $.command.register, $.env.get (via pathOf, readLegacy), $.fs.read (via readBook, readLegacy), $.fs.write, $.model.complete (via dreamUp, quipFromModel), $.state.get, $.state.set, $.store.get, $.store.set, $.ui.resolve, $.ui.toast
+❯ ./register.tsx calls: $.clock.every, $.command.register, $.env.get (via pathOf, readLegacy), $.fs.read (via readBook, readLegacy), $.fs.write, $.model.complete (via askJson, quipFromModel), $.state.get, $.state.set, $.store.get, $.store.set, $.ui.resolve, $.ui.toast
 ❯ ./register.tsx env reads: HOME
 ```
 

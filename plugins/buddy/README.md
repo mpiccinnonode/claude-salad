@@ -13,7 +13,7 @@ The `/buddy` companion Claude Code shipped in April 2026 and removed in 2.1.97, 
 
 ## Requirements
 
-- **Claude Code ≥ 2.1.295.** Older builds refuse the clickable sprite and the band stays empty.
+- **Claude Code ≥ 2.1.299.** Older builds refuse the clickable sprite and the band stays empty.
 - One Haiku call every few turns (`everyNTurns`, default 3), plus one each time you press `talk`, plus one when a buddy without a name or personality hatches.
 
 ## Install

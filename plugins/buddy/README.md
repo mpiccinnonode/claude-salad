@@ -44,8 +44,8 @@ The number keys work while the band has focus (`ctrl+x tab`, or click it). Click
 
 | Option | Type | Default | Effect |
 | --- | --- | --- | --- |
-| `name` | string | `""` | Overrides the name from `~/.claude.json`. |
-| `personality` | string | `""` | Overrides the personality the quips are written in. |
+| `name` | string | `""` | Overrides your original buddy's name, whether it came from `~/.claude.json` or from Haiku. |
+| `personality` | string | `""` | Overrides your original buddy's personality, an evolved one included. |
 | `everyNTurns` | number | `3` | Finished turns between Haiku quips. |
 | `species` | string | `auto` | Your original buddy's species: `auto` keeps the hatched one; pick any of the 18 to try another. |
 | `buddiesFile` | string | `~/.claude/buddy/buddies.json` | Where your extra buddies live (see below). |
@@ -53,7 +53,7 @@ The number keys work while the band has focus (`ctrl+x tab`, or click it). Click
 | `sessionsPerHatch` | number | `20` | Sessions together for each egg. |
 | `sessionsPerEvolve` | number | `30` | Sessions with a buddy out before it can evolve. |
 | `position` | string | `left` | `left` or `right`: on the right the buddy sits against the right edge, its bubble to its left. |
-| `language` | string | `it` | `it` or `en`: canned lines, labels and Haiku quips all follow it. |
+| `language` | string | `it` | `it` or `en`: canned lines, labels, Haiku quips and personalities all follow it, and so does the epithet an evolved buddy shows. |
 
 Set them in `/config`, or in `settings.json` under `pluginConfigs`, keyed `buddy@mpiccinnonode`.
 

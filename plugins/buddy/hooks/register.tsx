@@ -335,14 +335,14 @@ export const register: Register = (on, options) => {
   on('session.start', async ($, e, next) => {
     await $.store.set('sessions', Number((await $.store.get('sessions')) ?? 0) + 1)
     adopt(await hatchInto($, o, lang))
-    // Only on the session that completes the egg, so it is said once.
-    if ((await eggs($, perEgg)).left === 0) {
+    // Every session until the egg is hatched: a toast missed once is not lost.
+    if ((await eggs($, perEgg)).left <= 0) {
       $.ui.toast(WORDS[lang].ready, { timeoutMs: 10000 })
       await say($, WORDS[lang].ready)
     }
     await countSession($, current)
-    // Same rule as the egg: only the session that makes it ready says so.
-    if ((await growth($, current, perEvolve)).left === 0) {
+    // Same rule as the egg: repeats until /buddy evolve is spent.
+    if ((await growth($, current, perEvolve)).left <= 0) {
       $.ui.toast(WORDS[lang].glow(name), { timeoutMs: 10000 })
       await say($, WORDS[lang].glow(name))
     }

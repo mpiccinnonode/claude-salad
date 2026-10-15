@@ -1,5 +1,9 @@
 # Changelog
 
+## buddy 0.4.0 → 0.4.1
+
+- fix(buddy): repeat the egg and evolution toasts every session until acted on
+
 ## buddy 0.3.0 → 0.4.0
 
 - feat(buddy): buddies evolve after sessions together, on /buddy evolve

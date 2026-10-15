@@ -1,6 +1,6 @@
 # buddy plugin — dev notes
 
-A mod: function hooks only. Needs Claude Code ≥ 2.1.295 (a `Button` holding coloured `Text` children; 2.1.294 and older refuse it).
+A mod: function hooks only. Needs Claude Code ≥ 2.1.299 (a `Button` holding coloured `Text` children, and `Text mono`; 2.1.296 and older refuse it).
 
 - `hooks/register.tsx` wires events and draws the band; everything it draws comes from pure modules that the tests drive directly.
 - `hooks/bones.ts` is the original roll (wyhash → mulberry32, salt `friend-2026-401`) over the original 18 species. coding-buddy's list has 20, which changes every roll, so keep 18. `bones.test.ts` pins reference values computed with coding-buddy's engine.

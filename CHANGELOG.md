@@ -1,5 +1,11 @@
 # Changelog
 
+## buddy 0.3.0 → 0.4.0
+
+- feat(buddy): buddies evolve after sessions together, on /buddy evolve
+- fix(buddy): draw the sprite in a monospaced face on desktop
+- docs(buddy): describe evolution in the manifest, marketplace and option help
+
 ## buddy 0.2.0 → 0.3.0
 
 - feat(buddy): several buddies, eggs every N sessions, random hatching, left/right position

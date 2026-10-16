@@ -177,7 +177,7 @@ test('buddies.json: its buddies are eggs until /buddy use spends one; a missing 
   expect(await run('use Pippo')).toContain('Pippo hops in')
   // One for the original (no ~/.claude.json), one for Nino; none for Pippo, who brought his own.
   expect(systems.filter(s => s.includes('invent personalities'))).toHaveLength(2)
-  expect(book()[1]).toEqual({ name: 'Pippo', personality: { tone: 'anxious', traits: 'always' } })
+  expect(book()[1]).toEqual({ name: 'Pippo', species: expect.any(String), personality: { tone: 'anxious', traits: 'always' } })
   const ui = await mount()
   await ui.press({ key: 'talk' })
   await ui.unmount()
@@ -250,7 +250,7 @@ test('no companion in ~/.claude.json: the original is random, name and personali
   expect(await shows(/Brisa/)).toBe(true)
   expect(await card()).not.toContain('PAT 78')
   expect(await run('add')).toContain('Quillon hatched')
-  expect(book()).toEqual([{ name: 'Quillon', personality: { tone: 'dry', traits: ['odd'] } }])
+  expect(book()).toEqual([{ name: 'Quillon', species: expect.any(String), personality: { tone: 'dry', traits: ['odd'] } }])
   expect(await run('add')).toContain('1 more session')
 })
 
@@ -310,11 +310,11 @@ test('evolution: if Haiku fails nothing changes; a file buddy gets its new soul 
   expect(await run('use Zed')).toContain('Zed hops in')
   await start()
   expect(await run('evolve')).toContain('nothing changed')
-  expect(book()).toEqual([ZED])
+  expect(book()).toEqual([{ ...ZED, species: expect.any(String) }])
   isBroken = false
   expect(await run('evolve')).toContain('Zed, the Unbothered has evolved!')
   expect(await shows(/Zed, the Unbothered/)).toBe(true)
-  expect(book()).toEqual([{ name: 'Zed', personality: { tone: 'eerily calm' } }])
+  expect(book()).toEqual([{ name: 'Zed', species: expect.any(String), personality: { tone: 'eerily calm' } }])
 })
 
 test('crew: the 0.4 `active` in the store still picks the buddy until /buddy use; the option is a comma list that skips unknown names and eggs', { options: { language: 'en', active: 'Ghost, Nino, Ada' } }, async ($, on) => {
@@ -339,7 +339,7 @@ test('crew: every buddy out counts the session and glows on its own; /buddy evol
   expect(await run('evolve Ghost')).toContain('No buddy called Ghost')
   expect(await run('evolve Pebble')).toContain('Pebble, the Unbothered has evolved!')
   expect(await run('evolve')).toContain('Zed, the Unbothered has evolved!')
-  expect(book()).toEqual([{ name: 'Zed', personality: { tone: 'eerily calm' } }])
+  expect(book()).toEqual([{ name: 'Zed', species: expect.any(String), personality: { tone: 'eerily calm' } }])
   expect(await run('evolve')).toContain('Zed evolves after 1 more session together')
 })
 

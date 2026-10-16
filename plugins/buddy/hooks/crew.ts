@@ -1,6 +1,6 @@
 import type { EngineInterface } from 'claude-code'
 import type { Bones, Member } from '../types'
-import { evolve, roll } from './bones.ts'
+import { evolve, roll, SPECIES } from './bones.ts'
 import { dreamOn, dreamUp } from './dream.ts'
 import { describe, findFriend, keyOf, parseBook, upsert } from './friends.ts'
 import type { Friend, Personality } from './friends.ts'
@@ -83,8 +83,17 @@ export async function rosterOf($: EngineInterface, o: Ctx) {
   const [born, book] = await Promise.all([withOriginal($, o), openBook($, o).catch((): Book => ({ path: '', raw: [], friends: [] }))])
   const original: Entry = { key: '', name: o.name || born['']?.name || SOUL.name, personality: o.personality || born['']?.personality, species: o.species }
   const roster: [Entry, ...Entry[]] = [original, ...book.friends.map(f => ({ ...f, key: keyOf(f.name) }))]
+  await recordSpecies($, book, roster, born)
   return { roster, born, book }
 }
+// A buddy hatched before species lived in the file gets its rolled one written once, so the file can override it.
+async function recordSpecies($: EngineInterface, book: Book, roster: Entry[], born: Births) {
+  const missing = book.error ? [] : roster.filter(e => e.key && !e.species && born[e.key])
+  if (!missing.length || !book.path) return
+  for (const e of missing) e.species = born[e.key]!.bones.species
+  await writeBook($, book, missing.reduce((raw, e) => upsert(raw, e.name, { species: e.species }), book.raw))
+}
+
 export type Roster = Awaited<ReturnType<typeof rosterOf>>
 
 // Names or keys, in order: what /buddy use, join and leave wrote in `crew`; else the `active` option, else everyone hatched. 0.4's one `active` name leads either.
@@ -125,20 +134,28 @@ export async function eggs($: EngineInterface, per: number) {
   return { done: Math.min(per, sessions - hatched * per), left: (hatched + 1) * per - sessions }
 }
 
+// A random roll; with `fresh`, rerolls until the species is one nobody in the roster has, unless all 18 are taken.
+function rollNew(have: Set<string | undefined>, fresh: boolean): Bones {
+  let b = roll(String(Math.random()))
+  while (fresh && have.has(b.species) && SPECIES.some(s => !have.has(s))) b = roll(String(Math.random()))
+  return b
+}
+
 // Spends an egg: random bones, a name and personality dreamt up when missing, written back into buddies.json.
 // The egg is spent only on success; `failed` is the line to show otherwise.
-export async function hatchNew($: EngineInterface, o: Ctx, friend: Friend, { roster, book }: Roster): Promise<{ name: string } | { failed: string }> {
+export async function hatchNew($: EngineInterface, o: Ctx, friend: Friend, { roster, book, born: owned }: Roster): Promise<{ name: string } | { failed: string }> {
   const w = WORDS[o.lang]
   if (book.error) return { failed: w.badFile(book.error) }
-  const rolled = roll(String(Math.random()))
+  const rolled = rollNew(new Set(roster.map(e => e.species ?? owned[e.key]?.bones.species)), !friend.species)
   const dreamt = friend.name && friend.personality ? undefined : await dreamUp($, friend.name || undefined, { ...rolled, species: friend.species ?? rolled.species }, o.lang)
   const name = friend.name || dreamt?.name
   if (!name) return { failed: w.noName }
   if (!friend.name && findFriend(roster, name)) return { failed: w.taken(name) }
-  // A file entry gets only what was dreamt up; its own fields stay as written. A new one is written whole.
+  // A file entry gets only what was dreamt up and its rolled species when it had none; the rest stays as written. A new one is written whole.
   const isNew = !findFriend(book.friends, name)
   const soul = friend.personality ? undefined : dreamt?.soul
-  if (isNew || soul) await writeBook($, book, upsert(book.raw, name, isNew ? { name, species: friend.species, personality: friend.personality ?? soul } : { personality: soul }))
+  const species = friend.species ?? rolled.species
+  if (isNew || soul || !friend.species) await writeBook($, book, upsert(book.raw, name, isNew ? { name, species, personality: friend.personality ?? soul } : { species, personality: soul }))
   const [born, hatched] = await Promise.all([bornOf($), $.store.get('hatched')])
   await Promise.all([$.store.set('born', { ...born, [keyOf(name)]: { bones: rolled } }), $.store.set('hatched', Number(hatched ?? 0) + 1)])
   return { name }

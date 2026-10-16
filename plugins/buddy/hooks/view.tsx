@@ -49,7 +49,7 @@ export async function drawBand($: EngineInterface, e: RenderInput<'AbovePrompt'>
           const action = p && p.who === c.key && age < ACTION_TICKS[p.kind] ? { kind: p.kind, age } : undefined
           const look = { isWorking: e.props.isWorking, eye: c.bones.eye, hat: c.bones.hat, action, isAsleep }
           return (
-            <Box key={`buddy-${i}`} flexDirection="column">
+            <Box key={`buddy-${i}`} flexDirection="column" width={SPRITE.columns} flexShrink={0}>
               {drawBuddy(c.bones.species, frame + i * 7, look, RARITY_COLOR[c.bones.rarity]).map((row, r) => (
                 <Button key={`body-${i}-${r}`} plain onPress={() => press($, o, 'pet', crew, i)}>
                   {row.map(([text, color], j) => <Text key={`p${i}-${r}-${j}`} color={color} mono>{text}</Text>)}

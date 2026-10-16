@@ -5,16 +5,17 @@ import type { On } from 'claude-code'
 const BAND = { component: 'AbovePrompt', props: { hasSurvey: false, isWorking: false, maxRows: 10, bodyColumns: 80, scroll: { offset: 0, bodyRows: 10 }, view: {} } } as const
 const TURN = { reason: 'answer', answer: 'Fixed the bug.', durationMs: 10, isAborted: false, turnId: 't' } as const
 import { line } from './lines.ts'
+import { roll } from './bones.ts'
 
 const FILE = '/home/t/.claude/buddy/buddies.json'
 const LEGACY = JSON.stringify({ companion: { name: 'Pebble' }, oauthAccount: { accountUuid: 'rare-hunt-42' } })
 const answer = (text: string) => ({ value: { isAnswered: true, text, usage: { input_tokens: 1, output_tokens: 1, cache_read_input_tokens: 0, cache_creation_input_tokens: 0 } } }) as never
 
 // A home on an in-memory disk, a stubbed engine, and the helpers the hatching tests share.
-function rig($: Engine, on: On, files: Record<string, string>) {
+function rig($: Engine, on: On, files: Record<string, string>, store?: Record<string, unknown>) {
   const reads: string[] = []
   const writes: string[] = []
-  mock.store(on)
+  mock.store(on, store)
   mock.env(on, { HOME: '/home/t' })
   on('fs.read', ($, e) => {
     reads.push(e.path)
@@ -125,7 +126,7 @@ test('clicks: pet, poke and the buddy itself say a line; stats toggles, any othe
   expect(await ui.find({ type: 'Text', text: /squish|jiggles|happy|again|peacefully/ })).toBeDefined()
   await ui.press({ key: 'poke' })
   expect(await ui.find({ type: 'Text', text: /jiggles|oozes|wobbles|what\.|unimpressed|sarcasm/ })).toBeDefined()
-  await ui.press({ key: 'body-2' })
+  await ui.press({ key: 'body-0-2' })
   expect(await ui.find({ type: 'Text', text: /\^  \^/ })).toBeDefined()
 
   await ui.press({ key: 'stats' })
@@ -282,10 +283,11 @@ test('hatching: ~/.claude.json is read once to keep the original, the others are
   const { reads, run, start, card } = rig($, on, { '/home/t/.claude.json': LEGACY, [FILE]: JSON.stringify([{ name: 'Zed', personality: 'Calm.' }]) })
 
   await start()
-  expect(await card()).toContain('PAT 78')
+  const pebble = await card()
+  expect(pebble).toContain('PAT 78')
   expect(await run('use Zed')).toContain('Zed hops in')
   const zed = await card()
-  expect(zed).not.toContain('PAT 78')
+  expect(zed).not.toBe(pebble)
   expect(await run('use Pebble')).toContain('Pebble hops in')
   expect(await card()).toContain('PAT 78')
   expect(await run('use')).toContain('Zed hops in')
@@ -372,4 +374,125 @@ test('evolution: if Haiku fails nothing changes; a file buddy gets its new soul 
   expect(await run('evolve')).toContain('Zed, the Unbothered has evolved!')
   expect(await shows(/Zed, the Unbothered/)).toBe(true)
   expect(book()).toEqual([{ name: 'Zed', personality: { tone: 'eerily calm' } }])
+})
+
+test('crew: the 0.4 `active` in the store still picks the buddy until /buddy use; the option is a comma list that skips unknown names and eggs', { options: { language: 'en', active: 'Ghost, Nino, Ada' } }, async ($, on) => {
+  const friends = [{ name: 'Zed', personality: 'Calm.' }, { name: 'Nino' }, { name: 'Ada', personality: 'Sharp.' }]
+  const { run, start, shows } = rig($, on, { [FILE]: JSON.stringify(friends) }, { active: 'Zed', born: { zed: { bones: roll('z') }, ada: { bones: roll('a') } } })
+
+  await start()
+  expect(await shows(/Zed/)).toBe(true)
+  expect(await run('use')).toContain('Ada hops in')
+  expect(await shows(/Zed/)).toBe(false)
+  expect(await run('use Zed')).toContain('Zed hops in')
+  await start()
+  expect(await shows(/Zed/)).toBe(true)
+})
+
+test('crew: every buddy out counts the session and glows on its own; /buddy evolve takes a name, or the first that is ready', { options: { language: 'en', sessionsPerEvolve: 1 } }, async ($, on) => {
+  const { run, start, book } = rig($, on, { '/home/t/.claude.json': LEGACY, [FILE]: JSON.stringify([{ name: 'Zed', personality: 'Calm.' }]) }, { crew: ['zed', ''], born: { zed: { bones: roll('z') } } })
+  const toasts: string[] = []
+  on('ui.toast', ($, e) => { toasts.push(e.text); return { value: undefined } })
+  on('model.complete', () => answer(JSON.stringify({ title_en: 'the Unbothered', title_it: 'l\'Imperturbabile', tone: 'eerily calm' })))
+
+  await start()
+  expect(toasts).toEqual(['Zed is glowing! Type /buddy evolve when you are ready.', 'Pebble is glowing! Type /buddy evolve when you are ready.'])
+  expect(await run('evolve Ghost')).toContain('No buddy called Ghost')
+  expect(await run('evolve Pebble')).toContain('Pebble, the Unbothered has evolved!')
+  expect(await run('evolve')).toContain('Zed, the Unbothered has evolved!')
+  expect(book()).toEqual([{ name: 'Zed', personality: { tone: 'eerily calm' } }])
+  expect(await run('evolve')).toContain('Zed evolves after 1 more session together')
+})
+
+test('crew: join and leave up to 3, never empty; a newborn with the crew full waits on the bench; list marks who is out', { options: { language: 'en', sessionsPerHatch: 1 } }, async ($, on) => {
+  const friends = ['Zed', 'Ada', 'Nino', 'Pip'].map(name => ({ name, personality: 'Calm.' }))
+  const born = { zed: { bones: roll('z') }, ada: { bones: roll('a') }, pip: { bones: roll('p') } }
+  const { run, start } = rig($, on, { '/home/t/.claude.json': LEGACY, [FILE]: JSON.stringify(friends) }, { born, hatched: 3, sessions: 3 })
+  on('model.complete', () => answer(JSON.stringify({ name: 'Brisa', tone: 'dry' })))
+
+  await start()
+  expect(await run('join Zed')).toBe('Zed joins the crew.')
+  expect(await run('join zed')).toContain('already in the crew')
+  expect(await run('join Ghost')).toContain('No buddy called Ghost')
+  expect(await run('join')).toContain('Usage')
+  expect(await run('join Ada')).toContain('Ada joins')
+  expect(await run('join Pip')).toContain('The crew is full')
+  const list = await run('list')
+  for (const row of ['▸ Pebble', '● Zed', '● Ada', '🥚 Nino', '\n  Pip']) expect(list).toContain(row)
+
+  expect(await run('leave Pip')).toContain('Pip is not in the crew')
+  expect(await run('leave Pebble')).toContain('Pebble steps back')
+  expect(await run('list')).toContain('▸ Zed')
+  expect(await run('join Pip')).toContain('Pip joins')
+  expect(await run('')).toBe('Crack! Say hi to Brisa.\nThe crew is full, so Brisa waits on the bench: /buddy join Brisa to bring it out.')
+  expect(await run('list')).toContain('\n  Brisa')
+
+  await run('leave Ada')
+  await run('leave Pip')
+  expect(await run('leave Zed')).toContain('the only one out')
+  expect(await run('join Nino')).toContain('Nino is still an egg')
+})
+
+for (const banterChance of [0, 1])
+  test(`crew: the floor passes on at each quip; with banterChance ${banterChance} the next one ${banterChance ? 'answers once, 3s later' : 'stays quiet'}`, { options: { language: 'en', everyNTurns: 1, banterChance } }, async ($, on) => {
+    const { start, shows } = rig($, on, { '/home/t/.claude.json': LEGACY, [FILE]: JSON.stringify([{ name: 'Zed', personality: 'Calm.' }]) }, { crew: ['', 'zed'], born: { zed: { bones: roll('z') } } })
+    const clock = mock.clock(on)
+    on('turn.complete', ($, e) => ({ text: e.answer }))
+    const asks: { system: string; prompt: string }[] = []
+    on('model.complete', ($, e) => {
+      asks.push({ system: e.system ?? '', prompt: e.prompt ?? '' })
+      return answer(`line ${asks.length}`)
+    })
+
+    await start()
+    await $.turn.complete(TURN)
+    expect(asks[0]?.system).toContain('You are Zed, a tiny terminal companion. Calm. You share the terminal with Pebble.')
+    expect(await shows(/^Zed/)).toBe(true)
+    await clock.advance(2900)
+    expect(asks).toHaveLength(1)
+    await clock.advance(100)
+    if (banterChance) {
+      expect(asks).toHaveLength(2)
+      expect(asks[1]?.system).toContain('You are Pebble')
+      expect(asks[1]?.prompt).toBe('Zed, who shares the terminal with you, just said: "line 1". Answer it.')
+      expect(await shows(/line 2/)).toBe(true)
+    } else expect(asks).toHaveLength(1)
+    await clock.advance(6000)
+    expect(asks).toHaveLength(1 + banterChance)
+
+    await $.turn.complete(TURN)
+    expect(asks.at(-1)?.system).toContain(banterChance ? 'You are Zed' : 'You are Pebble')
+  })
+
+test('crew: the band fits three buddies to its width: beside the bubble, above it, only the one talking, one line; a click gives the floor', { options: { language: 'en' } }, async ($, on) => {
+  const friends = [{ name: 'Zed', personality: 'Calm.' }, { name: 'Ada', personality: 'Sharp.' }]
+  const { start } = rig($, on, { '/home/t/.claude.json': LEGACY, [FILE]: JSON.stringify(friends) }, { crew: ['', 'zed', 'ada'], born: { zed: { bones: roll('z') }, ada: { bones: roll('a') } } })
+  const mount = (bodyColumns: number) => $.ui.mount({ plugin: 'buddy', surface: 'terminal', ...BAND, props: { ...BAND.props, bodyColumns, maxRows: 40 } })
+
+  await start()
+  const wide = await mount(100)
+  expect((await wide.find({ key: 'band' }))?.props.flexDirection).toBe('row')
+  expect(await wide.find({ key: 'buddy-2' })).toBeDefined()
+  expect(await wide.find({ type: 'Text', text: /^ {6}▲$/ })).toBeDefined()
+  await wide.press({ key: 'body-1-2' })
+  expect(await wide.find({ type: 'Text', text: /^ {19}▲$/ })).toBeDefined()
+  expect(await wide.find({ type: 'Text', text: /^Zed/ })).toBeDefined()
+  await wide.unmount()
+
+  const mid = await mount(50)
+  expect((await mid.find({ key: 'band' }))?.props.flexDirection).toBe('column')
+  expect(await mid.find({ key: 'buddy-0' })).toBeDefined()
+  expect(await mid.find({ type: 'Text', text: /^ {19}▼$/ })).toBeDefined()
+  await mid.unmount()
+
+  const narrow = await mount(43)
+  expect(await narrow.find({ key: 'buddy-0' })).toBeUndefined()
+  expect(await narrow.find({ key: 'buddy-1' })).toBeDefined()
+  expect(await narrow.find({ type: 'Text', text: /· Pebble · Ada/ })).toBeDefined()
+  await narrow.unmount()
+
+  const bare = await mount(41)
+  expect(await bare.find({ type: 'Text', text: /^Zed: / })).toBeDefined()
+  expect(await bare.find({ key: 'pet' })).toBeUndefined()
+  await bare.unmount()
 })

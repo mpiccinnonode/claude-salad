@@ -1,27 +1,30 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
-import type { Bones, Pressed, Quip, StatName } from '../types'
+import type { Bones, Member, Pressed, Quip, StatName } from '../types'
 import { evolve, RARITIES, roll, STAT_NAMES } from './bones.ts'
 import { asPersonality, describe, findFriend, parseAdd, parseBook, upsert, without } from './friends.ts'
 import type { Friend, Personality, Soul } from './friends.ts'
 import { line, reasonFor } from './lines.ts'
 import type { Lang, Reason } from './lines.ts'
 import { ACTION_TICKS, drawBuddy } from './sprite.ts'
+import { layoutFor, SPRITE } from './band.ts'
 
 const quip = atom({ plugin: 'buddy', key: 'quip' } as const, null as Quip)
 const isHidden = atom({ plugin: 'buddy', key: 'isHidden' } as const, false)
 const tick = atom({ plugin: 'buddy', key: 'tick' } as const, 0)
-const bones = atom({ plugin: 'buddy', key: 'bones' } as const, null as Bones | null)
+const members = atom({ plugin: 'buddy', key: 'members' } as const, null as Member[] | null)
 const pressed = atom({ plugin: 'buddy', key: 'pressed' } as const, null as Pressed)
 const isStats = atom({ plugin: 'buddy', key: 'isStats' } as const, false)
+// Index into `members` of the one whose bubble shows; wrapped, so a crew that shrank still points at someone.
+const speaker = atom({ plugin: 'buddy', key: 'speaker' } as const, 0)
 
 // Until ~/.claude.json is read (or when it can't be), a plain common blob stands in.
 const FALLBACK: Bones = { rarity: 'common', species: 'blob', eye: '·', hat: 'none', isShiny: false, stats: { DEBUGGING: 30, PATIENCE: 30, CHAOS: 30, WISDOM: 30, SNARK: 30 }, peak: 'PATIENCE' }
 const SOUL = { name: 'Buddy', personality: 'A small, curious terminal companion who comments on your work.' }
 type Opts = { name: string; personality: string; species: string; active: string; file: string }
 type Say = (n: string) => string
-const HINT = 'list | use <name> | add [name] [species] [personality] | rm <name> | evolve'
-const WORDS: Record<Lang, { thinks: string; off: Say; on: Say; toggle: Say; hello: Say; unknown: Say; added: Say; taken: Say; removed: Say; locked: Say; stillEgg: (n: string, left: string) => string; badFile: Say; noName: string; dream: string; ready: string; born: Say; glow: Say; evolved: Say; notYet: (n: string, left: string) => string; noEvolve: string; egg: (done: number, per: number) => string; usage: string; chatAnswer: string; chatEmpty: string; turnDone: string; reply: string; labels: [string, string, string, string] }> = {
+const HINT = 'list | use <name> | join <name> | leave <name> | add [name] [species] [personality] | rm <name> | evolve [name]'
+const WORDS: Record<Lang, { thinks: string; off: Say; on: Say; toggle: Say; hello: Say; unknown: Say; added: Say; taken: Say; removed: Say; locked: Say; stillEgg: (n: string, left: string) => string; joined: Say; full: string; already: Say; benched: Say; notOut: Say; lastOne: Say; bench: Say; badFile: Say; noName: string; dream: string; ready: string; born: Say; glow: Say; evolved: Say; notYet: (n: string, left: string) => string; noEvolve: string; egg: (done: number, per: number) => string; usage: string; chatAnswer: string; chatEmpty: string; banter: (n: string, said: string) => string; mates: (names: string) => string; turnDone: string; reply: string; labels: [string, string, string, string] }> = {
   en: {
     thinks: '*thinks*',
     off: n => `${n} waddles off.`,
@@ -34,6 +37,13 @@ const WORDS: Record<Lang, { thinks: string; off: Say; on: Say; toggle: Say; hell
     removed: n => `${n} waves goodbye.`,
     locked: n => `No egg yet: ${n} more session${n === '1' ? '' : 's'} together and one hatches.`,
     stillEgg: (n, left) => `${n} is still an egg: ${left} more session${left === '1' ? '' : 's'} together.`,
+    joined: n => `${n} joins the crew.`,
+    full: 'The crew is full (3). /buddy leave <name> first.',
+    already: n => `${n} is already in the crew.`,
+    benched: n => `${n} steps back to the bench.`,
+    notOut: n => `${n} is not in the crew.`,
+    lastOne: n => `${n} is the only one out: someone has to stay.`,
+    bench: n => `The crew is full, so ${n} waits on the bench: /buddy join ${n} to bring it out.`,
     badFile: e => `buddies.json can't be read, so it is left untouched: ${e}`,
     noName: 'Haiku could not name it, so no egg was spent. Try /buddy add <name>.',
     dream: 'Write every value in English.',
@@ -47,6 +57,8 @@ const WORDS: Record<Lang, { thinks: string; off: Say; on: Say; toggle: Say; hell
     usage: `Usage: /buddy [${HINT}]`,
     chatAnswer: 'Someone clicked you to chat. What the assistant last said:',
     chatEmpty: 'Someone clicked you to chat. Say something.',
+    banter: (n, said) => `${n}, who shares the terminal with you, just said: "${said}". Answer it.`,
+    mates: names => `You share the terminal with ${names}.`,
     turnDone: 'The coding assistant just finished a turn. Its final message:',
     reply: 'Always reply in English, whatever language the text below is in.',
     labels: ['pet', 'poke', 'talk', 'stats'],
@@ -63,6 +75,13 @@ const WORDS: Record<Lang, { thinks: string; off: Say; on: Say; toggle: Say; hell
     removed: n => `${n} ti saluta e se ne va.`,
     locked: n => `Ancora nessun uovo: ${n === '1' ? 'manca una sessione' : `mancano ${n} sessioni`} insieme perché se ne schiuda uno.`,
     stillEgg: (n, left) => `${n} è ancora un uovo: ${left === '1' ? 'manca una sessione' : `mancano ${left} sessioni`} insieme.`,
+    joined: n => `${n} si unisce alla squadra.`,
+    full: 'La squadra è al completo (3). Prima /buddy leave <nome>.',
+    already: n => `${n} è già in squadra.`,
+    benched: n => `${n} torna in panchina.`,
+    notOut: n => `${n} non è in squadra.`,
+    lastOne: n => `${n} è l'unico in squadra: qualcuno deve restare.`,
+    bench: n => `La squadra è al completo, quindi ${n} aspetta in panchina: /buddy join ${n} per farlo entrare.`,
     badFile: e => `buddies.json non si legge, quindi non lo tocco: ${e}`,
     noName: 'Haiku non è riuscito a dargli un nome, quindi nessun uovo è stato speso. Prova /buddy add <nome>.',
     dream: 'Scrivi ogni valore in italiano.',
@@ -76,6 +95,8 @@ const WORDS: Record<Lang, { thinks: string; off: Say; on: Say; toggle: Say; hell
     usage: `Uso: /buddy [${HINT}]`,
     chatAnswer: 'Qualcuno ti ha cliccato per chiacchierare. Ultima cosa detta dall\'assistente:',
     chatEmpty: 'Qualcuno ti ha cliccato per chiacchierare. Di\' qualcosa.',
+    banter: (n, said) => `${n}, che divide il terminale con te, ha appena detto: "${said}". Rispondigli.`,
+    mates: names => `Dividi il terminale con ${names}.`,
     turnDone: 'L\'assistente di codice ha appena finito un turno. Il suo messaggio finale:',
     reply: 'Rispondi sempre in italiano, qualunque sia la lingua del testo qui sotto.',
     labels: ['coccola', 'pungola', 'parla', 'stat'],
@@ -220,24 +241,62 @@ async function hatchNew($: EngineInterface, o: Opts, friend: Friend, roster: Fri
   return { name }
 }
 
-// `key` is the buddy's slot in `born`: '' for the original.
-async function hatch($: EngineInterface, o: Opts, lang: Lang) {
-  const { roster, born } = await rosterOf($, o)
-  // /buddy use wins over the `active` option; an unknown name, or one still in its egg, falls back to the original.
-  const wanted = findFriend(roster, String((await $.store.get('active')) ?? o.active))
-  const friend = wanted && born[keyOf(wanted.name)] ? wanted : roster[0]
-  const key = friend === roster[0] ? '' : keyOf(friend.name)
+const CREW_MAX = 3
+// The option's comma-separated names; empty is the original, whose key is ''.
+const namesIn = (text: string) => {
+  const names = text.split(',').map(s => s.trim()).filter(Boolean)
+  return names.length ? names : ['']
+}
+
+// /buddy use and join write `crew` (keys); 0.4 kept one name in `active`; with neither, the `active` option.
+async function crewKeys($: EngineInterface, o: Opts): Promise<string[]> {
+  const [crew, active] = await Promise.all([$.store.get('crew'), $.store.get('active')])
+  return Array.isArray(crew) ? crew.map(String) : namesIn(String(active ?? o.active))
+}
+
+// null goes back to the option; the 0.4 `active` is cleared so it never shadows the option again.
+async function setCrew($: EngineInterface, keys: string[] | null) {
+  await Promise.all([$.store.set('crew', keys), $.store.set('active', null)])
+}
+
+async function memberOf($: EngineInterface, o: Opts, lang: Lang, friend: Friend, isOriginal: boolean, born: Births): Promise<Member> {
+  const key = isOriginal ? '' : keyOf(friend.name)
   const b = key ? born[key]! : await bornOriginal($, lang)
-  const named = key ? friend : { ...friend, name: o.name || b.name || SOUL.name }
-  return { key, title: b.title?.[lang], friend: { ...named, personality: named.personality ?? b.personality }, bones: { ...b.bones, species: friend.species ?? b.bones.species } }
+  const name = key ? friend.name : o.name || b.name || SOUL.name
+  return { key, name, title: b.title?.[lang], personality: describe(friend.personality ?? b.personality ?? SOUL.personality), bones: { ...b.bones, species: friend.species ?? b.bones.species } }
+}
+
+// The epithet rides along wherever the buddy is named: the band and its own system prompt.
+const titled = (m: Member) => (m.title ? `${m.name}, ${m.title}` : m.name)
+
+// Unknown names, eggs and repeats are skipped; with nobody left, the original comes out alone.
+async function hatchCrew($: EngineInterface, o: Opts, lang: Lang) {
+  const { roster, born } = await rosterOf($, o)
+  const found = (await crewKeys($, o)).map(k => (k ? findFriend(roster, k) : roster[0]))
+  const friends = [...new Set(found)].filter((f): f is Friend => !!f && (f === roster[0] || !!born[keyOf(f.name)])).slice(0, CREW_MAX)
+  return Promise.all((friends.length ? friends : [roster[0]]).map(f => memberOf($, o, lang, f, f === roster[0], born)))
+}
+
+// A buddy still in its egg hatches when an egg is ready; the line to show when it cannot.
+async function outOfEgg($: EngineInterface, o: Opts, lang: Lang, perEgg: number, friend: Friend, roster: Friend[], born: Births): Promise<string | undefined> {
+  if (friend === roster[0] || born[keyOf(friend.name)]) return undefined
+  const { left } = await eggs($, perEgg)
+  if (left > 0) return WORDS[lang].stillEgg(friend.name, String(left))
+  return (await hatchNew($, o, friend, roster, lang)).failed
+}
+
+// The lead is swapped out; the rest of the crew stays.
+async function setLead($: EngineInterface, o: Opts, lang: Lang, key: string) {
+  const rest = (await hatchCrew($, o, lang)).slice(1).map(m => m.key).filter(k => k !== key)
+  await setCrew($, [key, ...rest])
 }
 
 // Fills the session's atoms from disk; safe to call again whenever they come back empty (a /clear starts them over).
 async function hatchInto($: EngineInterface, o: Opts, lang: Lang) {
-  const hatched = await hatch($, o, lang)
+  const hatched = await hatchCrew($, o, lang)
   const wasHidden = (await $.store.get('isHidden')) === true
-  await Promise.all([update($, bones, () => hatched.bones), update($, isHidden, () => wasHidden), update($, quip, () => null), update($, pressed, () => null)])
-  return hatched
+  await Promise.all([update($, members, () => hatched), update($, isHidden, () => wasHidden), update($, quip, () => null), update($, pressed, () => null), update($, speaker, () => 0)])
+  return hatched as [Member, ...Member[]]
 }
 
 // Every `per` sessions with a buddy out earns it one evolution; `stage` counts the ones spent.
@@ -248,25 +307,25 @@ async function growth($: EngineInterface, key: string, per: number) {
   return { left: (stage + 1) * per - done }
 }
 
-async function countSession($: EngineInterface, key: string) {
+// One write for the whole crew, so no count is lost to a parallel read.
+async function countSession($: EngineInterface, keys: string[]) {
   const together = ((await $.store.get('together')) ?? {}) as Record<string, number>
-  await $.store.set('together', { ...together, [key]: (together[key] ?? 0) + 1 })
+  await $.store.set('together', { ...together, ...Object.fromEntries(keys.map(k => [k, (together[k] ?? 0) + 1])) })
 }
 
-// Spends a ready evolution on the buddy that is out; nothing changes unless Haiku delivers the new soul.
-async function evolveNow($: EngineInterface, o: Opts, lang: Lang): Promise<{ failed: string } | { failed?: undefined }> {
+// Spends a ready evolution on a buddy that is out; nothing changes unless Haiku delivers the new soul.
+async function evolveNow($: EngineInterface, o: Opts, lang: Lang, h: Member): Promise<{ failed: string } | { failed?: undefined }> {
   const w = WORDS[lang]
-  const h = await hatch($, o, lang)
   const path = await pathOf($, o)
   const book = h.key ? await readBook($, path) : undefined
   if (book?.error) return { failed: w.badFile(book.error) }
   const born = ((await $.store.get('born')) ?? {}) as Births
   const was = born[h.key]!
   const grown = evolve(was.bones)
-  const dreamt = await dreamOn($, h.friend.name, describe(h.friend.personality ?? SOUL.personality), { ...grown, species: h.bones.species }, h.title, lang)
+  const dreamt = await dreamOn($, h.name, h.personality, { ...grown, species: h.bones.species }, h.title, lang)
   if (!dreamt) return { failed: w.noEvolve }
   // A file buddy's soul lives in the file; the original's in the store.
-  if (book) await $.fs.write(path, `${JSON.stringify(upsert(book.raw, h.friend.name, { personality: dreamt.soul }), null, 2)}\n`)
+  if (book) await $.fs.write(path, `${JSON.stringify(upsert(book.raw, h.name, { personality: dreamt.soul }), null, 2)}\n`)
   await $.store.set('born', { ...born, [h.key]: { ...was, bones: grown, stage: (was.stage ?? 0) + 1, title: dreamt.title, ...(book ? {} : { personality: dreamt.soul }) } })
   return {}
 }
@@ -278,26 +337,39 @@ async function eggs($: EngineInterface, per: number) {
   return { hatched, done: Math.min(per, sessions - hatched * per), left: (hatched + 1) * per - sessions }
 }
 
-async function react($: EngineInterface, reason: Reason, species: string, lang: Lang) {
-  const [b, now] = await Promise.all([read($, bones), read($, tick)])
-  await say($, line(reason, (b ?? FALLBACK).peak, species, now, lang))
+// The bubble moves to buddy `i` with its line.
+async function speak($: EngineInterface, i: number, text: string) {
+  await Promise.all([update($, speaker, () => i), update($, quip, () => text)])
 }
 
-async function press($: EngineInterface, kind: 'pet' | 'poke', species: string, lang: Lang) {
-  const [b, now] = await Promise.all([read($, bones), read($, tick)])
-  const { peak } = b ?? FALLBACK
-  await Promise.all([update($, pressed, () => ({ kind, at: now })), update($, isStats, () => false), say($, line(kind, peak, species, now, lang))])
+// Canned lines take turns too: the next one in the crew says it.
+async function react($: EngineInterface, reason: Reason, crew: Member[], lang: Lang) {
+  const i = ((await read($, speaker)) + 1) % crew.length
+  const m = crew[i]!
+  await speak($, i, line(reason, m.bones.peak, m.bones.species, await read($, tick), lang))
 }
 
-async function quipFromModel($: EngineInterface, name: string, personality: string, about: string, lang: Lang, isAsked = false) {
-  if (isAsked) await Promise.all([update($, quip, () => WORDS[lang].thinks), update($, isStats, () => false)])
+async function press($: EngineInterface, kind: 'pet' | 'poke', crew: Member[], i: number, lang: Lang) {
+  const now = await read($, tick)
+  const m = crew[i]!
+  await Promise.all([update($, pressed, () => ({ kind, at: now, who: m.key })), update($, isStats, () => false), speak($, i, line(kind, m.bones.peak, m.bones.species, now, lang))])
+}
+
+// One Haiku line from buddy `i`; the bubble moves only once it answers. Resolves what was said, '' for nothing.
+async function quipFromModel($: EngineInterface, crew: Member[], i: number, about: string, lang: Lang, isAsked = false) {
+  const m = crew[i]!
+  if (isAsked) await Promise.all([speak($, i, WORDS[lang].thinks), update($, isStats, () => false)])
+  const mates = crew.filter(c => c !== m).map(c => c.name).join(', ')
   const r = await $.model.complete({
     model: 'haiku',
-    system: `You are ${name}, a tiny terminal companion. ${personality} Reply with ONE short in-character quip (max 15 words). ${WORDS[lang].reply} No quotes, no emoji.`,
+    system: `You are ${titled(m)}, a tiny terminal companion. ${m.personality}${mates ? ` ${WORDS[lang].mates(mates)}` : ''} Reply with ONE short in-character quip (max 15 words). ${WORDS[lang].reply} No quotes, no emoji.`,
     prompt: about,
     maxTokens: 60,
   })
-  if (r.isAnswered && r.text.trim()) await say($, r.text.trim())
+  // ponytail: Haiku sometimes narrates a stage direction first; the quip is its last line
+  const said = r.isAnswered ? (r.text.trim().split(/\n+/).at(-1) ?? '').trim() : ''
+  if (said) await speak($, i, said)
+  return said
 }
 
 export const register: Register = (on, options) => {
@@ -308,25 +380,16 @@ export const register: Register = (on, options) => {
     active: String(options.active ?? ''),
     file: String(options.buddiesFile || '~/.claude/buddy/buddies.json'),
   }
-  let name = o.name || SOUL.name
-  let personality = o.personality || SOUL.personality
-  let title: string | undefined
-  let current = ''
-  // The epithet rides along wherever the buddy is named: the band and its own system prompt.
-  const titled = () => (title ? `${name}, ${title}` : name)
   const every = Math.max(1, Number(options.everyNTurns ?? 3))
   const perEgg = Math.max(1, Number(options.sessionsPerHatch ?? 20))
   const perEvolve = Math.max(1, Number(options.sessionsPerEvolve ?? 30))
   const lang: Lang = options.language === 'en' ? 'en' : 'it'
   const isRight = options.position === 'right'
-  // Before the first hatch the bones are empty: the species option still shows through.
-  const speciesOf = (b: Bones | null) => b?.species ?? (o.species === 'auto' ? FALLBACK.species : o.species)
-  const adopt = (h: Awaited<ReturnType<typeof hatch>>) => {
-    name = h.friend.name
-    personality = describe(h.friend.personality ?? SOUL.personality)
-    title = h.title
-    current = h.key
-  }
+  // Before the first hatch there is no crew: a stand-in with the options' name, soul and species shows instead.
+  const standIn: Member = { key: '', name: o.name || SOUL.name, personality: o.personality || SOUL.personality, bones: { ...FALLBACK, species: o.species === 'auto' ? FALLBACK.species : o.species } }
+  const crewOf = (crew: Member[] | null): Member[] => (crew?.length ? crew : [standIn])
+  const leadOf = (crew: Member[] | null) => crewOf(crew)[0]!
+  const banterChance = Math.min(1, Math.max(0, Number(options.banterChance ?? 0.3)))
   let turns = 0
   let lastAnswer = ''
   let lastCannedAt = -Infinity
@@ -334,24 +397,25 @@ export const register: Register = (on, options) => {
 
   on('session.start', async ($, e, next) => {
     await $.store.set('sessions', Number((await $.store.get('sessions')) ?? 0) + 1)
-    adopt(await hatchInto($, o, lang))
+    const crew = await hatchInto($, o, lang)
     // Every session until the egg is hatched: a toast missed once is not lost.
     if ((await eggs($, perEgg)).left <= 0) {
       $.ui.toast(WORDS[lang].ready, { timeoutMs: 10000 })
       await say($, WORDS[lang].ready)
     }
-    await countSession($, current)
+    await countSession($, crew.map(m => m.key))
     // Same rule as the egg: repeats until /buddy evolve is spent.
-    if ((await growth($, current, perEvolve)).left <= 0) {
-      $.ui.toast(WORDS[lang].glow(name), { timeoutMs: 10000 })
-      await say($, WORDS[lang].glow(name))
+    for (const [i, m] of crew.entries()) {
+      if ((await growth($, m.key, perEvolve)).left > 0) continue
+      $.ui.toast(WORDS[lang].glow(m.name), { timeoutMs: 10000 })
+      await speak($, i, WORDS[lang].glow(m.name))
     }
-    await $.command.register({ name: 'buddy', description: WORDS[lang].toggle(name), argumentHint: HINT })
+    await $.command.register({ name: 'buddy', description: WORDS[lang].toggle(crew[0].name), argumentHint: HINT })
     // ponytail: band redraws ~3x/s forever; pause the ticker while hidden if that ever shows up in profiles
     lastActiveAt = await read($, tick)
     $.clock.every(300, async () => {
       await update($, tick, n => n + 1)
-      if (!(await read($, bones))) adopt(await hatchInto($, o, lang))
+      if (!(await read($, members))) await hatchInto($, o, lang)
     })
     return next(e)
   })
@@ -370,42 +434,69 @@ export const register: Register = (on, options) => {
     const w = WORDS[lang]
     const [verb = '', ...words] = e.args.trim().split(/\s+/).filter(Boolean)
     const wanted = words.join(' ')
+    const lead = leadOf(await read($, members))
     // With an egg ready, a bare /buddy hatches a surprise: Haiku picks the name. Otherwise it shows or hides.
     let failed: string | undefined
     if (!verb && (await eggs($, perEgg)).left <= 0) {
       const hatched = await hatchNew($, o, { name: '' }, (await rosterOf($, o)).roster, lang)
       if ('name' in hatched) {
-        await Promise.all([$.store.set('active', hatched.name), setHidden($, false)])
-        adopt(await hatchInto($, o, lang))
-        await say($, w.born(name))
-        return { text: w.born(name) }
+        // The newborn leads when there is room; a full crew stays as it is and it waits on the bench.
+        const key = keyOf(hatched.name)
+        const keys = (await hatchCrew($, o, lang)).map(m => m.key).filter(k => k !== key)
+        const hasRoom = keys.length < CREW_MAX
+        await Promise.all([hasRoom ? setCrew($, [key, ...keys]) : undefined, setHidden($, false)])
+        await hatchInto($, o, lang)
+        await say($, w.born(hatched.name))
+        return { text: [w.born(hatched.name), ...(hasRoom ? [] : [w.bench(hatched.name)])].join('\n') }
       }
       failed = hatched.failed
     }
     if (!verb) {
       const hidden = !(await read($, isHidden))
       await setHidden($, hidden)
-      return { text: [hidden ? w.off(name) : w.on(name), ...(failed ? [failed] : [])].join('\n') }
+      return { text: [hidden ? w.off(lead.name) : w.on(lead.name), ...(failed ? [failed] : [])].join('\n') }
     }
     if (verb === 'list') {
       const [{ roster, born, error }, { done }] = await Promise.all([rosterOf($, o), eggs($, perEgg)])
-      const mark = (f: Friend) => (f.name === name ? '▸' : f === roster[0] || born[keyOf(f.name)] ? ' ' : '🥚')
+      // ▸ the lead, ● the rest of the crew, blank the bench, 🥚 still an egg.
+      const keys = ((await read($, members)) ?? [lead]).map(m => m.key)
+      const mark = (f: Friend) => {
+        const key = f === roster[0] ? '' : keyOf(f.name)
+        return key === lead.key ? '▸' : keys.includes(key) ? '●' : !key || born[key] ? ' ' : '🥚'
+      }
       return { text: [...roster.map(f => `${mark(f)} ${f.name}${f.species ? ` (${f.species})` : ''}`), w.egg(done, perEgg), ...(error ? [w.badFile(error)] : [])].join('\n') }
     }
     if (verb === 'use') {
       const { roster, born } = await rosterOf($, o)
       const friend = wanted ? findFriend(roster, wanted) : undefined
       if (wanted && !friend) return { text: w.unknown(wanted) }
-      if (friend && friend !== roster[0] && !born[keyOf(friend.name)]) {
-        const { left } = await eggs($, perEgg)
-        if (left > 0) return { text: w.stillEgg(friend.name, String(left)) }
-        const { failed } = await hatchNew($, o, friend, roster, lang)
-        if (failed) return { text: failed }
-      }
+      const failed = friend && (await outOfEgg($, o, lang, perEgg, friend, roster, born))
+      if (failed) return { text: failed }
       // A bare `/buddy use` goes back to the `active` option.
-      await $.store.set('active', wanted || null)
-      adopt(await hatchInto($, o, lang))
-      return { text: w.hello(name) }
+      await (friend ? setLead($, o, lang, friend === roster[0] ? '' : keyOf(friend.name)) : setCrew($, null))
+      const [out] = await hatchInto($, o, lang)
+      return { text: w.hello(out.name) }
+    }
+    if (verb === 'join' || verb === 'leave') {
+      const { roster, born } = await rosterOf($, o)
+      const friend = findFriend(roster, wanted)
+      if (!friend) return { text: wanted ? w.unknown(wanted) : w.usage }
+      const key = friend === roster[0] ? '' : keyOf(friend.name)
+      const keys = (await hatchCrew($, o, lang)).map(m => m.key)
+      if (verb === 'leave') {
+        if (!keys.includes(key)) return { text: w.notOut(friend.name) }
+        if (keys.length === 1) return { text: w.lastOne(friend.name) }
+        await setCrew($, keys.filter(k => k !== key))
+        await hatchInto($, o, lang)
+        return { text: w.benched(friend.name) }
+      }
+      if (keys.includes(key)) return { text: w.already(friend.name) }
+      if (keys.length >= CREW_MAX) return { text: w.full }
+      const failed = await outOfEgg($, o, lang, perEgg, friend, roster, born)
+      if (failed) return { text: failed }
+      await setCrew($, [...keys, key])
+      await hatchInto($, o, lang)
+      return { text: w.joined(friend.name) }
     }
     if (verb === 'add') {
       // A bare `/buddy add` lets Haiku name it too.
@@ -419,13 +510,21 @@ export const register: Register = (on, options) => {
       return { text: hatched.failed ?? w.added(hatched.name) }
     }
     if (verb === 'evolve') {
-      const { left } = await growth($, current, perEvolve)
-      if (left > 0) return { text: w.notYet(name, String(left)) }
-      const { failed } = await evolveNow($, o, lang)
+      // A name picks who; without one, the first that is ready, else the lead, to say how long is left.
+      const crew = (await read($, members)) ?? (await hatchInto($, o, lang))
+      const named = wanted ? crew.find(m => keyOf(m.name) === keyOf(wanted)) : undefined
+      if (wanted && !named) return { text: w.unknown(wanted) }
+      let target = named ?? crew[0]!
+      if (!named) for (const m of crew) if ((await growth($, m.key, perEvolve)).left <= 0) { target = m; break }
+      const { left } = await growth($, target.key, perEvolve)
+      if (left > 0) return { text: w.notYet(target.name, String(left)) }
+      const { failed } = await evolveNow($, o, lang, target)
       if (failed) return { text: failed }
-      adopt(await hatchInto($, o, lang))
-      await say($, w.evolved(titled()))
-      return { text: w.evolved(titled()) }
+      const out = await hatchInto($, o, lang)
+      const at = Math.max(0, out.findIndex(m => m.key === target.key))
+      const grown = out[at]!
+      await speak($, at, w.evolved(titled(grown)))
+      return { text: w.evolved(titled(grown)) }
     }
     if (verb === 'rm') {
       const path = await pathOf($, o)
@@ -437,7 +536,7 @@ export const register: Register = (on, options) => {
       delete born[keyOf(wanted)]
       delete together[keyOf(wanted)]
       await Promise.all([$.fs.write(path, `${JSON.stringify(without(book.raw, wanted), null, 2)}\n`), $.store.set('born', born), $.store.set('together', together)])
-      adopt(await hatchInto($, o, lang))
+      await hatchInto($, o, lang)
       return { text: w.removed(wanted) }
     }
     return { text: w.usage }
@@ -451,7 +550,7 @@ export const register: Register = (on, options) => {
     // ponytail: one canned line per ~10s so a failing loop doesn't spam the bubble
     if (reason && now - lastCannedAt >= 33) {
       lastCannedAt = now
-      await react($, reason, speciesOf(await read($, bones)), lang)
+      await react($, reason, crewOf(await read($, members)), lang)
     }
     return result
   })
@@ -465,58 +564,102 @@ export const register: Register = (on, options) => {
 
     if (++turns % every !== 0) return result
 
-    await quipFromModel($, titled(), personality, `${WORDS[lang].turnDone}\n\n${lastAnswer}`, lang)
+    // The floor passes on each time; now and then the next one answers back, once, never a chain.
+    const crew = crewOf(await read($, members))
+    const i = ((await read($, speaker)) + 1) % crew.length
+    const said = await quipFromModel($, crew, i, `${WORDS[lang].turnDone}\n\n${lastAnswer}`, lang)
+    // ponytail: a turn costs 1 + banterChance Haiku calls on average; a reply already pending is not cancelled by the next turn
+    if (said && crew.length > 1 && Math.random() < banterChance) $.clock.after(3000, () => quipFromModel($, crew, (i + 1) % crew.length, WORDS[lang].banter(crew[i]!.name, said), lang))
     return result
   })
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
-    const [hidden, said, frame, rolledBones, p, showStats] = await Promise.all([
-      read($, isHidden), read($, quip), read($, tick), read($, bones), read($, pressed), read($, isStats),
+    const [hidden, said, frame, out, p, showStats, floor] = await Promise.all([
+      read($, isHidden), read($, quip), read($, tick), read($, members), read($, pressed), read($, isStats), read($, speaker),
     ])
     if (e.props.hasSurvey || hidden) return next(e)
 
-    const b = rolledBones ?? FALLBACK
-    const species = speciesOf(rolledBones)
+    const crew = crewOf(out)
+    const at = floor % crew.length
+    const m = crew[at]!
+    const b = m.bones
     if (e.props.isWorking || p?.at === frame) lastActiveAt = frame
     // ponytail: ~30s with nothing happening and it dozes off
     const isAsleep = frame - Math.max(lastActiveAt, p?.at ?? 0) > 100
     const age = p ? frame - p.at : 0
-    const action = p && age < ACTION_TICKS[p.kind] ? { kind: p.kind, age } : undefined
+    const layout = layoutFor(e.props.bodyColumns, e.props.maxRows, crew.length)
+    const shown = layout.isSolo ? [at] : crew.map((_, i) => i)
     const { Box, Button, Text } = $.ui.resolve(e)
 
+    if (layout.shape === 'bare') {
+      return (
+        <Box key="band">
+          <Text wrap="truncate-end"><Text bold>{m.name}</Text>: {said ?? '...'}</Text>
+        </Box>
+      )
+    }
+
+    // Each buddy on its own beat (+7 ticks apiece) so the crew never blinks in unison; a click pets it and gives it the floor.
+    const sprites = (
+      <Box key="crew" flexDirection="column" flexShrink={0}>
+        <Box flexDirection="row">
+          {shown.map(i => {
+            const c = crew[i]!
+            const action = p && p.who === c.key && age < ACTION_TICKS[p.kind] ? { kind: p.kind, age } : undefined
+            return (
+              <Box key={`buddy-${i}`} flexDirection="column">
+                {drawBuddy(c.bones.species, frame + i * 7, { isWorking: e.props.isWorking, eye: c.bones.eye, hat: c.bones.hat, action, isAsleep }, RARITY_COLOR[c.bones.rarity]).map((row, r) => (
+                  <Button key={`body-${i}-${r}`} plain onPress={() => press($, 'pet', crew, i, lang)}>
+                    {row.map(([text, color], j) => <Text key={`p${i}-${r}-${j}`} color={color} mono>{text}</Text>)}
+                  </Button>
+                ))}
+              </Box>
+            )
+          })}
+        </Box>
+        {shown.length > 1 && <Text key="pointer" mono>{`${' '.repeat(at * SPRITE.columns + 6)}${layout.shape === 'stack' ? '▼' : '▲'}`}</Text>}
+      </Box>
+    )
+    const others = layout.isSolo ? crew.filter(c => c !== m).map(c => ` · ${c.name}`).join('') : ''
+    const bubble = (
+      <Box key="bubble" flexDirection="column" borderStyle="round" paddingX={1}>
+        <Text bold>
+          {titled(m)} <Text color="yellow">{STARS(b.rarity)}</Text>
+          {others && <Text bold={false} dimColor>{others}</Text>}
+        </Text>
+        {/* ponytail: stats stay on one line so the bubble keeps its height and the buttons never scroll out of the band */}
+        {showStats ? (
+          <Text>
+            {STAT_NAMES.map(stat => (
+              <Text key={`stat-${stat}`} color={stat === b.peak ? 'green' : undefined}>
+                {SHORT[stat]} {b.stats[stat]}{'  '}
+              </Text>
+            ))}
+          </Text>
+        ) : (
+          <Text dimColor={said === null}>{said ?? '...'}</Text>
+        )}
+        <Box flexDirection="row" gap={1}>
+          <Button key="pet" plain dimColor hotkey="1" label={WORDS[lang].labels[0]} onPress={() => press($, 'pet', crew, at, lang)} />
+          <Button key="poke" plain dimColor hotkey="2" label={WORDS[lang].labels[1]} onPress={() => press($, 'poke', crew, at, lang)} />
+          <Button key="talk" plain dimColor hotkey="3" label={WORDS[lang].labels[2]} onPress={() => quipFromModel($, crew, at, lastAnswer ? `${WORDS[lang].chatAnswer}\n\n${lastAnswer}` : WORDS[lang].chatEmpty, lang, true)} />
+          <Button key="stats" plain dimColor hotkey="4" label={WORDS[lang].labels[3]} onPress={() => update($, isStats, v => !v)} />
+        </Box>
+      </Box>
+    )
+    const hide = <Button key="hide" label="×" onPress={() => setHidden($, true)} />
+
+    if (layout.shape === 'stack') {
+      return (
+        <Box key="band" flexDirection="column" alignItems={isRight ? 'flex-end' : 'flex-start'} width={isRight ? '100%' : undefined}>
+          <Box key="top" flexDirection={isRight ? 'row-reverse' : 'row'}>{sprites}{hide}</Box>
+          {bubble}
+        </Box>
+      )
+    }
     return (
       <Box key="band" flexDirection={isRight ? 'row-reverse' : 'row'} width={isRight ? '100%' : undefined}>
-        <Box flexDirection="column">
-          {drawBuddy(species, frame, { isWorking: e.props.isWorking, eye: b.eye, hat: b.hat, action, isAsleep }, RARITY_COLOR[b.rarity]).map((row, i) => (
-            <Button key={`body-${i}`} plain onPress={() => press($, 'pet', species, lang)}>
-              {row.map(([text, color], j) => <Text key={`p${i}-${j}`} color={color} mono>{text}</Text>)}
-            </Button>
-          ))}
-        </Box>
-        <Box flexDirection="column" borderStyle="round" paddingX={1}>
-          <Text bold>
-            {titled()} <Text color="yellow">{STARS(b.rarity)}</Text>
-          </Text>
-          {/* ponytail: stats stay on one line so the bubble keeps its height and the buttons never scroll out of the band */}
-          {showStats ? (
-            <Text>
-              {STAT_NAMES.map(stat => (
-                <Text key={`stat-${stat}`} color={stat === b.peak ? 'green' : undefined}>
-                  {SHORT[stat]} {b.stats[stat]}{'  '}
-                </Text>
-              ))}
-            </Text>
-          ) : (
-            <Text dimColor={said === null}>{said ?? '...'}</Text>
-          )}
-          <Box flexDirection="row" gap={1}>
-            <Button key="pet" plain dimColor hotkey="1" label={WORDS[lang].labels[0]} onPress={() => press($, 'pet', species, lang)} />
-            <Button key="poke" plain dimColor hotkey="2" label={WORDS[lang].labels[1]} onPress={() => press($, 'poke', species, lang)} />
-            <Button key="talk" plain dimColor hotkey="3" label={WORDS[lang].labels[2]} onPress={() => quipFromModel($, titled(), personality, lastAnswer ? `${WORDS[lang].chatAnswer}\n\n${lastAnswer}` : WORDS[lang].chatEmpty, lang, true)} />
-            <Button key="stats" plain dimColor hotkey="4" label={WORDS[lang].labels[3]} onPress={() => update($, isStats, v => !v)} />
-          </Box>
-        </Box>
-        <Button key="hide" label="×" onPress={() => setHidden($, true)} />
+        {sprites}{bubble}{hide}
       </Box>
     )
   })

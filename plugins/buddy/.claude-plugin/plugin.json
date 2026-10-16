@@ -22,6 +22,12 @@
       "description": "How many finished turns between quips (each quip is one Haiku call).",
       "default": 3
     },
+    "banterChance": {
+      "type": "number",
+      "title": "Banter chance",
+      "description": "With more than one buddy out: the chance, from 0 to 1, that after a quip the next buddy answers it (one more Haiku call). 0 turns it off.",
+      "default": 0.3
+    },
     "species": {
       "type": "string",
       "title": "Species",
@@ -71,8 +77,8 @@
     },
     "active": {
       "type": "string",
-      "title": "Active buddy",
-      "description": "Name of the buddy to show; empty = your original one. /buddy use <name> overrides it. A buddy still in its egg falls back to the original.",
+      "title": "Active buddies",
+      "description": "Names of the buddies to show, comma separated, up to 3 (e.g. Pip,Mox); empty = your original one. /buddy use <name> overrides it. Unknown names and buddies still in their egg are skipped; with none left, the original comes out.",
       "default": ""
     },
     "sessionsPerHatch": {

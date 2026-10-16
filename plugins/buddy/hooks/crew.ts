@@ -87,16 +87,12 @@ export async function rosterOf($: EngineInterface, o: Ctx) {
 }
 export type Roster = Awaited<ReturnType<typeof rosterOf>>
 
-// The option's comma-separated names; empty is the original, whose key is ''.
-const namesIn = (text: string) => {
-  const names = text.split(',').map(s => s.trim()).filter(Boolean)
-  return names.length ? names : ['']
-}
-
-// /buddy use and join write `crew` (keys); 0.4 kept one name in `active`; with neither, the `active` option.
-async function crewKeys($: EngineInterface, o: Ctx): Promise<string[]> {
-  const [crew, active] = await Promise.all([$.store.get('crew'), $.store.get('active')])
-  return Array.isArray(crew) ? crew.map(String) : namesIn(String(active ?? o.active))
+// Names or keys, in order: what /buddy use, join and leave wrote in `crew`; else the `active` option, else everyone hatched. 0.4's one `active` name leads either.
+async function crewKeys($: EngineInterface, o: Ctx, { roster, born }: Pick<Roster, 'roster' | 'born'>): Promise<string[]> {
+  const [crew, legacy] = await Promise.all([$.store.get('crew'), $.store.get('active')])
+  if (Array.isArray(crew)) return crew.map(String)
+  const base = o.active ? o.active.split(',').map(s => s.trim()).filter(Boolean) : roster.filter(e => born[e.key]).map(e => e.key)
+  return typeof legacy === 'string' ? [legacy, ...base] : base
 }
 
 // null goes back to the option; the 0.4 `active` is cleared so it never shadows the option again.
@@ -111,7 +107,8 @@ function memberOf(o: Ctx, e: Entry, born: Births): Member {
 
 // Unknown names, eggs and repeats are skipped; with nobody left, the original comes out alone.
 export async function hatchCrew($: EngineInterface, o: Ctx, r?: Roster): Promise<[Member, ...Member[]]> {
-  const [{ roster, born }, keys] = await Promise.all([r ?? rosterOf($, o), crewKeys($, o)])
+  const { roster, born } = r ?? (await rosterOf($, o))
+  const keys = await crewKeys($, o, { roster, born })
   const found = keys.map(k => (k ? findFriend(roster, k) : roster[0]))
   const out = [...new Set(found)].filter((e): e is Entry => !!e && !!born[e.key]).slice(0, CREW_MAX)
   const [first = roster[0], ...rest] = out

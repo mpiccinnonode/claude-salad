@@ -78,7 +78,7 @@
     "active": {
       "type": "string",
       "title": "Active buddies",
-      "description": "Names of the buddies to show, comma separated, up to 3 (e.g. Pip,Mox); empty = your original one. /buddy use <name> overrides it. Unknown names and buddies still in their egg are skipped; with none left, the original comes out.",
+      "description": "Names of the buddies to show, comma separated, up to 3 (e.g. Pip,Mox); empty = every buddy already hatched, your original first, up to 3. /buddy use, join and leave override it. Unknown names and buddies still in their egg are skipped; with none left, the original comes out.",
       "default": ""
     },
     "sessionsPerHatch": {

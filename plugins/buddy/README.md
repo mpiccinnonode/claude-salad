@@ -29,10 +29,10 @@ The `/buddy` companion Claude Code shipped in April 2026 and removed in 2.1.97, 
 | --- | --- |
 | `/buddy` | Shows or hides the buddy (remembered across sessions). When an egg is ready, it hatches a surprise instead: a new buddy, named by Haiku, comes straight out. |
 | `/buddy list` | Lists your buddies; `▸` marks the lead, `●` the rest of the crew, `🥚` one still in its egg. Shows the progress to the next egg. |
-| `/buddy use <name>` | Makes another buddy the lead of the crew (remembered across sessions). If it is still an egg, this hatches it, when you have an egg to spend. A bare `/buddy use` goes back to the `active` option. |
+| `/buddy use <name>` | Makes another buddy the lead of the crew (remembered across sessions). If it is still an egg, this hatches it, when you have an egg to spend. A bare `/buddy use` goes back to the default crew (the `active` option, or everyone hatched). |
 | `/buddy join <name>` | Brings one more buddy out, up to 3; hatches it like `use` if it is still an egg. |
 | `/buddy leave <name>` | Sends a buddy back to the bench; the last one out stays. |
-| `/buddy add [name] [species] [personality]` | Spends an egg to hatch a new buddy and writes it into the buddies file, e.g. `/buddy add Nino duck grumpy old bird`. No species: a random one. No name: Haiku names it. |
+| `/buddy add [name] [species] [personality]` | Spends an egg to hatch a new buddy and writes it into the buddies file, e.g. `/buddy add Nino duck grumpy old bird`. No species: a random one. No name: Haiku names it. It joins the crew while there is room. |
 | `/buddy rm <name>` | Removes a buddy from the buddies file. No egg back. |
 | `/buddy evolve [name]` | Evolves a buddy in the crew once it is ready (see below); without a name, the first one that is. |
 | click it, or `1` | Pet: happy eyes, a floating heart, a happy line. |
@@ -52,7 +52,7 @@ The number keys work while the band has focus (`ctrl+x tab`, or click it). Click
 | `banterChance` | number | `0.3` | With more than one buddy out, the chance that after a quip the next buddy answers it, once (one more Haiku call). `0` turns it off. |
 | `species` | string | `auto` | Your original buddy's species: `auto` keeps the hatched one; pick any of the 18 to try another. |
 | `buddiesFile` | string | `~/.claude/buddy/buddies.json` | Where your extra buddies live (see below). |
-| `active` | string | `""` | Which buddies are out, comma separated, up to 3 (e.g. `Pip,Mox`); empty means your original one. `/buddy use` and `join` override it. Unknown names and buddies still in their egg are skipped. |
+| `active` | string | `""` | Which buddies are out, comma separated, up to 3 (e.g. `Pip,Mox`); empty means every buddy already hatched, your original first. `/buddy use`, `join` and `leave` override it. Unknown names and buddies still in their egg are skipped. |
 | `sessionsPerHatch` | number | `20` | Sessions together for each egg. |
 | `sessionsPerEvolve` | number | `30` | Sessions with a buddy out before it can evolve. |
 | `position` | string | `left` | `left` or `right`: on the right the buddy sits against the right edge, its bubble to its left. |
@@ -90,7 +90,7 @@ Every buddy in the file starts as an egg: you earn one egg every `sessionsPerHat
 
 ## Crew
 
-Up to 3 buddies can be out at once (`/buddy join`, or `active` as a comma-separated list). They sit side by side and take turns: each quip, canned line or button press comes from the one with the floor, marked by `▲`/`▼` under its sprite, and clicking a buddy gives it the floor. Now and then the next one answers back (`banterChance`). Each counts its own sessions towards evolving.
+Up to 3 buddies can be out at once. Until you pick with `/buddy use`, `join` or `leave` (or set `active`), the crew forms on its own: every buddy already hatched, your original first; the one picked with `/buddy use` in 0.4 leads it. A newborn joins while there is room. They sit side by side and take turns: each quip, canned line or button press comes from the one with the floor, marked by `▲`/`▼` under its sprite, and clicking a buddy gives it the floor. Now and then the next one answers back (`banterChance`). Each counts its own sessions towards evolving.
 
 As the terminal narrows the band gives way in steps: the sprites move above the bubble, then only the one talking stays (the others are listed after its name), and below about 42 columns it is a single line, `Name: quip`. A short band skips the stacked steps.
 

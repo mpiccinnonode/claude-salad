@@ -345,7 +345,7 @@ test('crew: every buddy out counts the session and glows on its own; /buddy evol
 
 test('crew: join and leave up to 3, never empty; a newborn with the crew full waits on the bench; list marks who is out', { options: { language: 'en', sessionsPerHatch: 1 } }, async ($, on) => {
   const friends = ['Zed', 'Ada', 'Nino', 'Pip'].map(name => ({ name, personality: 'Calm.' }))
-  const { run, start } = rig($, on, { '/home/t/.claude.json': LEGACY, [FILE]: JSON.stringify(friends) }, { born: born(), hatched: 3, sessions: 3 })
+  const { run, start } = rig($, on, { '/home/t/.claude.json': LEGACY, [FILE]: JSON.stringify(friends) }, { crew: [''], born: born(), hatched: 3, sessions: 3 })
   on('model.complete', () => answer(JSON.stringify({ name: 'Brisa', tone: 'dry' })))
 
   await start()
@@ -369,6 +369,22 @@ test('crew: join and leave up to 3, never empty; a newborn with the crew full wa
   await run('leave Pip')
   expect(await run('leave Zed')).toContain('the only one out')
   expect(await run('join Nino')).toContain('Nino is still an egg')
+})
+
+test('crew: with no choice made it forms on its own, everyone hatched up to 3 with 0.4\'s pick leading; /buddy add brings a newborn out while there is room', { options: { language: 'en', sessionsPerHatch: 1 } }, async ($, on) => {
+  const friends = ['Zed', 'Ada', 'Nino', 'Pip'].map(name => ({ name, personality: 'Calm.' }))
+  const { run, start } = rig($, on, { '/home/t/.claude.json': LEGACY, [FILE]: JSON.stringify(friends) }, { active: 'Pip', born: born(), hatched: 3, sessions: 3 })
+
+  await start()
+  const upgraded = await run('list')
+  for (const row of ['▸ Pip', '● Pebble', '● Zed', '\n  Ada', '🥚 Nino']) expect(upgraded).toContain(row)
+  expect(await run('leave Zed')).toContain('Zed steps back')
+  expect(await run('add Mox robot Calm.')).toBe('Mox hatched.\nMox joins the crew.')
+  expect(await run('list')).toContain('● Mox')
+
+  expect(await run('use')).toContain('Pebble hops in')
+  const auto = await run('list')
+  for (const row of ['▸ Pebble', '● Zed', '● Ada', '\n  Pip', '\n  Mox']) expect(auto).toContain(row)
 })
 
 for (const banterChance of [0, 1])

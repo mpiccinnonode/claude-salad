@@ -45,14 +45,18 @@ async function toggle($: EngineInterface, o: Ctx) {
   return [hidden ? w.off(lead.name) : w.on(lead.name), ...(failed ? [failed] : [])].join('\n')
 }
 
-// The newborn leads when there is room; a full crew stays as it is and it waits on the bench.
-async function welcome($: EngineInterface, o: Ctx, name: string) {
-  const w = WORDS[o.lang]
+// A newborn joins while there is room, leading or last; a full crew stays as it is and it waits on the bench.
+async function place($: EngineInterface, o: Ctx, name: string, isLead: boolean) {
   const key = keyOf(name)
   const keys = (await keysOut($, o)).filter(k => k !== key)
-  const hasRoom = keys.length < CREW_MAX
-  await Promise.all([hasRoom ? setCrew($, [key, ...keys]) : undefined, setHidden($, false)])
-  await hatchInto($, o)
+  if (keys.length >= CREW_MAX) return false
+  await recrew($, o, isLead ? [key, ...keys] : [...keys, key])
+  return true
+}
+
+async function welcome($: EngineInterface, o: Ctx, name: string) {
+  const w = WORDS[o.lang]
+  const [hasRoom] = await Promise.all([place($, o, name, true), setHidden($, false)])
   await say($, w.born(name))
   return [w.born(name), ...(hasRoom ? [] : [w.bench(name)])].join('\n')
 }
@@ -115,7 +119,9 @@ async function add($: EngineInterface, o: Ctx, words: string[]) {
   const { left } = await eggs($, o.perEgg)
   if (left > 0) return w.locked(left)
   const hatched = await hatchNew($, o, friend, r)
-  return 'failed' in hatched ? hatched.failed : w.added(hatched.name)
+  if ('failed' in hatched) return hatched.failed
+  const hasRoom = await place($, o, hatched.name, false)
+  return [w.added(hatched.name), hasRoom ? w.joined(hatched.name) : w.bench(hatched.name)].join('\n')
 }
 
 // A name picks who; without one, the first that is ready, else the lead, to say how long is left.

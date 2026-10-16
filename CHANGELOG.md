@@ -1,5 +1,10 @@
 # Changelog
 
+## buddy 0.5.0 → 0.5.1
+
+- feat(buddy): a new buddy rolls a species nobody in the crew has, and records it in buddies.json so it can be overridden
+- fix(buddy): give each buddy a fixed column so the crew lines up on desktop
+
 ## buddy 0.4.1 → 0.5.0
 
 - feat(buddy): a crew of up to 3 buddies that take turns, with optional banter between them

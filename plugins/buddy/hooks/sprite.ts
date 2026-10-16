@@ -1,9 +1,9 @@
 import type { Hat } from '../types'
 import { HAT_ART } from './roster.ts'
 import { RIGS, rigRow } from './rigs.ts'
-import type { Mood } from './rigs.ts'
+import type { Mood, Segment } from './rigs.ts'
 
-export type Row = readonly (readonly [text: string, color: string])[]
+export type Row = readonly Segment[]
 export type Action = { kind: 'pet' | 'poke'; age: number }
 export type Look = { isWorking: boolean; eye: string; hat: Hat; action?: Action; isAsleep?: boolean }
 const H = 'magenta'

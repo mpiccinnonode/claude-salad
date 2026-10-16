@@ -1,0 +1,193 @@
+import type { EngineInterface } from 'claude-code'
+import type { Bones, Member } from '../types'
+import { evolve, roll } from './bones.ts'
+import { dreamOn, dreamUp } from './dream.ts'
+import { describe, findFriend, keyOf, parseBook, upsert } from './friends.ts'
+import type { Friend, Personality } from './friends.ts'
+import type { Lang } from './lines.ts'
+import { WORDS } from './words.ts'
+
+// The options, read once; `species` is undefined for 'auto'.
+export type Ctx = { name: string; personality: string; species?: string; active: string; file: string; lang: Lang; every: number; perEgg: number; perEvolve: number; banterChance: number; isRight: boolean }
+
+export const SOUL = { name: 'Buddy', personality: 'A small, curious terminal companion who comments on your work.' }
+export const CREW_MAX = 3
+
+// `stage` counts evolutions; `title` is the epithet they earned, kept in both languages.
+type Born = { bones: Bones; name?: string; personality?: Personality; stage?: number; title?: Record<Lang, string> }
+type Births = Record<string, Born>
+// A roster entry carries its key in `born`: '' for the original.
+export type Entry = Friend & { key: string }
+
+async function bornOf($: EngineInterface) {
+  return ((await $.store.get('born')) ?? {}) as Births
+}
+
+async function togetherOf($: EngineInterface) {
+  return ((await $.store.get('together')) ?? {}) as Record<string, number>
+}
+
+// The original /buddy kept its soul in ~/.claude.json and rolled its bones from the account id; no companion, nothing to keep.
+async function readLegacy($: EngineInterface): Promise<Born | undefined> {
+  try {
+    const config = JSON.parse(await $.fs.read(`${await $.env.get('HOME')}/.claude.json`))
+    if (!config.companion) return undefined
+    const { name, personality } = config.companion
+    return { bones: roll(String(config.oauthAccount?.accountUuid ?? config.userID ?? 'anon')), name: name && String(name), personality: personality && String(personality) }
+  } catch {
+    return undefined
+  }
+}
+
+// The original buddy hatches free; ~/.claude.json is read once, so users of 0.2.0 keep theirs, else it is random, name and soul too.
+async function withOriginal($: EngineInterface, o: Ctx): Promise<Births> {
+  const [stored, migrated] = await Promise.all([bornOf($), $.store.get('migrated')])
+  let born = stored
+  if (migrated !== true) {
+    const legacy = await readLegacy($)
+    if (legacy && !born['']) born = { ...born, '': legacy }
+    await Promise.all([$.store.set('born', born), $.store.set('migrated', true)])
+  }
+  if (born['']) return born
+  const bones = roll(String(Math.random()))
+  const dreamt = await dreamUp($, undefined, bones, o.lang)
+  born = { ...born, '': { bones, name: dreamt?.name, personality: dreamt?.soul } }
+  await $.store.set('born', born)
+  return born
+}
+
+// A missing file is an empty list; a broken one reports its error and is never written.
+export type Book = { path: string; raw: unknown[]; friends: Friend[]; error?: string }
+
+export async function openBook($: EngineInterface, o: Ctx): Promise<Book> {
+  const path = o.file.startsWith('~/') ? `${await $.env.get('HOME')}${o.file.slice(1)}` : o.file
+  let text: string
+  try {
+    text = String(await $.fs.read(path))
+  } catch {
+    return { path, raw: [], friends: [] }
+  }
+  try {
+    return { path, ...parseBook(text) }
+  } catch (err) {
+    return { path, raw: [], friends: [], error: err instanceof Error ? err.message : String(err) }
+  }
+}
+
+export async function writeBook($: EngineInterface, book: Book, raw: unknown[]) {
+  await $.fs.write(book.path, `${JSON.stringify(raw, null, 2)}\n`)
+}
+
+// The original first, then the file's buddies.
+export async function rosterOf($: EngineInterface, o: Ctx) {
+  const [born, book] = await Promise.all([withOriginal($, o), openBook($, o).catch((): Book => ({ path: '', raw: [], friends: [] }))])
+  const original: Entry = { key: '', name: o.name || born['']?.name || SOUL.name, personality: o.personality || born['']?.personality, species: o.species }
+  const roster: [Entry, ...Entry[]] = [original, ...book.friends.map(f => ({ ...f, key: keyOf(f.name) }))]
+  return { roster, born, book }
+}
+export type Roster = Awaited<ReturnType<typeof rosterOf>>
+
+// The option's comma-separated names; empty is the original, whose key is ''.
+const namesIn = (text: string) => {
+  const names = text.split(',').map(s => s.trim()).filter(Boolean)
+  return names.length ? names : ['']
+}
+
+// /buddy use and join write `crew` (keys); 0.4 kept one name in `active`; with neither, the `active` option.
+async function crewKeys($: EngineInterface, o: Ctx): Promise<string[]> {
+  const [crew, active] = await Promise.all([$.store.get('crew'), $.store.get('active')])
+  return Array.isArray(crew) ? crew.map(String) : namesIn(String(active ?? o.active))
+}
+
+// null goes back to the option; the 0.4 `active` is cleared so it never shadows the option again.
+export async function setCrew($: EngineInterface, keys: string[] | null) {
+  await Promise.all([$.store.set('crew', keys), $.store.set('active', null)])
+}
+
+function memberOf(o: Ctx, e: Entry, born: Births): Member {
+  const b = born[e.key]!
+  return { key: e.key, name: e.name, title: b.title?.[o.lang], personality: describe(e.personality ?? b.personality ?? SOUL.personality), bones: { ...b.bones, species: e.species ?? b.bones.species } }
+}
+
+// Unknown names, eggs and repeats are skipped; with nobody left, the original comes out alone.
+export async function hatchCrew($: EngineInterface, o: Ctx, r?: Roster): Promise<[Member, ...Member[]]> {
+  const [{ roster, born }, keys] = await Promise.all([r ?? rosterOf($, o), crewKeys($, o)])
+  const found = keys.map(k => (k ? findFriend(roster, k) : roster[0]))
+  const out = [...new Set(found)].filter((e): e is Entry => !!e && !!born[e.key]).slice(0, CREW_MAX)
+  const [first = roster[0], ...rest] = out
+  return [first, ...rest].map(e => memberOf(o, e, born)) as [Member, ...Member[]]
+}
+
+// The epithet rides along wherever the buddy is named: the band and its own system prompt.
+export const titled = (m: Member) => (m.title ? `${m.name}, ${m.title}` : m.name)
+
+// Every `per` sessions earns one egg; `hatched` only grows, so removing a buddy frees no slot.
+export async function eggs($: EngineInterface, per: number) {
+  const [s, h] = await Promise.all([$.store.get('sessions'), $.store.get('hatched')])
+  const [sessions, hatched] = [Number(s ?? 0), Number(h ?? 0)]
+  return { done: Math.min(per, sessions - hatched * per), left: (hatched + 1) * per - sessions }
+}
+
+// Spends an egg: random bones, a name and personality dreamt up when missing, written back into buddies.json.
+// The egg is spent only on success; `failed` is the line to show otherwise.
+export async function hatchNew($: EngineInterface, o: Ctx, friend: Friend, { roster, book }: Roster): Promise<{ name: string } | { failed: string }> {
+  const w = WORDS[o.lang]
+  if (book.error) return { failed: w.badFile(book.error) }
+  const rolled = roll(String(Math.random()))
+  const dreamt = friend.name && friend.personality ? undefined : await dreamUp($, friend.name || undefined, { ...rolled, species: friend.species ?? rolled.species }, o.lang)
+  const name = friend.name || dreamt?.name
+  if (!name) return { failed: w.noName }
+  if (!friend.name && findFriend(roster, name)) return { failed: w.taken(name) }
+  // A file entry gets only what was dreamt up; its own fields stay as written. A new one is written whole.
+  const isNew = !findFriend(book.friends, name)
+  const soul = friend.personality ? undefined : dreamt?.soul
+  if (isNew || soul) await writeBook($, book, upsert(book.raw, name, isNew ? { name, species: friend.species, personality: friend.personality ?? soul } : { personality: soul }))
+  const [born, hatched] = await Promise.all([bornOf($), $.store.get('hatched')])
+  await Promise.all([$.store.set('born', { ...born, [keyOf(name)]: { bones: rolled } }), $.store.set('hatched', Number(hatched ?? 0) + 1)])
+  return { name }
+}
+
+// A buddy still in its egg hatches when an egg is ready; the line to show when it cannot.
+export async function outOfEgg($: EngineInterface, o: Ctx, e: Entry, r: Roster): Promise<string | undefined> {
+  if (r.born[e.key]) return undefined
+  const { left } = await eggs($, o.perEgg)
+  if (left > 0) return WORDS[o.lang].stillEgg(e.name, left)
+  const hatched = await hatchNew($, o, e, r)
+  return 'failed' in hatched ? hatched.failed : undefined
+}
+
+// Every `per` sessions with a buddy out earns it one evolution; `stage` counts the ones spent. Sessions left, by key.
+export async function evolvesIn($: EngineInterface, per: number) {
+  const [together, born] = await Promise.all([togetherOf($), bornOf($)])
+  return (key: string) => ((born[key]?.stage ?? 0) + 1) * per - Number(together[key] ?? 0)
+}
+
+// One write for the whole crew, so no count is lost to a parallel read.
+export async function countSession($: EngineInterface, keys: string[]) {
+  const together = await togetherOf($)
+  await $.store.set('together', { ...together, ...Object.fromEntries(keys.map(k => [k, (together[k] ?? 0) + 1])) })
+}
+
+// Spends a ready evolution on a buddy that is out; nothing changes unless Haiku delivers the new soul. The line to show when it fails.
+export async function evolveNow($: EngineInterface, o: Ctx, m: Member): Promise<string | undefined> {
+  const w = WORDS[o.lang]
+  const book = m.key ? await openBook($, o) : undefined
+  if (book?.error) return w.badFile(book.error)
+  const born = await bornOf($)
+  const was = born[m.key]!
+  const grown = evolve(was.bones)
+  const dreamt = await dreamOn($, m.name, m.personality, { ...grown, species: m.bones.species }, m.title, o.lang)
+  if (!dreamt) return w.noEvolve
+  // A file buddy's soul lives in the file; the original's in the store.
+  if (book) await writeBook($, book, upsert(book.raw, m.name, { personality: dreamt.soul }))
+  await $.store.set('born', { ...born, [m.key]: { ...was, bones: grown, stage: (was.stage ?? 0) + 1, title: dreamt.title, ...(book ? {} : { personality: dreamt.soul }) } })
+  return undefined
+}
+
+// Drops a buddy's bones and its session count.
+export async function forget($: EngineInterface, key: string) {
+  const [born, together] = await Promise.all([bornOf($), togetherOf($)])
+  delete born[key]
+  delete together[key]
+  await Promise.all([$.store.set('born', born), $.store.set('together', together)])
+}

@@ -104,7 +104,7 @@ Mods are not sandboxed, so this is what you install. From `claude plugin validat
 
 ```text
 ❯ ./register.tsx hooks: session.start, session.end, command.run{command=buddy}, tool.call{tool=Bash}, turn.complete, ui.render{component=AbovePrompt}
-❯ ./register.tsx calls: $.clock.every, $.command.register, $.env.get (via pathOf, readLegacy), $.fs.read (via readBook, readLegacy), $.fs.write, $.model.complete (via askJson, quipFromModel), $.state.get, $.state.set, $.store.get, $.store.set, $.ui.resolve, $.ui.toast
+❯ ./register.tsx calls: $.clock.after, $.clock.every, $.command.register, $.env.get (via openBook, readLegacy), $.fs.read (via openBook, readLegacy), $.fs.write (via writeBook), $.model.complete (via askJson, quipFromModel), $.state.get, $.state.set, $.store.get, $.store.set, $.ui.resolve (via drawBand), $.ui.toast
 ❯ ./register.tsx env reads: HOME
 ```
 

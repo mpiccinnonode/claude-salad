@@ -8,8 +8,9 @@ const TEXT_KEYS = ['tone', 'backstory', 'speech', 'catchphrase'] as const
 const LIST_KEYS = ['traits', 'quirks', 'likes', 'dislikes'] as const
 
 const isSpecies = (s: unknown): s is string => (SPECIES as readonly string[]).includes(String(s))
-const isNamed = (entry: unknown, name: string) => String((entry as Friend | null)?.name ?? '').trim().toLowerCase() === name.trim().toLowerCase()
-const texts = (v: unknown) => (Array.isArray(v) ? v : [v]).filter((x): x is string => typeof x === 'string' && x.trim() !== '').map(x => x.trim())
+export const keyOf = (name: string) => name.trim().toLowerCase()
+const isNamed = (entry: unknown, name: string) => keyOf(String((entry as Friend | null)?.name ?? '')) === keyOf(name)
+export const texts =(v: unknown) => (Array.isArray(v) ? v : [v]).filter((x): x is string => typeof x === 'string' && x.trim() !== '').map(x => x.trim())
 
 // A plain string, or an object of known fields (a lone string where a list goes counts as a list of one).
 export function asPersonality(value: unknown): Personality | undefined {

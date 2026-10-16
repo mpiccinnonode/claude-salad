@@ -1,5 +1,11 @@
 # Changelog
 
+## buddy 0.4.1 → 0.5.0
+
+- feat(buddy): a crew of up to 3 buddies that take turns, with optional banter between them
+- feat(buddy): the crew forms on its own from hatched buddies; /buddy join and leave manage it
+- refactor(buddy): split register.tsx into focused modules
+
 ## buddy 0.4.0 → 0.4.1
 
 - fix(buddy): repeat the egg and evolution toasts every session until acted on

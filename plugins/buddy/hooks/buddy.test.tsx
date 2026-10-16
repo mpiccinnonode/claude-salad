@@ -1,20 +1,24 @@
 import { expect, mock, test } from 'claude-code/testing'
 import type { Engine } from 'claude-code/testing'
 import type { On } from 'claude-code'
+import { line } from './lines.ts'
+import { roll } from './bones.ts'
 
 const BAND = { component: 'AbovePrompt', props: { hasSurvey: false, isWorking: false, maxRows: 10, bodyColumns: 80, scroll: { offset: 0, bodyRows: 10 }, view: {} } } as const
 const TURN = { reason: 'answer', answer: 'Fixed the bug.', durationMs: 10, isAborted: false, turnId: 't' } as const
-import { line } from './lines.ts'
-
 const FILE = '/home/t/.claude/buddy/buddies.json'
 const LEGACY = JSON.stringify({ companion: { name: 'Pebble' }, oauthAccount: { accountUuid: 'rare-hunt-42' } })
+const ZED = { name: 'Zed', personality: 'Calm.' }
+// Bones already rolled for Zed, Ada and Pip; a fresh copy per test.
+const born = () => ({ zed: { bones: roll('z') }, ada: { bones: roll('a') }, pip: { bones: roll('p') } })
 const answer = (text: string) => ({ value: { isAnswered: true, text, usage: { input_tokens: 1, output_tokens: 1, cache_read_input_tokens: 0, cache_creation_input_tokens: 0 } } }) as never
 
-// A home on an in-memory disk, a stubbed engine, and the helpers the hatching tests share.
-function rig($: Engine, on: On, files: Record<string, string>) {
+// A home on an in-memory disk, a stubbed engine, and the helpers the tests share.
+function rig($: Engine, on: On, files: Record<string, string> = {}, store?: Record<string, unknown>) {
   const reads: string[] = []
   const writes: string[] = []
-  mock.store(on)
+  const toasts: string[] = []
+  mock.store(on, store)
   mock.env(on, { HOME: '/home/t' })
   on('fs.read', ($, e) => {
     reads.push(e.path)
@@ -26,19 +30,21 @@ function rig($: Engine, on: On, files: Record<string, string>) {
     files[e.path] = e.text
     return { value: undefined }
   })
+  on('ui.toast', ($, e) => { toasts.push(e.text); return { value: undefined } })
   on('ui.render', ($, e) => { const { Box } = $.ui.resolve(e); return <Box key="engine" /> })
   on('command.register', () => ({ value: {} }) as never)
   on('session.start', ($, e) => ({ cwd: e.cwd }))
   const run = async (args: string) => (await $.command.run({ command: 'buddy', args, origin: { kind: 'user' } } as never)).text
   const start = () => $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true } as never)
+  const mount = (props: { bodyColumns?: number; maxRows?: number } = {}) => $.ui.mount({ plugin: 'buddy', surface: 'terminal', ...BAND, props: { ...BAND.props, ...props } })
   const shows = async (text: RegExp) => {
-    const ui = await $.ui.mount({ plugin: 'buddy', surface: 'terminal', ...BAND })
+    const ui = await mount()
     const found = await ui.find({ type: 'Text', text })
     await ui.unmount()
     return found !== undefined
   }
   const card = async () => {
-    const ui = await $.ui.mount({ plugin: 'buddy', surface: 'terminal', ...BAND })
+    const ui = await mount()
     await ui.press({ key: 'stats' })
     const found = await ui.find({ type: 'Text', text: /DBG \d+/ })
     await ui.press({ key: 'stats' })
@@ -46,20 +52,16 @@ function rig($: Engine, on: On, files: Record<string, string>) {
     return found?.text
   }
   const book = () => JSON.parse(files[FILE] ?? '[]') as Record<string, unknown>[]
-  return { reads, writes, run, start, shows, card, book }
+  return { reads, writes, toasts, run, start, mount, shows, card, book }
 }
 
 test('speaks every N turns and the band shows the quip', { options: { everyNTurns: 2 } }, async ($, on) => {
-  mock.store(on)
+  const { mount, shows } = rig($, on)
   let calls = 0
-  on('ui.render', ($, e) => { const { Box } = $.ui.resolve(e); return <Box key="engine" /> })
-  on('model.complete', () => { calls += 1; return { value: { isAnswered: true, text: 'Another bug? Shocking.', usage: { input_tokens: 1, output_tokens: 1, cache_read_input_tokens: 0, cache_creation_input_tokens: 0 } } } })
+  on('model.complete', () => { calls += 1; return answer('Another bug? Shocking.') })
   on('turn.complete', ($, e) => ({ text: e.answer }))
 
-  const idle = await $.ui.mount({ plugin: 'buddy', surface: 'terminal', ...BAND })
-  expect(await idle.find({ type: 'Text', text: /Buddy/ })).toBeDefined()
-  await idle.unmount()
-
+  expect(await shows(/Buddy/)).toBe(true)
   await $.turn.complete(TURN)
   expect(calls).toBe(0)
   await $.turn.complete(TURN)
@@ -71,61 +73,42 @@ test('speaks every N turns and the band shows the quip', { options: { everyNTurn
     await ui.unmount()
   }
 
-  const ui = await $.ui.mount({ plugin: 'buddy', surface: 'terminal', ...BAND })
+  const ui = await mount()
   await ui.press({ key: 'hide' })
   expect(await ui.find({ type: 'Text', text: /Shocking/ })).toBeUndefined()
   await ui.unmount()
 })
 
 test('/buddy toggles the band', { options: { language: 'en' } }, async ($, on) => {
-  mock.store(on)
-  on('ui.render', ($, e) => { const { Box } = $.ui.resolve(e); return <Box key="engine" /> })
-  const run = { command: 'buddy', args: '', origin: { kind: 'user' } } as never
-  const shown = async () => {
-    const ui = await $.ui.mount({ plugin: 'buddy', surface: 'terminal', ...BAND })
-    const found = await ui.find({ type: 'Text', text: /Buddy/ })
-    await ui.unmount()
-    return found !== undefined
-  }
-
-  expect(await shown()).toBe(true)
-  expect((await $.command.run(run)).text).toContain('waddles off')
-  expect(await shown()).toBe(false)
-  expect((await $.command.run(run)).text).toContain('is back')
-  expect(await shown()).toBe(true)
+  const { run, shows } = rig($, on)
+  expect(await shows(/Buddy/)).toBe(true)
+  expect(await run('')).toContain('waddles off')
+  expect(await shows(/Buddy/)).toBe(false)
+  expect(await run('')).toContain('is back')
+  expect(await shows(/Buddy/)).toBe(true)
 })
 
 test('the ticker started at session.start animates the band', { options: { species: 'blob' } }, async ($, on) => {
-  mock.store(on)
+  const { start, shows } = rig($, on)
   const clock = mock.clock(on)
-  on('ui.render', ($, e) => { const { Box } = $.ui.resolve(e); return <Box key="engine" /> })
-  on('command.register', () => ({ value: {} }) as never)
-  on('session.start', ($, e) => ({ cwd: e.cwd }))
-  const eyes = async () => {
-    const ui = await $.ui.mount({ plugin: 'buddy', surface: 'terminal', ...BAND })
-    const shut = await ui.find({ type: 'Text', text: /\(\s*-/ })
-    await ui.unmount()
-    return shut ? 'shut' : 'open'
-  }
+  const shut = /\(\s*-/
 
-  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true } as never)
-  expect(await eyes()).toBe('shut')
+  await start()
+  expect(await shows(shut)).toBe(true)
   await clock.advance(300)
-  expect(await eyes()).toBe('open')
+  expect(await shows(shut)).toBe(false)
   await clock.advance(300 * 19)
-  expect(await eyes()).toBe('shut')
+  expect(await shows(shut)).toBe(true)
 })
 
 test('clicks: pet, poke and the buddy itself say a line; stats toggles, any other click closes it', { options: { language: 'en' } }, async ($, on) => {
-  mock.store(on)
-  on('ui.render', ($, e) => { const { Box } = $.ui.resolve(e); return <Box key="engine" /> })
-  const ui = await $.ui.mount({ plugin: 'buddy', surface: 'terminal', ...BAND })
+  const ui = await rig($, on).mount()
 
   await ui.press({ key: 'pet' })
   expect(await ui.find({ type: 'Text', text: /squish|jiggles|happy|again|peacefully/ })).toBeDefined()
   await ui.press({ key: 'poke' })
   expect(await ui.find({ type: 'Text', text: /jiggles|oozes|wobbles|what\.|unimpressed|sarcasm/ })).toBeDefined()
-  await ui.press({ key: 'body-2' })
+  await ui.press({ key: 'body-0-2' })
   expect(await ui.find({ type: 'Text', text: /\^  \^/ })).toBeDefined()
 
   await ui.press({ key: 'stats' })
@@ -139,76 +122,41 @@ test('clicks: pet, poke and the buddy itself say a line; stats toggles, any othe
 })
 
 test('a failing Bash call gets a canned line, a quiet one does not', async ($, on) => {
-  mock.store(on)
-  on('ui.render', ($, e) => { const { Box } = $.ui.resolve(e); return <Box key="engine" /> })
+  const { shows } = rig($, on)
   let isError = false
   on('tool.call', () => (isError ? { result: {}, isError: true } : { result: {} }) as never)
-  const bubble = async () => {
-    const ui = await $.ui.mount({ plugin: 'buddy', surface: 'terminal', ...BAND })
-    const quiet = await ui.find({ type: 'Text', text: /^\.\.\.$/ })
-    await ui.unmount()
-    return quiet ? 'quiet' : 'spoke'
-  }
+  const quiet = /^\.\.\.$/
 
   await $.tool.call({ tool: 'Bash', command: 'ls' } as never)
-  expect(await bubble()).toBe('quiet')
+  expect(await shows(quiet)).toBe(true)
   isError = true
   await $.tool.call({ tool: 'Bash', command: 'npm test' } as never)
-  expect(await bubble()).toBe('spoke')
+  expect(await shows(quiet)).toBe(false)
 })
 
 test('the species option swaps the art and the lines', { options: { species: 'duck', language: 'en' } }, async ($, on) => {
-  mock.store(on)
-  on('ui.render', ($, e) => { const { Box } = $.ui.resolve(e); return <Box key="engine" /> })
-  const ui = await $.ui.mount({ plugin: 'buddy', surface: 'terminal', ...BAND })
+  const ui = await rig($, on).mount()
   expect(await ui.find({ type: 'Text', text: /<\([◉-] \)___/ })).toBeDefined()
   await ui.press({ key: 'poke' })
   expect(await ui.find({ type: 'Text', text: /quack|waddle|attentive|what\.|unimpressed|sarcasm/ })).toBeDefined()
   await ui.unmount()
 })
 
-test('hatches from ~/.claude.json: own name, and bones rolled from the account id', async ($, on) => {
-  mock.store(on)
-  mock.env(on, { HOME: '/home/t' })
-  let path = ''
-  on('fs.read', ($, e) => {
-    path = String((e as { path?: string }).path ?? '')
-    return { value: JSON.stringify({ companion: { name: 'Pebble', personality: 'Calm.' }, oauthAccount: { accountUuid: 'rare-hunt-42' } }) } as never
-  })
-  on('ui.render', ($, e) => { const { Box } = $.ui.resolve(e); return <Box key="engine" /> })
-  on('command.register', () => ({ value: {} }) as never)
-  on('session.start', ($, e) => ({ cwd: e.cwd }))
-  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true } as never)
-
-  expect(path).toBe('/home/t/.claude.json')
-  const ui = await $.ui.mount({ plugin: 'buddy', surface: 'terminal', ...BAND })
-  expect(await ui.find({ type: 'Text', text: /Pebble/ })).toBeDefined()
-  await ui.press({ key: 'stats' })
-  expect(await ui.find({ type: 'Text', text: /PAT 78/ })).toBeDefined()
-  await ui.unmount()
-})
-
 test('language it: command text and canned lines are Italian', { options: { language: 'it' } }, async ($, on) => {
-  mock.store(on)
-  on('ui.render', ($, e) => { const { Box } = $.ui.resolve(e); return <Box key="engine" /> })
-  const run = { command: 'buddy', args: '', origin: { kind: 'user' } } as never
-  expect((await $.command.run(run)).text).toContain('ondeggiando')
+  expect(await rig($, on).run('')).toContain('ondeggiando')
   expect(line('commit', 'SNARK', 'cat', 0, 'it')).toContain('tastiera')
 })
 
-
 for (const [position, direction] of [['left', 'row'], ['right', 'row-reverse']] as const) {
   test(`position ${position} lays the band out ${direction}`, { options: { position } }, async ($, on) => {
-    mock.store(on)
-    on('ui.render', ($, e) => { const { Box } = $.ui.resolve(e); return <Box key="engine" /> })
-    const ui = await $.ui.mount({ plugin: 'buddy', surface: 'terminal', ...BAND })
+    const ui = await rig($, on).mount()
     expect((await ui.find({ key: 'band' }))?.props.flexDirection).toBe(direction)
     await ui.unmount()
   })
 }
 
 test('buddies.json: its buddies are eggs until /buddy use spends one; a missing personality is dreamt up and written back', { options: { language: 'en', sessionsPerHatch: 1 } }, async ($, on) => {
-  const { run, start, shows, book } = rig($, on, {
+  const { run, start, shows, mount, book } = rig($, on, {
     [FILE]: JSON.stringify([{ name: 'Nino', species: 'duck', mood: 'kept as is' }, { name: 'Pippo', personality: { tone: 'anxious', traits: 'always' } }]),
   })
   const systems: string[] = []
@@ -230,7 +178,7 @@ test('buddies.json: its buddies are eggs until /buddy use spends one; a missing 
   // One for the original (no ~/.claude.json), one for Nino; none for Pippo, who brought his own.
   expect(systems.filter(s => s.includes('invent personalities'))).toHaveLength(2)
   expect(book()[1]).toEqual({ name: 'Pippo', personality: { tone: 'anxious', traits: 'always' } })
-  const ui = await $.ui.mount({ plugin: 'buddy', surface: 'terminal', ...BAND })
+  const ui = await mount()
   await ui.press({ key: 'talk' })
   await ui.unmount()
   expect(systems.at(-1)).toContain('You are Pippo, a tiny terminal companion. Tone: anxious. Traits: always.')
@@ -251,10 +199,8 @@ test('a broken buddies.json is reported and never written', { options: { languag
 })
 
 test('a new buddy hatches only every N sessions together, and removing one frees no egg', { options: { language: 'en', sessionsPerHatch: 2 } }, async ($, on) => {
-  const { run, start, book } = rig($, on, {})
+  const { run, start, book, toasts } = rig($, on)
   on('model.complete', () => answer('not json'))
-  const toasts: string[] = []
-  on('ui.toast', ($, e) => { toasts.push(e.text); return { value: undefined } })
 
   await start()
   expect(toasts).toEqual([])
@@ -279,13 +225,14 @@ test('a new buddy hatches only every N sessions together, and removing one frees
 })
 
 test('hatching: ~/.claude.json is read once to keep the original, the others are random, and what is born stays', { options: { language: 'en', active: 'Zed', sessionsPerHatch: 1 } }, async ($, on) => {
-  const { reads, run, start, card } = rig($, on, { '/home/t/.claude.json': LEGACY, [FILE]: JSON.stringify([{ name: 'Zed', personality: 'Calm.' }]) })
+  const { reads, run, start, card } = rig($, on, { '/home/t/.claude.json': LEGACY, [FILE]: JSON.stringify([ZED]) })
 
   await start()
-  expect(await card()).toContain('PAT 78')
+  const pebble = await card()
+  expect(pebble).toContain('PAT 78')
   expect(await run('use Zed')).toContain('Zed hops in')
   const zed = await card()
-  expect(zed).not.toContain('PAT 78')
+  expect(zed).not.toBe(pebble)
   expect(await run('use Pebble')).toContain('Pebble hops in')
   expect(await card()).toContain('PAT 78')
   expect(await run('use')).toContain('Zed hops in')
@@ -308,9 +255,7 @@ test('no companion in ~/.claude.json: the original is random, name and personali
 })
 
 test('with an egg ready, a bare /buddy hatches a surprise named by Haiku and brings it out; then it toggles again', { options: { language: 'en', sessionsPerHatch: 1 } }, async ($, on) => {
-  const { run, start, shows, book } = rig($, on, {})
-  const toasts: string[] = []
-  on('ui.toast', ($, e) => { toasts.push(e.text); return { value: undefined } })
+  const { run, start, shows, book, toasts } = rig($, on)
   const names = ['Brisa', 'Tortellino']
   on('model.complete', ($, e) => answer(e.system?.includes('invent personalities') ? JSON.stringify({ name: names.shift(), tone: 'grand' }) : 'Hm.'))
 
@@ -325,9 +270,7 @@ test('with an egg ready, a bare /buddy hatches a surprise named by Haiku and bri
 })
 
 test('evolution: a toast when ready, nothing until /buddy evolve, then a rarity up, a weirder soul and an epithet in the set language', { options: { language: 'it', sessionsPerEvolve: 2 } }, async ($, on) => {
-  const { run, start, shows, card } = rig($, on, { '/home/t/.claude.json': LEGACY })
-  const toasts: string[] = []
-  on('ui.toast', ($, e) => { toasts.push(e.text); return { value: undefined } })
+  const { run, start, shows, card, mount, toasts } = rig($, on, { '/home/t/.claude.json': LEGACY })
   const systems: string[] = []
   const prompts: string[] = []
   on('model.complete', ($, e) => {
@@ -349,7 +292,7 @@ test('evolution: a toast when ready, nothing until /buddy evolve, then a rarity 
   expect(await card()).toContain('PAT 93')
   expect(await run('evolve')).toContain('altre 2 sessioni')
 
-  const ui = await $.ui.mount({ plugin: 'buddy', surface: 'terminal', ...BAND })
+  const ui = await mount()
   await ui.press({ key: 'talk' })
   await ui.unmount()
   expect(systems.at(-1)).toContain('You are Pebble, Sarcasmo Alato, a tiny terminal companion. Tone: feroce. Traits: strano.')
@@ -359,7 +302,7 @@ test('evolution: a toast when ready, nothing until /buddy evolve, then a rarity 
 })
 
 test('evolution: if Haiku fails nothing changes; a file buddy gets its new soul written back', { options: { language: 'en', sessionsPerEvolve: 1, sessionsPerHatch: 1, active: 'Zed' } }, async ($, on) => {
-  const { run, start, shows, book } = rig($, on, { [FILE]: JSON.stringify([{ name: 'Zed', personality: 'Calm.' }]) })
+  const { run, start, shows, book } = rig($, on, { [FILE]: JSON.stringify([ZED]) })
   let isBroken = true
   on('model.complete', ($, e) => answer(isBroken ? 'not json' : JSON.stringify({ title_en: 'the Unbothered', title_it: 'l\'Imperturbabile', tone: 'eerily calm' })))
 
@@ -367,9 +310,143 @@ test('evolution: if Haiku fails nothing changes; a file buddy gets its new soul 
   expect(await run('use Zed')).toContain('Zed hops in')
   await start()
   expect(await run('evolve')).toContain('nothing changed')
-  expect(book()).toEqual([{ name: 'Zed', personality: 'Calm.' }])
+  expect(book()).toEqual([ZED])
   isBroken = false
   expect(await run('evolve')).toContain('Zed, the Unbothered has evolved!')
   expect(await shows(/Zed, the Unbothered/)).toBe(true)
   expect(book()).toEqual([{ name: 'Zed', personality: { tone: 'eerily calm' } }])
+})
+
+test('crew: the 0.4 `active` in the store still picks the buddy until /buddy use; the option is a comma list that skips unknown names and eggs', { options: { language: 'en', active: 'Ghost, Nino, Ada' } }, async ($, on) => {
+  const friends = [ZED, { name: 'Nino' }, { name: 'Ada', personality: 'Sharp.' }]
+  const { run, start, shows } = rig($, on, { [FILE]: JSON.stringify(friends) }, { active: 'Zed', born: born() })
+
+  await start()
+  expect(await shows(/Zed/)).toBe(true)
+  expect(await run('use')).toContain('Ada hops in')
+  expect(await shows(/Zed/)).toBe(false)
+  expect(await run('use Zed')).toContain('Zed hops in')
+  await start()
+  expect(await shows(/Zed/)).toBe(true)
+})
+
+test('crew: every buddy out counts the session and glows on its own; /buddy evolve takes a name, or the first that is ready', { options: { language: 'en', sessionsPerEvolve: 1 } }, async ($, on) => {
+  const { run, start, book, toasts } = rig($, on, { '/home/t/.claude.json': LEGACY, [FILE]: JSON.stringify([ZED]) }, { crew: ['zed', ''], born: born() })
+  on('model.complete', () => answer(JSON.stringify({ title_en: 'the Unbothered', title_it: 'l\'Imperturbabile', tone: 'eerily calm' })))
+
+  await start()
+  expect(toasts).toEqual(['Zed is glowing! Type /buddy evolve when you are ready.', 'Pebble is glowing! Type /buddy evolve when you are ready.'])
+  expect(await run('evolve Ghost')).toContain('No buddy called Ghost')
+  expect(await run('evolve Pebble')).toContain('Pebble, the Unbothered has evolved!')
+  expect(await run('evolve')).toContain('Zed, the Unbothered has evolved!')
+  expect(book()).toEqual([{ name: 'Zed', personality: { tone: 'eerily calm' } }])
+  expect(await run('evolve')).toContain('Zed evolves after 1 more session together')
+})
+
+test('crew: join and leave up to 3, never empty; a newborn with the crew full waits on the bench; list marks who is out', { options: { language: 'en', sessionsPerHatch: 1 } }, async ($, on) => {
+  const friends = ['Zed', 'Ada', 'Nino', 'Pip'].map(name => ({ name, personality: 'Calm.' }))
+  const { run, start } = rig($, on, { '/home/t/.claude.json': LEGACY, [FILE]: JSON.stringify(friends) }, { crew: [''], born: born(), hatched: 3, sessions: 3 })
+  on('model.complete', () => answer(JSON.stringify({ name: 'Brisa', tone: 'dry' })))
+
+  await start()
+  expect(await run('join Zed')).toBe('Zed joins the crew.')
+  expect(await run('join zed')).toContain('already in the crew')
+  expect(await run('join Ghost')).toContain('No buddy called Ghost')
+  expect(await run('join')).toContain('Usage')
+  expect(await run('join Ada')).toContain('Ada joins')
+  expect(await run('join Pip')).toContain('The crew is full')
+  const list = await run('list')
+  for (const row of ['▸ Pebble', '● Zed', '● Ada', '🥚 Nino', '\n  Pip']) expect(list).toContain(row)
+
+  expect(await run('leave Pip')).toContain('Pip is not in the crew')
+  expect(await run('leave Pebble')).toContain('Pebble steps back')
+  expect(await run('list')).toContain('▸ Zed')
+  expect(await run('join Pip')).toContain('Pip joins')
+  expect(await run('')).toBe('Crack! Say hi to Brisa.\nThe crew is full, so Brisa waits on the bench: /buddy join Brisa to bring it out.')
+  expect(await run('list')).toContain('\n  Brisa')
+
+  await run('leave Ada')
+  await run('leave Pip')
+  expect(await run('leave Zed')).toContain('the only one out')
+  expect(await run('join Nino')).toContain('Nino is still an egg')
+})
+
+test('crew: with no choice made it forms on its own, everyone hatched up to 3 with 0.4\'s pick leading; /buddy add brings a newborn out while there is room', { options: { language: 'en', sessionsPerHatch: 1 } }, async ($, on) => {
+  const friends = ['Zed', 'Ada', 'Nino', 'Pip'].map(name => ({ name, personality: 'Calm.' }))
+  const { run, start } = rig($, on, { '/home/t/.claude.json': LEGACY, [FILE]: JSON.stringify(friends) }, { active: 'Pip', born: born(), hatched: 3, sessions: 3 })
+
+  await start()
+  const upgraded = await run('list')
+  for (const row of ['▸ Pip', '● Pebble', '● Zed', '\n  Ada', '🥚 Nino']) expect(upgraded).toContain(row)
+  expect(await run('leave Zed')).toContain('Zed steps back')
+  expect(await run('add Mox robot Calm.')).toBe('Mox hatched.\nMox joins the crew.')
+  expect(await run('list')).toContain('● Mox')
+
+  expect(await run('use')).toContain('Pebble hops in')
+  const auto = await run('list')
+  for (const row of ['▸ Pebble', '● Zed', '● Ada', '\n  Pip', '\n  Mox']) expect(auto).toContain(row)
+})
+
+for (const banterChance of [0, 1])
+  test(`crew: the floor passes on at each quip; with banterChance ${banterChance} the next one ${banterChance ? 'answers once, 3s later' : 'stays quiet'}`, { options: { language: 'en', everyNTurns: 1, banterChance } }, async ($, on) => {
+    const { start, shows } = rig($, on, { '/home/t/.claude.json': LEGACY, [FILE]: JSON.stringify([ZED]) }, { crew: ['', 'zed'], born: born() })
+    const clock = mock.clock(on)
+    on('turn.complete', ($, e) => ({ text: e.answer }))
+    const asks: { system: string; prompt: string }[] = []
+    on('model.complete', ($, e) => {
+      asks.push({ system: e.system ?? '', prompt: e.prompt ?? '' })
+      return answer(`line ${asks.length}`)
+    })
+
+    await start()
+    await $.turn.complete(TURN)
+    expect(asks[0]?.system).toContain('You are Zed, a tiny terminal companion. Calm. You share the terminal with Pebble.')
+    expect(await shows(/^Zed/)).toBe(true)
+    await clock.advance(2900)
+    expect(asks).toHaveLength(1)
+    await clock.advance(100)
+    if (banterChance) {
+      expect(asks).toHaveLength(2)
+      expect(asks[1]?.system).toContain('You are Pebble')
+      expect(asks[1]?.prompt).toBe('Zed, who shares the terminal with you, just said: "line 1". Answer it.')
+      expect(await shows(/line 2/)).toBe(true)
+    } else expect(asks).toHaveLength(1)
+    await clock.advance(6000)
+    expect(asks).toHaveLength(1 + banterChance)
+
+    await $.turn.complete(TURN)
+    expect(asks.at(-1)?.system).toContain(banterChance ? 'You are Zed' : 'You are Pebble')
+  })
+
+test('crew: the band fits three buddies to its width: beside the bubble, above it, only the one talking, one line; a click gives the floor', { options: { language: 'en' } }, async ($, on) => {
+  const friends = [ZED, { name: 'Ada', personality: 'Sharp.' }]
+  const rigged = rig($, on, { '/home/t/.claude.json': LEGACY, [FILE]: JSON.stringify(friends) }, { crew: ['', 'zed', 'ada'], born: born() })
+  const mount = (bodyColumns: number) => rigged.mount({ bodyColumns, maxRows: 40 })
+
+  await rigged.start()
+  const wide = await mount(100)
+  expect((await wide.find({ key: 'band' }))?.props.flexDirection).toBe('row')
+  expect(await wide.find({ key: 'buddy-2' })).toBeDefined()
+  expect(await wide.find({ type: 'Text', text: /^ {6}▲$/ })).toBeDefined()
+  await wide.press({ key: 'body-1-2' })
+  expect(await wide.find({ type: 'Text', text: /^ {19}▲$/ })).toBeDefined()
+  expect(await wide.find({ type: 'Text', text: /^Zed/ })).toBeDefined()
+  await wide.unmount()
+
+  const mid = await mount(50)
+  expect((await mid.find({ key: 'band' }))?.props.flexDirection).toBe('column')
+  expect(await mid.find({ key: 'buddy-0' })).toBeDefined()
+  expect(await mid.find({ type: 'Text', text: /^ {19}▼$/ })).toBeDefined()
+  await mid.unmount()
+
+  const narrow = await mount(43)
+  expect(await narrow.find({ key: 'buddy-0' })).toBeUndefined()
+  expect(await narrow.find({ key: 'buddy-1' })).toBeDefined()
+  expect(await narrow.find({ type: 'Text', text: /· Pebble · Ada/ })).toBeDefined()
+  await narrow.unmount()
+
+  const bare = await mount(41)
+  expect(await bare.find({ type: 'Text', text: /^Zed: / })).toBeDefined()
+  expect(await bare.find({ key: 'pet' })).toBeUndefined()
+  await bare.unmount()
 })

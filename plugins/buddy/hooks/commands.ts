@@ -1,5 +1,5 @@
 import type { EngineInterface } from 'claude-code'
-import { CREW_MAX, eggs, evolveNow, evolvesIn, forget, hatchCrew, hatchNew, openBook, outOfEgg, rosterOf, setCrew, titled, writeBook } from './crew.ts'
+import { eggs, evolveNow, evolvesIn, forget, hatchCrew, hatchNew, openBook, outOfEgg, rosterOf, setCrew, titled, writeBook } from './crew.ts'
 import type { Ctx, Entry, Roster } from './crew.ts'
 import { findFriend, keyOf, parseAdd, without } from './friends.ts'
 import { crewNow, hatchInto, membersNow, say, setHidden, speak, toggleHidden } from './state.ts'
@@ -49,7 +49,7 @@ async function toggle($: EngineInterface, o: Ctx) {
 async function place($: EngineInterface, o: Ctx, name: string, isLead: boolean) {
   const key = keyOf(name)
   const keys = (await keysOut($, o)).filter(k => k !== key)
-  if (keys.length >= CREW_MAX) return false
+  if (keys.length >= o.crewSize) return false
   await recrew($, o, isLead ? [key, ...keys] : [...keys, key])
   return true
 }
@@ -90,7 +90,7 @@ async function join($: EngineInterface, o: Ctx, wanted: string) {
   if (!e) return wanted ? w.unknown(wanted) : w.usage
   const keys = await keysOut($, o, r)
   if (keys.includes(e.key)) return w.already(e.name)
-  if (keys.length >= CREW_MAX) return w.full
+  if (keys.length >= o.crewSize) return w.full(o.crewSize)
   const failed = await outOfEgg($, o, e, r)
   if (failed) return failed
   await recrew($, o, [...keys, e.key])

@@ -383,6 +383,15 @@ test('crew: join and leave up to 3, never empty; a newborn with the crew full wa
   expect(await run('join Nino')).toContain('Nino is still an egg')
 })
 
+test('crew: crewSize sets how many can be out', { options: { language: 'en', sessionsPerHatch: 1, crewSize: 2 } }, async ($, on) => {
+  const friends = ['Zed', 'Ada'].map(name => ({ name, personality: 'Calm.' }))
+  const { run, start } = rig($, on, { '/home/t/.claude.json': LEGACY, [FILE]: JSON.stringify(friends) }, { crew: [''], born: born(), hatched: 3, sessions: 3 })
+
+  await start()
+  expect(await run('join Zed')).toBe('Zed joins the crew.')
+  expect(await run('join Ada')).toBe('The crew is full (2). /buddy leave <name> first.')
+})
+
 test('crew: with no choice made it forms on its own, everyone hatched up to 3 with 0.4\'s pick leading; /buddy add brings a newborn out while there is room', { options: { language: 'en', sessionsPerHatch: 1 } }, async ($, on) => {
   const friends = ['Zed', 'Ada', 'Nino', 'Pip'].map(name => ({ name, personality: 'Calm.' }))
   const { run, start } = rig($, on, { '/home/t/.claude.json': LEGACY, [FILE]: JSON.stringify(friends) }, { active: 'Pip', born: born(), hatched: 3, sessions: 3 })
@@ -430,7 +439,7 @@ for (const banterChance of [0, 1])
     expect(asks.at(-1)?.system).toContain(banterChance ? 'You are Zed' : 'You are Pebble')
   })
 
-test('crew: the band fits three buddies to its width: beside the bubble, above it, only the one talking, one line; a click gives the floor', { options: { language: 'en' } }, async ($, on) => {
+test('crew: the band fits three buddies to its width: beside the bubble, above it, as many as fit with the one talking, one line; a click gives the floor', { options: { language: 'en' } }, async ($, on) => {
   const friends = [ZED, { name: 'Ada', personality: 'Sharp.' }]
   const rigged = rig($, on, { '/home/t/.claude.json': LEGACY, [FILE]: JSON.stringify(friends) }, { crew: ['', 'zed', 'ada'], born: born() })
   const mount = (bodyColumns: number) => rigged.mount({ bodyColumns, maxRows: 40 })
@@ -452,9 +461,10 @@ test('crew: the band fits three buddies to its width: beside the bubble, above i
   await mid.unmount()
 
   const narrow = await mount(43)
-  expect(await narrow.find({ key: 'buddy-0' })).toBeUndefined()
   expect(await narrow.find({ key: 'buddy-1' })).toBeDefined()
-  expect(await narrow.find({ type: 'Text', text: /· Pebble · Ada/ })).toBeDefined()
+  expect(await narrow.find({ key: 'buddy-2' })).toBeUndefined()
+  expect(await narrow.find({ type: 'Text', text: /^ {19}▼$/ })).toBeDefined()
+  expect(await narrow.find({ type: 'Text', text: / · Ada$/ })).toBeDefined()
   await narrow.unmount()
 
   const bare = await mount(41)

@@ -8,10 +8,9 @@ import type { Lang } from './lines.ts'
 import { WORDS } from './words.ts'
 
 // The options, read once; `species` is undefined for 'auto'.
-export type Ctx = { name: string; personality: string; species?: string; active: string; file: string; lang: Lang; every: number; perEgg: number; perEvolve: number; banterChance: number; isRight: boolean }
+export type Ctx = { name: string; personality: string; species?: string; active: string; file: string; lang: Lang; every: number; perEgg: number; perEvolve: number; banterChance: number; isRight: boolean; crewSize: number }
 
 export const SOUL = { name: 'Buddy', personality: 'A small, curious terminal companion who comments on your work.' }
-export const CREW_MAX = 3
 
 // `stage` counts evolutions; `title` is the epithet they earned, kept in both languages.
 type Born = { bones: Bones; name?: string; personality?: Personality; stage?: number; title?: Record<Lang, string> }
@@ -119,7 +118,7 @@ export async function hatchCrew($: EngineInterface, o: Ctx, r?: Roster): Promise
   const { roster, born } = r ?? (await rosterOf($, o))
   const keys = await crewKeys($, o, { roster, born })
   const found = keys.map(k => (k ? findFriend(roster, k) : roster[0]))
-  const out = [...new Set(found)].filter((e): e is Entry => !!e && !!born[e.key]).slice(0, CREW_MAX)
+  const out = [...new Set(found)].filter((e): e is Entry => !!e && !!born[e.key]).slice(0, o.crewSize)
   const [first = roster[0], ...rest] = out
   return [first, ...rest].map(e => memberOf(o, e, born)) as [Member, ...Member[]]
 }

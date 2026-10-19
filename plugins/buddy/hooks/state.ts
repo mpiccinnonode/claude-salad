@@ -28,11 +28,10 @@ export const crewOr = (o: Ctx, crew: Member[] | null): [Member, ...Member[]] =>
 // Fills the session's atoms from disk; safe to call again whenever they come back empty (a /clear starts them over).
 export async function hatchInto($: EngineInterface, o: Ctx) {
   const [hatched, wasHidden] = await Promise.all([hatchCrew($, o), $.store.get('isHidden')])
-  await Promise.all([update($, members, () => hatched), update($, isHidden, () => wasHidden === true), update($, quip, () => null), update($, pressed, () => null), update($, speaker, () => 0)])
+  await Promise.all([update($, members, () => hatched), update($, isHidden, () => wasHidden === true), update($, speaker, () => 0), clearDialogue($)])
   return hatched
 }
 
-// The crew out now, null before the first hatch (or after a /clear).
 export async function membersNow($: EngineInterface) {
   return read($, members)
 }
@@ -51,7 +50,6 @@ export async function beat($: EngineInterface, o: Ctx) {
   if (!(await read($, members))) await hatchInto($, o)
 }
 
-// Everything the band draws from, in one go.
 export async function snapshot($: EngineInterface) {
   const [hidden, said, frame, out, p, showStats, floor] = await Promise.all([
     read($, isHidden), read($, quip), read($, tick), read($, members), read($, pressed), read($, isStats), read($, speaker),
@@ -72,7 +70,6 @@ export async function setHidden($: EngineInterface, hidden: boolean) {
   await update($, isHidden, () => hidden)
 }
 
-// Resolves whether it is hidden now.
 export async function toggleHidden($: EngineInterface) {
   const hidden = !(await read($, isHidden))
   await setHidden($, hidden)
@@ -83,7 +80,6 @@ export async function say($: EngineInterface, text: string) {
   await update($, quip, () => text)
 }
 
-// The bubble moves to buddy `i` with its line.
 export async function speak($: EngineInterface, i: number, text: string) {
   await Promise.all([update($, speaker, () => i), update($, quip, () => text)])
 }

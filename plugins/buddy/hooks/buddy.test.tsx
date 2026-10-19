@@ -14,17 +14,18 @@ const born = () => ({ zed: { bones: roll('z') }, ada: { bones: roll('a') }, pip:
 const answer = (text: string) => ({ value: { isAnswered: true, text, usage: { input_tokens: 1, output_tokens: 1, cache_read_input_tokens: 0, cache_creation_input_tokens: 0 } } }) as never
 
 // A home on an in-memory disk, a stubbed engine, and the helpers the tests share.
-function rig($: Engine, on: On, files: Record<string, string> = {}, store?: Record<string, unknown>) {
+function rig($: Engine, on: On, files: Record<string, string> = {}, store?: Record<string, unknown>, env: Record<string, string> = { HOME: '/home/t' }) {
   const reads: string[] = []
   const writes: string[] = []
   const toasts: string[] = []
   mock.store(on, store)
-  mock.env(on, { HOME: '/home/t' })
+  mock.env(on, env)
   on('fs.read', ($, e) => {
     reads.push(e.path)
     if (!(e.path in files)) throw new Error(`ENOENT ${e.path}`)
     return { value: files[e.path] } as never
   })
+  on('fs.exists', ($, e) => ({ value: e.path in files }) as never)
   on('fs.write', ($, e) => {
     writes.push(e.path)
     files[e.path] = e.text
@@ -241,6 +242,36 @@ test('hatching: ~/.claude.json is read once to keep the original, the others are
   expect(reads.filter(p => p.endsWith('.claude.json'))).toHaveLength(1)
 })
 
+test('a half-written ~/.claude.json is not the end of the original: a stand-in for now, and the next session reads it again', { options: { language: 'en' } }, async ($, on) => {
+  const files = { '/home/t/.claude.json': '{"compan' }
+  const { start, card } = rig($, on, files)
+
+  await start()
+  expect(await card()).not.toContain('PAT 78')
+  files['/home/t/.claude.json'] = LEGACY
+  await start()
+  expect(await card()).toContain('PAT 78')
+})
+
+test('on Windows, without HOME, USERPROFILE is home: the original is kept and buddies.json is found', { options: { language: 'en', active: 'Zed' } }, async ($, on) => {
+  const { start, card, run } = rig($, on, { '/home/t/.claude.json': LEGACY, [FILE]: JSON.stringify([ZED]) }, { born: born() }, { USERPROFILE: '/home/t' })
+
+  await start()
+  expect(await run('use Pebble')).toContain('Pebble hops in')
+  expect(await card()).toContain('PAT 78')
+  expect(await run('list')).toContain('Zed')
+})
+
+test('USERPROFILE wins over a Git Bash HOME, and CLAUDE_CONFIG_DIR is where ~/.claude.json lives', { options: { language: 'en', active: 'Zed' } }, async ($, on) => {
+  const files = { '/cfg/.claude.json': LEGACY, [FILE]: JSON.stringify([ZED]), '/elsewhere/.claude.json': JSON.stringify({}) }
+  const { start, card, run } = rig($, on, files, { born: born() }, { USERPROFILE: '/home/t', HOME: '/elsewhere', CLAUDE_CONFIG_DIR: '/cfg' })
+
+  await start()
+  expect(await run('use Pebble')).toContain('Pebble hops in')
+  expect(await card()).toContain('PAT 78')
+  expect(await run('list')).toContain('Zed')
+})
+
 test('no companion in ~/.claude.json: the original is random, name and personality included; a bare /buddy add is named by Haiku', { options: { language: 'en', sessionsPerHatch: 1 } }, async ($, on) => {
   const { run, start, shows, card, book } = rig($, on, { '/home/t/.claude.json': JSON.stringify({ oauthAccount: { accountUuid: 'rare-hunt-42' } }) })
   const names = ['Brisa', 'Quillon']
@@ -383,6 +414,15 @@ test('crew: join and leave up to 3, never empty; a newborn with the crew full wa
   expect(await run('join Nino')).toContain('Nino is still an egg')
 })
 
+test('crew: crewSize sets how many can be out', { options: { language: 'en', sessionsPerHatch: 1, crewSize: 2 } }, async ($, on) => {
+  const friends = ['Zed', 'Ada'].map(name => ({ name, personality: 'Calm.' }))
+  const { run, start } = rig($, on, { '/home/t/.claude.json': LEGACY, [FILE]: JSON.stringify(friends) }, { crew: [''], born: born(), hatched: 3, sessions: 3 })
+
+  await start()
+  expect(await run('join Zed')).toBe('Zed joins the crew.')
+  expect(await run('join Ada')).toBe('The crew is full (2). /buddy leave <name> first.')
+})
+
 test('crew: with no choice made it forms on its own, everyone hatched up to 3 with 0.4\'s pick leading; /buddy add brings a newborn out while there is room', { options: { language: 'en', sessionsPerHatch: 1 } }, async ($, on) => {
   const friends = ['Zed', 'Ada', 'Nino', 'Pip'].map(name => ({ name, personality: 'Calm.' }))
   const { run, start } = rig($, on, { '/home/t/.claude.json': LEGACY, [FILE]: JSON.stringify(friends) }, { active: 'Pip', born: born(), hatched: 3, sessions: 3 })
@@ -430,7 +470,7 @@ for (const banterChance of [0, 1])
     expect(asks.at(-1)?.system).toContain(banterChance ? 'You are Zed' : 'You are Pebble')
   })
 
-test('crew: the band fits three buddies to its width: beside the bubble, above it, only the one talking, one line; a click gives the floor', { options: { language: 'en' } }, async ($, on) => {
+test('crew: the band fits three buddies to its width: beside the bubble, above it, as many as fit with the one talking, one line; a click gives the floor', { options: { language: 'en' } }, async ($, on) => {
   const friends = [ZED, { name: 'Ada', personality: 'Sharp.' }]
   const rigged = rig($, on, { '/home/t/.claude.json': LEGACY, [FILE]: JSON.stringify(friends) }, { crew: ['', 'zed', 'ada'], born: born() })
   const mount = (bodyColumns: number) => rigged.mount({ bodyColumns, maxRows: 40 })
@@ -452,9 +492,10 @@ test('crew: the band fits three buddies to its width: beside the bubble, above i
   await mid.unmount()
 
   const narrow = await mount(43)
-  expect(await narrow.find({ key: 'buddy-0' })).toBeUndefined()
   expect(await narrow.find({ key: 'buddy-1' })).toBeDefined()
-  expect(await narrow.find({ type: 'Text', text: /· Pebble · Ada/ })).toBeDefined()
+  expect(await narrow.find({ key: 'buddy-2' })).toBeUndefined()
+  expect(await narrow.find({ type: 'Text', text: /^ {19}▼$/ })).toBeDefined()
+  expect(await narrow.find({ type: 'Text', text: / · Ada$/ })).toBeDefined()
   await narrow.unmount()
 
   const bare = await mount(41)

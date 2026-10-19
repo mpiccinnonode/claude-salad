@@ -343,6 +343,18 @@ test('crew: every buddy out counts the session and glows on its own; /buddy evol
   expect(await run('evolve')).toContain('Zed evolves after 1 more session together')
 })
 
+test('/clear counts as a new session for the egg and every buddy out; other endings do not', { options: { language: 'en', sessionsPerHatch: 2, sessionsPerEvolve: 2 } }, async ($, on) => {
+  const { start, toasts } = rig($, on, { '/home/t/.claude.json': LEGACY }, { crew: [''], born: born() })
+  on('session.end', () => ({ sessionId: 's' }))
+  const end = (reason: string) => $.session.end({ reason, sessionId: 's', resume: { id: 's' } } as never)
+
+  await start()
+  await end('resume')
+  expect(toasts).toEqual([])
+  await end('clear')
+  expect(toasts).toEqual([expect.stringContaining('egg'), expect.stringContaining('glowing')])
+})
+
 test('crew: join and leave up to 3, never empty; a newborn with the crew full waits on the bench; list marks who is out', { options: { language: 'en', sessionsPerHatch: 1 } }, async ($, on) => {
   const friends = ['Zed', 'Ada', 'Nino', 'Pip'].map(name => ({ name, personality: 'Calm.' }))
   const { run, start } = rig($, on, { '/home/t/.claude.json': LEGACY, [FILE]: JSON.stringify(friends) }, { crew: [''], born: born(), hatched: 3, sessions: 3 })

@@ -1,7 +1,7 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface } from 'claude-code'
 import type { Bones, Member, Pressed, Quip } from '../types'
-import { hatchCrew, SOUL, titled } from './crew.ts'
+import { countSession, eggs, evolvesIn, hatchCrew, SOUL, titled } from './crew.ts'
 import type { Ctx } from './crew.ts'
 import { line } from './lines.ts'
 import type { Reason } from './lines.ts'
@@ -122,4 +122,25 @@ export async function quipFromModel($: EngineInterface, o: Ctx, crew: Member[], 
   const said = r.isAnswered ? (r.text.trim().split(/\n+/).at(-1) ?? '').trim() : ''
   if (said) await speak($, i, said)
   return said
+}
+
+// One session together: the global count, the egg, each buddy out, and the toasts that say something is ready.
+export async function countSessionTogether($: EngineInterface, o: Ctx) {
+  const w = WORDS[o.lang]
+  await $.store.set('sessions', Number((await $.store.get('sessions')) ?? 0) + 1)
+  const crew = await hatchInto($, o)
+  // Every session until the egg is hatched: a toast missed once is not lost.
+  if ((await eggs($, o.perEgg)).left <= 0) {
+    $.ui.toast(w.ready, { timeoutMs: 10000 })
+    await say($, w.ready)
+  }
+  await countSession($, crew.map(m => m.key))
+  // Same rule as the egg: repeats until /buddy evolve is spent.
+  const leftOf = await evolvesIn($, o.perEvolve)
+  for (const [i, m] of crew.entries()) {
+    if (leftOf(m.key) > 0) continue
+    $.ui.toast(w.glow(m.name), { timeoutMs: 10000 })
+    await speak($, i, w.glow(m.name))
+  }
+  return crew
 }

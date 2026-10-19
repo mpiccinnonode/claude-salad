@@ -48,7 +48,7 @@ node "${CLAUDE_PLUGIN_ROOT}/skills/triage/scripts/discover-skills.mjs" "$(pwd)" 
 
 Emits a JSON array of `{ scope, kind, name, description, path }` — `scope` ∈ `project-local` | `user-global` | `plugin-installed`, `kind` ∈ `skill` | `agent` | `mcp-server`. This is the sole source of truth for what's available; don't re-glob or re-parse frontmatter.
 
-**On non-zero exit:** surface the stderr diagnostic and halt. Never fall back to inline traversal — a failed script means malformed frontmatter or a broken environment, and a silent fallback hides exactly the regression the script exists to expose (see `references/offload-scripts.md` §Exit codes).
+**On non-zero exit:** surface the stderr diagnostic and halt. Never fall back to inline traversal — a failed script means malformed frontmatter or a broken environment, and a silent fallback hides exactly the regression the script exists to expose (see `references/offload-scripts.md` §Exit codes). Only project-local and user-global files can fail the run: a plugin file with missing or malformed frontmatter is skipped with a `warning:` line on stderr and exit stays 0 — those warnings need no action.
 
 ### 1c. Open specs
 

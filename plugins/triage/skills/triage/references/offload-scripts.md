@@ -55,6 +55,8 @@ Every script begins with a one-line comment naming the SKILL.md section it serve
 - `0` — success. stdout contains the payload.
 - Any non-zero — failure. stderr contains one diagnostic line. The skill body **must halt and surface the diagnostic**; it must not silently fall back to doing the work inline.
 
+Exception: input the user does not own is skipped, not failed. `discover-skills.mjs` skips a plugin-scope file with missing or malformed frontmatter, writes a `warning:` line to stderr, and still exits `0`. Project-local and user-global files keep the hard failure.
+
 Empty/malformed input is a failure, not a zero-value success. Example: a recurrence-count script receiving empty input exits non-zero; it does not emit `{count: 0}`.
 
 ## Idempotency

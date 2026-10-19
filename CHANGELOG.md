@@ -1,5 +1,9 @@
 # Changelog
 
+## buddy 0.5.1 → 0.5.2
+
+- feat(buddy): /clear counts as a new session towards eggs and evolution
+
 ## buddy 0.5.0 → 0.5.1
 
 - feat(buddy): a new buddy rolls a species nobody in the crew has, and records it in buddies.json so it can be overridden

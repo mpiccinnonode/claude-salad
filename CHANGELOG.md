@@ -1,5 +1,9 @@
 # Changelog
 
+## triage 1.2.1 → 1.2.2
+
+- fix(triage): skip plugin files without frontmatter instead of aborting
+
 ## buddy 0.5.1 → 0.5.2
 
 - feat(buddy): /clear counts as a new session towards eggs and evolution

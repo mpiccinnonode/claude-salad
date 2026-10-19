@@ -15,7 +15,13 @@
 //
 // Exit 0 + JSON on stdout on success. Exit non-zero + one-line stderr
 // diagnostic on: bad argv, unreadable file, missing or malformed
-// frontmatter, or frontmatter missing required `name` / `description`.
+// frontmatter, or frontmatter missing required `name` / `description` —
+// for project-local and user-global files only. A plugin-scope file with
+// those defects is third-party: it is skipped with a stderr warning.
+//
+// Plugin scope walks each `installPath` from
+// `<home>/.claude/plugins/installed_plugins.json`; only when that file is
+// absent or lists nothing does it walk all of `<home>/.claude/plugins/`.
 //
 // Missing directories (e.g. project has no .claude/) are NOT failures — the
 // corresponding scope contributes zero records. Empty `_conventions/` and
@@ -105,6 +111,14 @@ function walkPluginRoots(root, maxDepth = 4) {
   return { skillsDirs, agentsDirs };
 }
 
+// Installed versions only, so marketplace clones and stale cache versions are ignored.
+function pluginRoots(pluginsDir) {
+  const installed = readJsonSafe(join(pluginsDir, "installed_plugins.json"));
+  const paths = Object.values(installed?.plugins ?? {}).flat()
+    .map((e) => e?.installPath).filter((p) => typeof p === "string");
+  return paths.length ? [...new Set(paths)].sort() : [pluginsDir];
+}
+
 function pluginSkillFiles(pluginsDir) {
   const { skillsDirs } = walkPluginRoots(pluginsDir);
   const out = [];
@@ -124,10 +138,10 @@ function extractFrontmatter(path) {
   try {
     content = readFileSync(path, "utf8");
   } catch (e) {
-    die(`cannot read ${path}: ${e.message}`);
+    throw new Error(`cannot read ${path}: ${e.message}`);
   }
   const m = content.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?/);
-  if (!m) die(`no YAML frontmatter in ${path}`);
+  if (!m) throw new Error(`no YAML frontmatter in ${path}`);
   return m[1];
 }
 
@@ -204,16 +218,26 @@ function parseYaml(block /*, path */) {
 function recordFrom(path, scope, kind) {
   const fm = parseYaml(extractFrontmatter(path), path);
   if (!fm || typeof fm !== "object" || Array.isArray(fm)) {
-    die(`frontmatter is not a mapping in ${path}`);
+    throw new Error(`frontmatter is not a mapping in ${path}`);
   }
   const { name, description } = fm;
   if (typeof name !== "string" || name.length === 0) {
-    die(`missing or non-string \`name\` in frontmatter: ${path}`);
+    throw new Error(`missing or non-string \`name\` in frontmatter: ${path}`);
   }
   if (typeof description !== "string" || description.length === 0) {
-    die(`missing or non-string \`description\` in frontmatter: ${path}`);
+    throw new Error(`missing or non-string \`description\` in frontmatter: ${path}`);
   }
   return { scope, kind, name, description, path };
+}
+
+// Plugin files are third-party: a defect there is not the user's regression to halt on.
+function pluginRecord(path, kind) {
+  try {
+    return recordFrom(path, "plugin-installed", kind);
+  } catch (e) {
+    process.stderr.write(`discover-skills: warning: skipping ${e.message}\n`);
+    return null;
+  }
 }
 
 function readJsonSafe(file) {
@@ -309,18 +333,21 @@ function main() {
     out.push(recordFrom(p, "user-global", "agent"));
   }
 
-  // Plugin root is `<home>/.claude/plugins/`, not just `/cache/`. The
-  // tolerant walker finds any `skills/` or `agents/` subdir within depth 4,
-  // covering the canonical `cache/<org>/<pkg>/<ver>/` layout plus any
-  // flatter alternates (e.g. `installed/<pkg>/`, user-symlinked plugins).
+  // The tolerant walker finds any `skills/` or `agents/` subdir within depth 4
+  // of each root, covering the canonical `cache/<org>/<pkg>/<ver>/` layout plus
+  // flatter alternates when falling back to the whole plugins dir.
   const pluginsDir = join(homeDir, ".claude", "plugins");
   const seen = new Set();
   const uniq = (p) => (seen.has(p) ? false : (seen.add(p), true));
-  for (const p of pluginSkillFiles(pluginsDir)) {
-    if (uniq(p)) out.push(recordFrom(p, "plugin-installed", "skill"));
-  }
-  for (const p of pluginAgentFiles(pluginsDir)) {
-    if (uniq(p)) out.push(recordFrom(p, "plugin-installed", "agent"));
+  for (const root of pluginRoots(pluginsDir)) {
+    for (const p of pluginSkillFiles(root)) {
+      const r = uniq(p) && pluginRecord(p, "skill");
+      if (r) out.push(r);
+    }
+    for (const p of pluginAgentFiles(root)) {
+      const r = uniq(p) && pluginRecord(p, "agent");
+      if (r) out.push(r);
+    }
   }
 
   out.push(...discoverMcp(projectRoot, homeDir));
@@ -328,4 +355,8 @@ function main() {
   process.stdout.write(JSON.stringify(out) + "\n");
 }
 
-main();
+try {
+  main();
+} catch (e) {
+  die(e.message);
+}

@@ -40,7 +40,7 @@
     },
     {
       "name": "buddy",
-      "version": "0.6.0",
+      "version": "0.6.1",
       "source": "./plugins/buddy",
       "description": "Mod that brings back the /buddy companion: random buddies hatched from eggs you earn, each with its own species, rarity, stats and Haiku-written personality, animated above the prompt, reacting to your work, evolving with you over time. Needs Claude Code >= 2.1.299."
     }

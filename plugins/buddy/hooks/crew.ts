@@ -26,15 +26,24 @@ async function togetherOf($: EngineInterface) {
   return ((await $.store.get('together')) ?? {}) as Record<string, number>
 }
 
-// The original /buddy kept its soul in ~/.claude.json and rolled its bones from the account id; no companion, nothing to keep.
-async function readLegacy($: EngineInterface): Promise<Born | undefined> {
+// Claude Code's own ~: USERPROFILE on Windows (even where Git Bash sets HOME), HOME elsewhere.
+async function homeOf($: EngineInterface) {
+  return (await $.env.get('USERPROFILE')) || (await $.env.get('HOME'))
+}
+
+// The original /buddy kept its soul in ~/.claude.json and rolled its bones from the account id; null when there is nothing to keep, undefined when it can't be read yet.
+async function readLegacy($: EngineInterface): Promise<Born | null | undefined> {
+  // CLAUDE_CONFIG_DIR moves .claude.json out of ~.
+  const dir = (await $.env.get('CLAUDE_CONFIG_DIR')) || (await homeOf($))
+  if (!dir) return null
+  const path = `${dir}/.claude.json`
   try {
-    const config = JSON.parse(await $.fs.read(`${await $.env.get('HOME')}/.claude.json`))
-    if (!config.companion) return undefined
+    const config = JSON.parse(await $.fs.read(path))
+    if (!config.companion) return null
     const { name, personality } = config.companion
     return { bones: roll(String(config.oauthAccount?.accountUuid ?? config.userID ?? 'anon')), name: name && String(name), personality: personality && String(personality) }
   } catch {
-    return undefined
+    return (await $.fs.exists(path).catch(() => true)) ? undefined : null
   }
 }
 
@@ -42,9 +51,11 @@ async function readLegacy($: EngineInterface): Promise<Born | undefined> {
 async function withOriginal($: EngineInterface, o: Ctx): Promise<Births> {
   const [stored, migrated] = await Promise.all([bornOf($), $.store.get('migrated')])
   let born = stored
-  if (migrated !== true) {
+  if (migrated !== true && !born['']) {
     const legacy = await readLegacy($)
-    if (legacy && !born['']) born = { ...born, '': legacy }
+    // Claude Code may be mid-write: a stand-in for this session, nothing stored, and the next one tries again.
+    if (legacy === undefined) return { ...born, '': { bones: roll(String(Math.random())) } }
+    if (legacy) born = { ...born, '': legacy }
     await Promise.all([$.store.set('born', born), $.store.set('migrated', true)])
   }
   if (born['']) return born
@@ -59,7 +70,10 @@ async function withOriginal($: EngineInterface, o: Ctx): Promise<Births> {
 export type Book = { path: string; raw: unknown[]; friends: Friend[]; error?: string }
 
 export async function openBook($: EngineInterface, o: Ctx): Promise<Book> {
-  const path = o.file.startsWith('~/') ? `${await $.env.get('HOME')}${o.file.slice(1)}` : o.file
+  const isHome = o.file.startsWith('~/')
+  const home = isHome ? await homeOf($) : ''
+  if (isHome && !home) return { path: '', raw: [], friends: [], error: WORDS[o.lang].noHome }
+  const path = isHome ? `${home}${o.file.slice(1)}` : o.file
   let text: string
   try {
     text = String(await $.fs.read(path))
@@ -77,7 +91,6 @@ export async function writeBook($: EngineInterface, book: Book, raw: unknown[]) 
   await $.fs.write(book.path, `${JSON.stringify(raw, null, 2)}\n`)
 }
 
-// The original first, then the file's buddies.
 export async function rosterOf($: EngineInterface, o: Ctx) {
   const [born, book] = await Promise.all([withOriginal($, o), openBook($, o).catch((): Book => ({ path: '', raw: [], friends: [] }))])
   const original: Entry = { key: '', name: o.name || born['']?.name || SOUL.name, personality: o.personality || born['']?.personality, species: o.species }
@@ -140,8 +153,7 @@ function rollNew(have: Set<string | undefined>, fresh: boolean): Bones {
   return b
 }
 
-// Spends an egg: random bones, a name and personality dreamt up when missing, written back into buddies.json.
-// The egg is spent only on success; `failed` is the line to show otherwise.
+// Spends an egg, only on success: random bones, a name and soul dreamt up when missing, written back into buddies.json.
 export async function hatchNew($: EngineInterface, o: Ctx, friend: Friend, { roster, book, born: owned }: Roster): Promise<{ name: string } | { failed: string }> {
   const w = WORDS[o.lang]
   if (book.error) return { failed: w.badFile(book.error) }
@@ -197,7 +209,6 @@ export async function evolveNow($: EngineInterface, o: Ctx, m: Member): Promise<
   return undefined
 }
 
-// Drops a buddy's bones and its session count.
 export async function forget($: EngineInterface, key: string) {
   const [born, together] = await Promise.all([bornOf($), togetherOf($)])
   delete born[key]

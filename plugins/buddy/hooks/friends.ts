@@ -10,7 +10,7 @@ const LIST_KEYS = ['traits', 'quirks', 'likes', 'dislikes'] as const
 const isSpecies = (s: unknown): s is string => (SPECIES as readonly string[]).includes(String(s))
 export const keyOf = (name: string) => name.trim().toLowerCase()
 const isNamed = (entry: unknown, name: string) => keyOf(String((entry as Friend | null)?.name ?? '')) === keyOf(name)
-export const texts =(v: unknown) => (Array.isArray(v) ? v : [v]).filter((x): x is string => typeof x === 'string' && x.trim() !== '').map(x => x.trim())
+export const texts = (v: unknown) => (Array.isArray(v) ? v : [v]).filter((x): x is string => typeof x === 'string' && x.trim() !== '').map(x => x.trim())
 
 // A plain string, or an object of known fields (a lone string where a list goes counts as a list of one).
 export function asPersonality(value: unknown): Personality | undefined {
@@ -18,8 +18,8 @@ export function asPersonality(value: unknown): Personality | undefined {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined
   const src = value as Record<string, unknown>
   const soul: Soul = {}
-  for (const key of TEXT_KEYS) if (texts(src[key])[0]) soul[key] = texts(src[key]).join(' ')
-  for (const key of LIST_KEYS) if (texts(src[key]).length) soul[key] = texts(src[key])
+  for (const key of TEXT_KEYS) { const t = texts(src[key]); if (t.length) soul[key] = t.join(' ') }
+  for (const key of LIST_KEYS) { const t = texts(src[key]); if (t.length) soul[key] = t }
   return Object.keys(soul).length ? soul : undefined
 }
 

@@ -10,7 +10,6 @@ import type { Live } from './state.ts'
 import { WORDS } from './words.ts'
 
 const RARITY_COLOR: Record<Bones['rarity'], string> = { common: 'gray', uncommon: 'green', rare: 'cyan', epic: 'magenta', legendary: 'yellow' }
-const STARS = (rarity: Bones['rarity']) => '★'.repeat(RARITIES.indexOf(rarity) + 1)
 const SHORT: Record<StatName, string> = { DEBUGGING: 'DBG', PATIENCE: 'PAT', CHAOS: 'CHA', WISDOM: 'WIS', SNARK: 'SNK' }
 const BUTTONS = ['pet', 'poke', 'talk', 'stats'] as const
 
@@ -72,7 +71,7 @@ export async function drawBand($: EngineInterface, e: RenderInput<'AbovePrompt'>
   const bubble = (
     <Box key="bubble" flexDirection="column" borderStyle="round" paddingX={1}>
       <Text bold wrap="truncate-end">
-        {titled(m)} <Text color="yellow">{STARS(b.rarity)}</Text>
+        {titled(m)} <Text color="yellow">{'★'.repeat(RARITIES.indexOf(b.rarity) + 1)}</Text>
         {others && <Text bold={false} dimColor>{others}</Text>}
       </Text>
       {/* ponytail: stats stay on one line so the bubble keeps its height and the buttons never scroll out of the band */}

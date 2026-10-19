@@ -58,7 +58,7 @@ export const register: Register = (on, options) => {
       await react($, o, reason, await crewNow($, o))
     }
     return result
-  })
+  }).catch(($, e, next) => next(e)) // the reaction is cosmetic: if it throws, the Bash result it already had goes through
 
   on('turn.complete', async ($, e, next) => {
     const result = await next(e)

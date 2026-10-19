@@ -34,8 +34,7 @@ const BUSY: readonly Beat[] = [{ eyes: 'squint', isLifted: true }, { isLifted: t
 
 // Any species: its rig, each part on its own rhythm unless the mood pins it; a lift drops the empty top row and leaves `~ ~` beneath.
 export function drawBuddy(species: string, tick: number, { isWorking, eye, hat, action, isAsleep }: Look, color: string): Row[] {
-  const rig = RIGS[species] ?? RIGS.blob
-  if (!rig) return []
+  const rig = RIGS[species] ?? RIGS.blob!
   const EYES = { wide: [eye, eye], shut: SHUT, left: [eye, '·'], right: ['·', eye], spin: SPIN, squint: SQUINT } as const
   let beat: Beat = (isWorking ? BUSY[tick % BUSY.length] : IDLE[tick % IDLE.length]) ?? {}
   let eyes: readonly [string, string] = EYES[beat.eyes ?? 'wide']

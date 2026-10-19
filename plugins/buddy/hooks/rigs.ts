@@ -1,5 +1,4 @@
-// Part-by-part rigs for all 18 species, built from the original /buddy frames.
-// A row is 12 cells once {E} becomes one eye glyph; {x} is a part whose variants share one width.
+// Rigs for all 18 species from the original /buddy frames; a row is 12 cells once {E} is one eye, {x} a part whose variants share one width.
 type Rhythm = (tick: number, isWorking: boolean) => number
 export type Mood = 'pet' | 'poke' | 'asleep' | 'working'
 type Part = { v: readonly string[]; r: Rhythm; c?: string }
@@ -15,7 +14,6 @@ const special: Rhythm = (t, w) => (w ? (t % 3 === 2 ? 1 : 0) : beat(t) === 11 ? 
 const step: Rhythm = (t, w) => (w ? t % 2 : beat(t) === 16 || beat(t) === 18 ? 1 : 0)
 const flap: Rhythm = (t, w) => (w ? t % 2 : beat(t) === 4 || beat(t) === 5 ? 1 : 0)
 const arm = (offset: number): Rhythm => (t, w) => (w ? (t + offset) % 3 : ([0, 0, 2, 0, 1][Math.floor((t + offset * 3) / 2) % 5] ?? 0))
-// Alternates between two given variants every tick.
 const fast = (a: number, b: number): Rhythm => t => (t % 2 ? b : a)
 
 const BLANK = '            '

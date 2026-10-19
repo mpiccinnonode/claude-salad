@@ -91,7 +91,7 @@ Every buddy in the file starts as an egg: you earn one egg every `sessionsPerHat
 
 ## Crew
 
-Up to 3 buddies can be out at once. Until you pick with `/buddy use`, `join` or `leave` (or set `active`), the crew forms on its own: every buddy already hatched, your original first; the one picked with `/buddy use` in 0.4 leads it. A newborn joins while there is room. They sit side by side and take turns: each quip, canned line or button press comes from the one with the floor, marked by `▲`/`▼` under its sprite, and clicking a buddy gives it the floor. Now and then the next one answers back (`banterChance`). Each counts its own sessions towards evolving.
+Up to `crewSize` buddies (3 by default) can be out at once. Until you pick with `/buddy use`, `join` or `leave` (or set `active`), the crew forms on its own: every buddy already hatched, your original first; the one picked with `/buddy use` in 0.4 leads it. A newborn joins while there is room. They sit side by side and take turns: each quip, canned line or button press comes from the one with the floor, marked by `▲`/`▼` under its sprite, and clicking a buddy gives it the floor. Now and then the next one answers back (`banterChance`). Each counts its own sessions towards evolving.
 
 As the terminal narrows the band gives way in steps: the sprites move above the bubble, then fewer of them, always with the one talking (the others are listed after its name), and below about 42 columns it is a single line, `Name: quip`. A short band skips the stacked steps.
 

@@ -14,17 +14,18 @@ const born = () => ({ zed: { bones: roll('z') }, ada: { bones: roll('a') }, pip:
 const answer = (text: string) => ({ value: { isAnswered: true, text, usage: { input_tokens: 1, output_tokens: 1, cache_read_input_tokens: 0, cache_creation_input_tokens: 0 } } }) as never
 
 // A home on an in-memory disk, a stubbed engine, and the helpers the tests share.
-function rig($: Engine, on: On, files: Record<string, string> = {}, store?: Record<string, unknown>) {
+function rig($: Engine, on: On, files: Record<string, string> = {}, store?: Record<string, unknown>, env: Record<string, string> = { HOME: '/home/t' }) {
   const reads: string[] = []
   const writes: string[] = []
   const toasts: string[] = []
   mock.store(on, store)
-  mock.env(on, { HOME: '/home/t' })
+  mock.env(on, env)
   on('fs.read', ($, e) => {
     reads.push(e.path)
     if (!(e.path in files)) throw new Error(`ENOENT ${e.path}`)
     return { value: files[e.path] } as never
   })
+  on('fs.exists', ($, e) => ({ value: e.path in files }) as never)
   on('fs.write', ($, e) => {
     writes.push(e.path)
     files[e.path] = e.text
@@ -239,6 +240,36 @@ test('hatching: ~/.claude.json is read once to keep the original, the others are
   await start()
   expect(await card()).toBe(zed)
   expect(reads.filter(p => p.endsWith('.claude.json'))).toHaveLength(1)
+})
+
+test('a half-written ~/.claude.json is not the end of the original: a stand-in for now, and the next session reads it again', { options: { language: 'en' } }, async ($, on) => {
+  const files = { '/home/t/.claude.json': '{"compan' }
+  const { start, card } = rig($, on, files)
+
+  await start()
+  expect(await card()).not.toContain('PAT 78')
+  files['/home/t/.claude.json'] = LEGACY
+  await start()
+  expect(await card()).toContain('PAT 78')
+})
+
+test('on Windows, without HOME, USERPROFILE is home: the original is kept and buddies.json is found', { options: { language: 'en', active: 'Zed' } }, async ($, on) => {
+  const { start, card, run } = rig($, on, { '/home/t/.claude.json': LEGACY, [FILE]: JSON.stringify([ZED]) }, { born: born() }, { USERPROFILE: '/home/t' })
+
+  await start()
+  expect(await run('use Pebble')).toContain('Pebble hops in')
+  expect(await card()).toContain('PAT 78')
+  expect(await run('list')).toContain('Zed')
+})
+
+test('USERPROFILE wins over a Git Bash HOME, and CLAUDE_CONFIG_DIR is where ~/.claude.json lives', { options: { language: 'en', active: 'Zed' } }, async ($, on) => {
+  const files = { '/cfg/.claude.json': LEGACY, [FILE]: JSON.stringify([ZED]), '/elsewhere/.claude.json': JSON.stringify({}) }
+  const { start, card, run } = rig($, on, files, { born: born() }, { USERPROFILE: '/home/t', HOME: '/elsewhere', CLAUDE_CONFIG_DIR: '/cfg' })
+
+  await start()
+  expect(await run('use Pebble')).toContain('Pebble hops in')
+  expect(await card()).toContain('PAT 78')
+  expect(await run('list')).toContain('Zed')
 })
 
 test('no companion in ~/.claude.json: the original is random, name and personality included; a bare /buddy add is named by Haiku', { options: { language: 'en', sessionsPerHatch: 1 } }, async ($, on) => {

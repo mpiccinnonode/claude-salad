@@ -3,8 +3,7 @@ export type Layout = { shape: 'side' | 'stack' | 'bare'; count: number }
 
 export const SPRITE = { columns: 13, rows: 5 }
 // Measured live: the it button row with its hotkeys (`1: coccola … 4: stat`) + padding + border, and `[ × ]`.
-// ponytail: assumes a one-line quip; a long one wraps and the band may scroll a row or two
-const BUBBLE = { columns: 42, rows: 5 }
+const BUBBLE = { columns: 42, rows: 5 } // ponytail: assumes a one-line quip; a long one wraps and the band may scroll a row or two
 const HIDE = 5
 
 export function layoutFor(columns: number, rows: number, n: number): Layout {

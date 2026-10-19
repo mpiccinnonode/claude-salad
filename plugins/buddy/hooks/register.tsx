@@ -20,6 +20,7 @@ export const register: Register = (on, options) => {
     perEvolve: Math.max(1, Number(options.sessionsPerEvolve ?? 30)),
     banterChance: Math.min(1, Math.max(0, Number(options.banterChance ?? 0.3))),
     isRight: options.position === 'right',
+    crewSize: Math.max(1, Math.floor(Number(options.crewSize ?? 3))),
   }
   const w = WORDS[o.lang]
   const live: Live = { turns: 0, lastAnswer: '', lastCannedAt: -Infinity, lastActiveAt: 0 }
@@ -57,7 +58,7 @@ export const register: Register = (on, options) => {
       await react($, o, reason, await crewNow($, o))
     }
     return result
-  })
+  }).catch(($, e, next) => next(e)) // the reaction is cosmetic: if it throws, the Bash result it already had goes through
 
   on('turn.complete', async ($, e, next) => {
     const result = await next(e)

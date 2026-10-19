@@ -1,6 +1,6 @@
 import type { EngineInterface, RenderInput } from 'claude-code'
 import type { Bones, StatName } from '../types'
-import { layoutFor, SPRITE } from './band.ts'
+import { layoutFor, SPRITE, windowOf } from './band.ts'
 import { RARITIES, STAT_NAMES } from './bones.ts'
 import { titled } from './crew.ts'
 import type { Ctx } from './crew.ts'
@@ -10,7 +10,6 @@ import type { Live } from './state.ts'
 import { WORDS } from './words.ts'
 
 const RARITY_COLOR: Record<Bones['rarity'], string> = { common: 'gray', uncommon: 'green', rare: 'cyan', epic: 'magenta', legendary: 'yellow' }
-const STARS = (rarity: Bones['rarity']) => '★'.repeat(RARITIES.indexOf(rarity) + 1)
 const SHORT: Record<StatName, string> = { DEBUGGING: 'DBG', PATIENCE: 'PAT', CHAOS: 'CHA', WISDOM: 'WIS', SNARK: 'SNK' }
 const BUTTONS = ['pet', 'poke', 'talk', 'stats'] as const
 
@@ -29,7 +28,7 @@ export async function drawBand($: EngineInterface, e: RenderInput<'AbovePrompt'>
   const isAsleep = frame - Math.max(live.lastActiveAt, p?.at ?? 0) > 100
   const age = p ? frame - p.at : 0
   const layout = layoutFor(e.props.bodyColumns, e.props.maxRows, crew.length)
-  const shown = layout.isSolo ? [at] : crew.map((_, i) => i)
+  const shown = windowOf(crew.length, layout.count, at)
   const { Box, Button, Text } = $.ui.resolve(e)
 
   if (layout.shape === 'bare') {
@@ -59,10 +58,10 @@ export async function drawBand($: EngineInterface, e: RenderInput<'AbovePrompt'>
           )
         })}
       </Box>
-      {shown.length > 1 && <Text key="pointer" mono>{`${' '.repeat(at * SPRITE.columns + 6)}${layout.shape === 'stack' ? '▼' : '▲'}`}</Text>}
+      {shown.length > 1 && <Text key="pointer" mono>{`${' '.repeat(shown.indexOf(at) * SPRITE.columns + 6)}${layout.shape === 'stack' ? '▼' : '▲'}`}</Text>}
     </Box>
   )
-  const others = layout.isSolo ? crew.filter(c => c !== m).map(c => ` · ${c.name}`).join('') : ''
+  const others = crew.filter((_, i) => !shown.includes(i)).map(c => ` · ${c.name}`).join('')
   const actions = {
     pet: () => press($, o, 'pet', crew, at),
     poke: () => press($, o, 'poke', crew, at),
@@ -71,8 +70,8 @@ export async function drawBand($: EngineInterface, e: RenderInput<'AbovePrompt'>
   }
   const bubble = (
     <Box key="bubble" flexDirection="column" borderStyle="round" paddingX={1}>
-      <Text bold>
-        {titled(m)} <Text color="yellow">{STARS(b.rarity)}</Text>
+      <Text bold wrap="truncate-end">
+        {titled(m)} <Text color="yellow">{'★'.repeat(RARITIES.indexOf(b.rarity) + 1)}</Text>
         {others && <Text bold={false} dimColor>{others}</Text>}
       </Text>
       {/* ponytail: stats stay on one line so the bubble keeps its height and the buttons never scroll out of the band */}

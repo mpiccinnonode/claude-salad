@@ -41,7 +41,7 @@ const PEAK: Partial<Record<StatName, Partial<Record<Reason, readonly string[]>>>
   },
 }
 
-export function line(reason: Reason, peak: StatName, species: string, n: number, lang: Lang = 'en'): string {
+export function line(reason: Reason, peak: StatName, species: string, n: number, lang: Lang): string {
   const [own, generic, peaks] = lang === 'it' ? [SPECIES_LINES_IT, GENERIC_IT, PEAK_IT] : [SPECIES_LINES, GENERIC, PEAK]
   const pool = [...(own[species]?.[reason] ?? []), ...generic[reason], ...(peaks[peak]?.[reason] ?? [])]
   return pool[n % pool.length] ?? '...'

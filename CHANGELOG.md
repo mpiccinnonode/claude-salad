@@ -1,5 +1,14 @@
 # Changelog
 
+## buddy 0.5.2 → 0.6.0
+
+- feat(buddy): configurable crew size, band fits as many as the terminal holds
+- fix(buddy): review-then-dry fixes and Windows home resolution
+
+## General fixes
+
+- chore: add review checklist seeded from the buddy review
+
 ## triage 1.2.1 → 1.2.2
 
 - fix(triage): skip plugin files without frontmatter instead of aborting

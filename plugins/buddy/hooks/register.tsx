@@ -1,9 +1,8 @@
 import type { Register } from 'claude-code'
 import { runBuddy } from './commands.ts'
-import { countSession, eggs, evolvesIn } from './crew.ts'
 import type { Ctx } from './crew.ts'
 import { reasonFor } from './lines.ts'
-import { beat, clearDialogue, crewNow, hatchInto, nextSpeaker, quipFromModel, react, say, speak, tickNow } from './state.ts'
+import { beat, clearDialogue, countSessionTogether, crewNow, nextSpeaker, quipFromModel, react, tickNow } from './state.ts'
 import type { Live } from './state.ts'
 import { drawBand } from './view.tsx'
 import { HINT, WORDS } from './words.ts'
@@ -26,21 +25,7 @@ export const register: Register = (on, options) => {
   const live: Live = { turns: 0, lastAnswer: '', lastCannedAt: -Infinity, lastActiveAt: 0 }
 
   on('session.start', async ($, e, next) => {
-    await $.store.set('sessions', Number((await $.store.get('sessions')) ?? 0) + 1)
-    const crew = await hatchInto($, o)
-    // Every session until the egg is hatched: a toast missed once is not lost.
-    if ((await eggs($, o.perEgg)).left <= 0) {
-      $.ui.toast(w.ready, { timeoutMs: 10000 })
-      await say($, w.ready)
-    }
-    await countSession($, crew.map(m => m.key))
-    // Same rule as the egg: repeats until /buddy evolve is spent.
-    const leftOf = await evolvesIn($, o.perEvolve)
-    for (const [i, m] of crew.entries()) {
-      if (leftOf(m.key) > 0) continue
-      $.ui.toast(w.glow(m.name), { timeoutMs: 10000 })
-      await speak($, i, w.glow(m.name))
-    }
+    const crew = await countSessionTogether($, o)
     await $.command.register({ name: 'buddy', description: w.toggle(crew[0].name), argumentHint: HINT })
     // ponytail: band redraws ~3x/s forever; pause the ticker while hidden if that ever shows up in profiles
     live.lastActiveAt = await tickNow($)
@@ -48,12 +33,13 @@ export const register: Register = (on, options) => {
     return next(e)
   })
 
-  // /clear ends the session without a new session.start: drop this conversation's dialogue, keep the rest.
+  // /clear ends the session without a new session.start: drop this conversation's dialogue, count it as a new session.
   on('session.end', async ($, e, next) => {
     if (e.reason === 'clear') {
       live.lastAnswer = ''
       live.turns = 0
       await clearDialogue($)
+      await countSessionTogether($, o)
     }
     return next(e)
   })

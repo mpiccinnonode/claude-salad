@@ -1,0 +1,296 @@
+version: 1
+checks:
+  - id: atom-access-in-state-only
+    severity: critical
+    rule: Every atom read/update stays in state.ts; other modules call state.ts helpers instead of touching atoms.
+    applies_to: plugins/buddy/hooks/**
+    tags:
+      - buddy
+      - validator
+    added_by: seed
+    added_date: 2026-10-19T00:00:00.000Z
+    status: staged
+    hit_count: 0
+    miss_streak: 1
+    last_hit: null
+    last_evaluated: '2026-10-19'
+  - id: dollar-helpers-top-level
+    severity: critical
+    rule: Functions that take $ must be declared at module top level, never nested or inline, so the validator can follow them.
+    applies_to: plugins/buddy/hooks/**
+    tags:
+      - buddy
+      - validator
+    added_by: seed
+    added_date: 2026-10-19T00:00:00.000Z
+    status: staged
+    hit_count: 0
+    miss_streak: 1
+    last_hit: null
+    last_evaluated: '2026-10-19'
+  - id: keep-18-species
+    severity: critical
+    rule: bones.ts must keep exactly the original 18 species; never adopt coding-buddy's 20-species list, which changes every roll.
+    applies_to: plugins/buddy/hooks/bones.ts
+    tags:
+      - buddy
+    added_by: seed
+    added_date: 2026-10-19T00:00:00.000Z
+    status: staged
+    hit_count: 0
+    miss_streak: 1
+    last_hit: null
+    last_evaluated: '2026-10-19'
+  - id: upsert-preserves-unknown-fields
+    severity: critical
+    rule: Patching the buddies file must keep every field it does not know; never rewrite the user's file dropping unknown keys.
+    applies_to: plugins/buddy/hooks/friends.ts
+    tags:
+      - buddy
+      - data-loss
+    added_by: seed
+    added_date: 2026-10-19T00:00:00.000Z
+    status: staged
+    hit_count: 0
+    miss_streak: 1
+    last_hit: null
+    last_evaluated: '2026-10-19'
+  - id: claude-json-read-once
+    severity: major
+    rule: Read ~/.claude.json only inside withOriginal in crew.ts, guarded by the migrated flag; never read it anywhere else.
+    applies_to: plugins/buddy/hooks/**
+    tags:
+      - buddy
+    added_by: seed
+    added_date: 2026-10-19T00:00:00.000Z
+    status: staged
+    hit_count: 0
+    miss_streak: 1
+    last_hit: null
+    last_evaluated: '2026-10-19'
+  - id: user-lines-in-words
+    severity: major
+    rule: Put every user-facing line in words.ts in both languages; never hardcode user-facing strings in other modules.
+    applies_to: plugins/buddy/hooks/**
+    tags:
+      - buddy
+      - i18n
+    added_by: seed
+    added_date: 2026-10-19T00:00:00.000Z
+    status: staged
+    hit_count: 0
+    miss_streak: 1
+    last_hit: null
+    last_evaluated: '2026-10-19'
+  - id: register-wires-only
+    severity: major
+    rule: register.tsx only reads options into one Ctx and wires events; put verb logic in commands.ts and drawing in view.tsx.
+    applies_to: plugins/buddy/hooks/register.tsx
+    tags:
+      - buddy
+      - architecture
+    added_by: seed
+    added_date: 2026-10-19T00:00:00.000Z
+    status: staged
+    hit_count: 0
+    miss_streak: 1
+    last_hit: null
+    last_evaluated: '2026-10-19'
+  - id: evolve-all-or-nothing
+    severity: major
+    rule: Persist an evolution only when both evolve and dreamOn succeed; never write a partial evolution to store or buddies file.
+    applies_to: plugins/buddy/hooks/crew.ts
+    tags:
+      - buddy
+      - data-integrity
+    added_by: seed
+    added_date: 2026-10-19T00:00:00.000Z
+    status: staged
+    hit_count: 0
+    miss_streak: 1
+    last_hit: null
+    last_evaluated: '2026-10-19'
+  - id: runtime-zero-deps
+    severity: major
+    rule: Plugin runtime code and tests use no external dependencies and no transpile, bundler, or compiled build step.
+    applies_to: plugins/**
+    tags:
+      - repo
+    added_by: seed
+    added_date: 2026-10-19T00:00:00.000Z
+    status: staged
+    hit_count: 0
+    miss_streak: 1
+    last_hit: null
+    last_evaluated: '2026-10-19'
+  - id: one-line-comments
+    severity: minor
+    rule: Code comments are one line max; never write multi-line comment blocks or comments restating the code.
+    applies_to: plugins/**/*.{ts,tsx,mjs}
+    tags:
+      - style
+    added_by: seed
+    added_date: 2026-10-19T00:00:00.000Z
+    status: staged
+    hit_count: 1
+    miss_streak: 0
+    last_hit: '2026-10-19'
+    last_evaluated: '2026-10-19'
+  - id: readme-matches-options
+    severity: minor
+    rule: README must describe configurable values by option name and default, never a stale hardcoded number.
+    applies_to: plugins/*/README.md
+    tags:
+      - docs
+    added_by: lifecycled-code-review
+    added_date: '2026-10-19'
+    status: staged
+    hit_count: 1
+    miss_streak: 0
+    last_hit: '2026-10-19'
+    last_evaluated: '2026-10-19'
+  - id: cosmetic-hook-work-guarded
+    severity: major
+    rule: Cosmetic work after await next(e) in a gating hook must be error-guarded so it can never lose the tool result.
+    applies_to: plugins/buddy/hooks/register.tsx
+    tags:
+      - buddy
+      - hooks
+    added_by: lifecycled-code-review
+    added_date: '2026-10-19'
+    status: staged
+    hit_count: 1
+    miss_streak: 0
+    last_hit: '2026-10-19'
+    last_evaluated: '2026-10-19'
+  - id: migration-flag-on-success
+    severity: major
+    rule: Set a one-shot migration flag only after the source was read successfully or confirmed missing, never on a transient failure.
+    applies_to: plugins/buddy/hooks/crew.ts
+    tags:
+      - buddy
+      - data-loss
+    added_by: lifecycled-code-review
+    added_date: '2026-10-19'
+    status: staged
+    hit_count: 1
+    miss_streak: 0
+    last_hit: '2026-10-19'
+    last_evaluated: '2026-10-19'
+  - id: home-path-guarded
+    severity: minor
+    rule: Expanding ~/ must handle an empty HOME and never produce a relative undefined/ path that can be written.
+    applies_to: plugins/buddy/hooks/**
+    tags:
+      - buddy
+      - fs
+    added_by: lifecycled-code-review
+    added_date: '2026-10-19'
+    status: staged
+    hit_count: 1
+    miss_streak: 0
+    last_hit: '2026-10-19'
+    last_evaluated: '2026-10-19'
+  - id: verbosity-speculative-parameter
+    severity: minor
+    rule: Flag parameters or defaults that no caller ever relies on; drop the default or the parameter.
+    applies_to: plugins/**
+    tags:
+      - verbosity
+    added_by: lifecycled-code-review
+    added_date: '2026-10-19'
+    status: staged
+    hit_count: 1
+    miss_streak: 0
+    last_hit: '2026-10-19'
+    last_evaluated: '2026-10-19'
+  - id: verbosity-impossible-case-handling
+    severity: minor
+    rule: Flag guards and fallbacks for cases internal contracts make impossible; validate at boundaries only.
+    applies_to: plugins/**
+    tags:
+      - verbosity
+    added_by: lifecycled-code-review
+    added_date: '2026-10-19'
+    status: staged
+    hit_count: 1
+    miss_streak: 0
+    last_hit: '2026-10-19'
+    last_evaluated: '2026-10-19'
+  - id: verbosity-single-use-abstraction
+    severity: minor
+    rule: Flag constants or helpers with exactly one use and no naming benefit; inline them.
+    applies_to: plugins/**
+    tags:
+      - verbosity
+    added_by: lifecycled-code-review
+    added_date: '2026-10-19'
+    status: staged
+    hit_count: 1
+    miss_streak: 0
+    last_hit: '2026-10-19'
+    last_evaluated: '2026-10-19'
+  - id: verbosity-intermediate-variable
+    severity: minor
+    rule: Flag repeated identical calls that should be one local, or single-use locals with no naming benefit.
+    applies_to: plugins/**
+    tags:
+      - verbosity
+    added_by: lifecycled-code-review
+    added_date: '2026-10-19'
+    status: staged
+    hit_count: 1
+    miss_streak: 0
+    last_hit: '2026-10-19'
+    last_evaluated: '2026-10-19'
+  - id: verbosity-narrating-comment
+    severity: minor
+    rule: Flag comments that restate the function name or signature instead of a non-obvious why.
+    applies_to: plugins/**
+    tags:
+      - verbosity
+    added_by: lifecycled-code-review
+    added_date: '2026-10-19'
+    status: staged
+    hit_count: 1
+    miss_streak: 0
+    last_hit: '2026-10-19'
+    last_evaluated: '2026-10-19'
+suppressions:
+  - id: language-neutral-glyphs
+    pattern: Hardcoded '...' and × glyphs flagged under user-lines-in-words
+    reason: Language-neutral glyphs need no translation.
+    applies_to: plugins/buddy/hooks/**
+    added_by: lifecycled-code-review
+    added_date: '2026-10-19'
+    last_relevant: '2026-10-19'
+    status: active
+  - id: openbook-env-catch
+    pattern: openBook(...).catch fallback and !book.path guard flagged as impossible-case-handling
+    reason: Guards $.env.get rejecting at a system boundary.
+    applies_to: plugins/buddy/hooks/crew.ts
+    added_by: lifecycled-code-review
+    added_date: '2026-10-19'
+    last_relevant: '2026-10-19'
+    status: active
+  - id: wag-explicit-default
+    pattern: wag(2, 2) flagged as repeating the default slow parameter
+    reason: Explicit 2s pair visually with the other wag calls in the rig table.
+    applies_to: plugins/buddy/hooks/rigs.ts
+    added_by: lifecycled-code-review
+    added_date: '2026-10-19'
+    last_relevant: '2026-10-19'
+    status: active
+  - id: typed-plugin-options
+    pattern: Numeric plugin options reaching register() as NaN / non-numbers
+    reason: Claude Code validates options against plugin.json userConfig types before the hooks module loads; a non-number never reaches register().
+    applies_to: plugins/*/hooks/register.tsx
+    added_by: lifecycled-code-review
+    added_date: '2026-10-19'
+    last_relevant: '2026-10-19'
+    status: active
+project_context:
+  - key: buddy-mod-runtime
+    context: 'plugins/buddy is a Claude Code mod (function hooks, TSX). Modules import each other as ./x.ts. Checks: `claude plugin validate plugins/buddy` and `claude plugin test plugins/buddy`.'
+  - key: buddy-store-is-users
+    context: The buddies file and the store are user data; losing or corrupting fields is a data-loss bug.

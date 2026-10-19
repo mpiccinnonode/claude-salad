@@ -3,6 +3,7 @@ import type { Engine } from 'claude-code/testing'
 import type { On } from 'claude-code'
 import { line } from './lines.ts'
 import { roll } from './bones.ts'
+import { titled } from './crew.ts'
 
 const BAND = { component: 'AbovePrompt', props: { hasSurvey: false, isWorking: false, maxRows: 10, bodyColumns: 80, scroll: { offset: 0, bodyRows: 10 }, view: {} } } as const
 const TURN = { reason: 'answer', answer: 'Fixed the bug.', durationMs: 10, isAborted: false, turnId: 't' } as const
@@ -330,6 +331,14 @@ test('evolution: a toast when ready, nothing until /buddy evolve, then a rarity 
   await start()
   await start()
   expect(toasts).toHaveLength(2)
+})
+
+test('an epithet that repeats the name shows it once', async () => {
+  const m = (name: string, title?: string) => ({ name, title }) as Parameters<typeof titled>[0]
+  expect(titled(m('gremolo', 'Gremolo, l\'Oca Impassibile'))).toBe('gremolo, l\'Oca Impassibile')
+  expect(titled(m('Pebble', 'Pebble the Unblinking'))).toBe('Pebble, the Unblinking')
+  expect(titled(m('Bo', 'Bold One'))).toBe('Bo, Bold One')
+  expect(titled(m('Pebble'))).toBe('Pebble')
 })
 
 test('evolution: if Haiku fails nothing changes; a file buddy gets its new soul written back', { options: { language: 'en', sessionsPerEvolve: 1, sessionsPerHatch: 1, active: 'Zed' } }, async ($, on) => {

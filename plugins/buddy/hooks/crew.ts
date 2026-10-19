@@ -137,7 +137,11 @@ export async function hatchCrew($: EngineInterface, o: Ctx, r?: Roster): Promise
 }
 
 // The epithet rides along wherever the buddy is named: the band and its own system prompt.
-export const titled = (m: Member) => (m.title ? `${m.name}, ${m.title}` : m.name)
+export const titled = (m: Member) => {
+  // Haiku sometimes opens the epithet with the name anyway ("Gremolo, l'Oca Impassibile").
+  const t = m.title?.replace(new RegExp(`^${m.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}[,\\s]+`, 'i'), '')
+  return t ? `${m.name}, ${t}` : m.name
+}
 
 // Every `per` sessions earns one egg; `hatched` only grows, so removing a buddy frees no slot.
 export async function eggs($: EngineInterface, per: number) {

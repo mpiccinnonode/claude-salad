@@ -1,5 +1,11 @@
 # Changelog
 
+## buddy 0.6.1 → 0.7.0
+
+- feat(buddy): evolution gap grows with rarity
+- feat(sessions): increase default sessions per egg and per evolution
+- docs(buddy): accurate comment for the pre-`at` evolution fallback
+
 ## buddy 0.6.0 → 0.6.1
 
 - fix(buddy): don't repeat the name when Haiku puts it in the epithet

@@ -190,7 +190,7 @@ export async function evolvesIn($: EngineInterface, per: number) {
   const [together, born] = await Promise.all([togetherOf($), bornOf($)])
   return (key: string) => {
     const b = born[key]
-    // Buddies evolved before `at` existed fall back to the old linear rule.
+    // Buddies evolved before `at` existed: estimate the last evolution as stage × per; the rarity gap still applies.
     const since = b?.at ?? (b?.stage ?? 0) * per
     return since + per * (RARITIES.indexOf(b?.bones.rarity ?? 'common') + 1) - Number(together[key] ?? 0)
   }

@@ -9,18 +9,18 @@ import { HINT, WORDS } from './words.ts'
 
 export const register: Register = (on, options) => {
   const o: Ctx = {
-    name: String(options.name ?? ''),
-    personality: String(options.personality ?? ''),
+    name: String(options.name),
+    personality: String(options.personality),
     species: options.species && options.species !== 'auto' ? String(options.species) : undefined,
-    active: String(options.active ?? ''),
+    active: String(options.active),
     file: String(options.buddiesFile || '~/.claude/buddy/buddies.json'),
     lang: options.language === 'en' ? 'en' : 'it',
-    every: Math.max(1, Number(options.everyNTurns ?? 3)),
-    perEgg: Math.max(1, Number(options.sessionsPerHatch ?? 20)),
-    perEvolve: Math.max(1, Number(options.sessionsPerEvolve ?? 30)),
-    banterChance: Math.min(1, Math.max(0, Number(options.banterChance ?? 0.3))),
+    every: Math.max(1, Number(options.everyNTurns)),
+    perEgg: Math.max(1, Number(options.sessionsPerHatch)),
+    perEvolve: Math.max(1, Number(options.sessionsPerEvolve)),
+    banterChance: Math.min(1, Math.max(0, Number(options.banterChance))),
     isRight: options.position === 'right',
-    crewSize: Math.max(1, Math.floor(Number(options.crewSize ?? 3))),
+    crewSize: Math.max(1, Math.floor(Number(options.crewSize))),
   }
   const w = WORDS[o.lang]
   const live: Live = { turns: 0, lastAnswer: '', lastCannedAt: -Infinity, lastActiveAt: 0 }

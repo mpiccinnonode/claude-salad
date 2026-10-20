@@ -1,6 +1,6 @@
 import type { EngineInterface } from 'claude-code'
 import type { Bones, Member } from '../types'
-import { evolve, roll, SPECIES } from './bones.ts'
+import { evolve, RARITIES, roll, SPECIES } from './bones.ts'
 import { dreamOn, dreamUp } from './dream.ts'
 import { describe, findFriend, keyOf, parseBook, upsert } from './friends.ts'
 import type { Friend, Personality } from './friends.ts'
@@ -12,8 +12,8 @@ export type Ctx = { name: string; personality: string; species?: string; active:
 
 export const SOUL = { name: 'Buddy', personality: 'A small, curious terminal companion who comments on your work.' }
 
-// `stage` counts evolutions; `title` is the epithet they earned, kept in both languages.
-type Born = { bones: Bones; name?: string; personality?: Personality; stage?: number; title?: Record<Lang, string> }
+// `stage` counts evolutions, `at` the sessions together when the last one was spent; `title` is the epithet, in both languages.
+type Born = { bones: Bones; name?: string; personality?: Personality; stage?: number; at?: number; title?: Record<Lang, string> }
 type Births = Record<string, Born>
 // A roster entry carries its key in `born`: '' for the original.
 export type Entry = Friend & { key: string }
@@ -185,10 +185,15 @@ export async function outOfEgg($: EngineInterface, o: Ctx, e: Entry, r: Roster):
   return 'failed' in hatched ? hatched.failed : undefined
 }
 
-// Every `per` sessions with a buddy out earns it one evolution; `stage` counts the ones spent. Sessions left, by key.
+// Each evolution costs `per` sessions times the rarity step (common 1×, legendary 5×), counted from the last one. Sessions left, by key.
 export async function evolvesIn($: EngineInterface, per: number) {
   const [together, born] = await Promise.all([togetherOf($), bornOf($)])
-  return (key: string) => ((born[key]?.stage ?? 0) + 1) * per - Number(together[key] ?? 0)
+  return (key: string) => {
+    const b = born[key]
+    // Buddies evolved before `at` existed fall back to the old linear rule.
+    const since = b?.at ?? (b?.stage ?? 0) * per
+    return since + per * (RARITIES.indexOf(b?.bones.rarity ?? 'common') + 1) - Number(together[key] ?? 0)
+  }
 }
 
 // One write for the whole crew, so no count is lost to a parallel read.
@@ -202,14 +207,14 @@ export async function evolveNow($: EngineInterface, o: Ctx, m: Member): Promise<
   const w = WORDS[o.lang]
   const book = m.key ? await openBook($, o) : undefined
   if (book?.error) return w.badFile(book.error)
-  const born = await bornOf($)
+  const [born, together] = await Promise.all([bornOf($), togetherOf($)])
   const was = born[m.key]!
   const grown = evolve(was.bones)
   const dreamt = await dreamOn($, m.name, m.personality, { ...grown, species: m.bones.species }, m.title, o.lang)
   if (!dreamt) return w.noEvolve
   // A file buddy's soul lives in the file; the original's in the store.
   if (book) await writeBook($, book, upsert(book.raw, m.name, { personality: dreamt.soul }))
-  await $.store.set('born', { ...born, [m.key]: { ...was, bones: grown, stage: (was.stage ?? 0) + 1, title: dreamt.title, ...(book ? {} : { personality: dreamt.soul }) } })
+  await $.store.set('born', { ...born, [m.key]: { ...was, bones: grown, stage: (was.stage ?? 0) + 1, at: Number(together[m.key] ?? 0), title: dreamt.title, ...(book ? {} : { personality: dreamt.soul }) } })
   return undefined
 }
 

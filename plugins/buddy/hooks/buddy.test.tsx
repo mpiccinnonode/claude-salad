@@ -12,6 +12,8 @@ const LEGACY = JSON.stringify({ companion: { name: 'Pebble' }, oauthAccount: { a
 const ZED = { name: 'Zed', personality: 'Calm.' }
 // Bones already rolled for Zed, Ada and Pip; a fresh copy per test.
 const born = () => ({ zed: { bones: roll('z') }, ada: { bones: roll('a') }, pip: { bones: roll('p') } })
+// The evolution gap grows with rarity, so evolution tests pin Zed to common.
+const commonZed = () => ({ ...born(), zed: { bones: { ...roll('z'), rarity: 'common' as const } } })
 const answer = (text: string) => ({ value: { isAnswered: true, text, usage: { input_tokens: 1, output_tokens: 1, cache_read_input_tokens: 0, cache_creation_input_tokens: 0 } } }) as never
 
 // A home on an in-memory disk, a stubbed engine, and the helpers the tests share.
@@ -322,13 +324,14 @@ test('evolution: a toast when ready, nothing until /buddy evolve, then a rarity 
   expect(await shows(/Pebble, Sarcasmo Alato/)).toBe(true)
   expect(await shows(/^★★$/)).toBe(true)
   expect(await card()).toContain('PAT 93')
-  expect(await run('evolve')).toContain('altre 2 sessioni')
+  expect(await run('evolve')).toContain('altre 4 sessioni')
 
   const ui = await mount()
   await ui.press({ key: 'talk' })
   await ui.unmount()
   expect(systems.at(-1)).toContain('You are Pebble, Sarcasmo Alato, a tiny terminal companion. Tone: feroce. Traits: strano.')
-  await start()
+  for (let i = 0; i < 3; i++) await start()
+  expect(toasts).toHaveLength(1)
   await start()
   expect(toasts).toHaveLength(2)
 })
@@ -342,7 +345,7 @@ test('an epithet that repeats the name shows it once', async () => {
 })
 
 test('evolution: if Haiku fails nothing changes; a file buddy gets its new soul written back', { options: { language: 'en', sessionsPerEvolve: 1, sessionsPerHatch: 1, active: 'Zed' } }, async ($, on) => {
-  const { run, start, shows, book } = rig($, on, { [FILE]: JSON.stringify([ZED]) })
+  const { run, start, shows, book } = rig($, on, { [FILE]: JSON.stringify([ZED]) }, { born: commonZed() })
   let isBroken = true
   on('model.complete', ($, e) => answer(isBroken ? 'not json' : JSON.stringify({ title_en: 'the Unbothered', title_it: 'l\'Imperturbabile', tone: 'eerily calm' })))
 
@@ -371,7 +374,7 @@ test('crew: the 0.4 `active` in the store still picks the buddy until /buddy use
 })
 
 test('crew: every buddy out counts the session and glows on its own; /buddy evolve takes a name, or the first that is ready', { options: { language: 'en', sessionsPerEvolve: 1 } }, async ($, on) => {
-  const { run, start, book, toasts } = rig($, on, { '/home/t/.claude.json': LEGACY, [FILE]: JSON.stringify([ZED]) }, { crew: ['zed', ''], born: born() })
+  const { run, start, book, toasts } = rig($, on, { '/home/t/.claude.json': LEGACY, [FILE]: JSON.stringify([ZED]) }, { crew: ['zed', ''], born: commonZed() })
   on('model.complete', () => answer(JSON.stringify({ title_en: 'the Unbothered', title_it: 'l\'Imperturbabile', tone: 'eerily calm' })))
 
   await start()
@@ -380,7 +383,7 @@ test('crew: every buddy out counts the session and glows on its own; /buddy evol
   expect(await run('evolve Pebble')).toContain('Pebble, the Unbothered has evolved!')
   expect(await run('evolve')).toContain('Zed, the Unbothered has evolved!')
   expect(book()).toEqual([{ name: 'Zed', species: expect.any(String), personality: { tone: 'eerily calm' } }])
-  expect(await run('evolve')).toContain('Zed evolves after 1 more session together')
+  expect(await run('evolve')).toContain('Zed evolves after 2 more sessions together')
 })
 
 test('/clear counts as a new session for the egg and every buddy out; other endings do not', { options: { language: 'en', sessionsPerHatch: 2, sessionsPerEvolve: 2 } }, async ($, on) => {

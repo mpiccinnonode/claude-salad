@@ -54,8 +54,8 @@ The number keys work while the band has focus (`ctrl+x tab`, or click it). Click
 | `buddiesFile` | string | `~/.claude/buddy/buddies.json` | Where your extra buddies live (see below). |
 | `crewSize` | number | `3` | How many buddies can be out at once. The band shows as many as the terminal has room for (beside the bubble, then above it), always including the one talking; the rest are named in its bubble. |
 | `active` | string | `""` | Which buddies are out, comma separated, up to `crewSize` (e.g. `Pip,Mox`); empty means every buddy already hatched, your original first. `/buddy use`, `join` and `leave` override it. Unknown names and buddies still in their egg are skipped. |
-| `sessionsPerHatch` | number | `20` | Sessions together for each egg. |
-| `sessionsPerEvolve` | number | `30` | Sessions with a buddy out before it can evolve. |
+| `sessionsPerHatch` | number | `70` | Sessions together for each egg. |
+| `sessionsPerEvolve` | number | `50` | Sessions with a buddy out before a common one can evolve; each rarity up multiplies it (see below). |
 | `position` | string | `left` | `left` or `right`: on the right the buddy sits against the right edge, its bubble to its left. |
 | `language` | string | `it` | `it` or `en`: canned lines, labels, Haiku quips and personalities all follow it, and so does the epithet an evolved buddy shows. |
 
@@ -87,7 +87,7 @@ A JSON list. Only `name` is required; any other field you add is kept as is.
 ]
 ```
 
-Every buddy in the file starts as an egg: you earn one egg every `sessionsPerHatch` sessions (20 by default), and `/buddy use <name>` spends it. A toast, and the buddy itself, tell you when an egg is ready; a bare `/buddy` then hatches a brand-new one whose name is the surprise; it leads the crew, or waits on the bench when the crew is full. Hatching rolls the rest at random. If the buddy has no personality, Haiku writes one into the file then. A file that is not valid JSON is reported by `/buddy list` and never written.
+Every buddy in the file starts as an egg: you earn one egg every `sessionsPerHatch` sessions (70 by default), and `/buddy use <name>` spends it. A toast, and the buddy itself, tell you when an egg is ready; a bare `/buddy` then hatches a brand-new one whose name is the surprise; it leads the crew, or waits on the bench when the crew is full. Hatching rolls the rest at random. If the buddy has no personality, Haiku writes one into the file then. A file that is not valid JSON is reported by `/buddy list` and never written.
 
 ## Crew
 
@@ -97,7 +97,7 @@ As the terminal narrows the band gives way in steps: the sprites move above the 
 
 ## Evolution
 
-Every `sessionsPerEvolve` sessions (30 by default) with a buddy out, it is ready to evolve: a toast, and the buddy itself, say so. Nothing happens until you type `/buddy evolve`. Then its rarity goes up one step (legendary stays legendary), it gets a hat if it had none, every stat goes up (its strongest one most), and Haiku rewrites its personality: the same buddy, only stranger, pushed along its stats. It also earns an epithet after its name, in the language you set, e.g. "Urchin, the Winged Sarcasm" or "Urchin, Sarcasmo Alato"; each evolution replaces it with a grander one. A file buddy's new personality is written into the buddies file. If Haiku fails, nothing changes and you can try again.
+Like a Pokémon, the rarer a buddy, the longer it takes: from its last evolution (or its hatching), a common buddy needs `sessionsPerEvolve` sessions out (50 by default), an uncommon one twice that, a rare one three times, an epic one four, a legendary one five. Then it is ready to evolve: a toast, and the buddy itself, say so. Nothing happens until you type `/buddy evolve`. Then its rarity goes up one step (legendary stays legendary), it gets a hat if it had none, every stat goes up (its strongest one most), and Haiku rewrites its personality: the same buddy, only stranger, pushed along its stats. It also earns an epithet after its name, in the language you set, e.g. "Urchin, the Winged Sarcasm" or "Urchin, Sarcasmo Alato"; each evolution replaces it with a grander one. A file buddy's new personality is written into the buddies file. If Haiku fails, nothing changes and you can try again.
 
 ## What it hooks
 

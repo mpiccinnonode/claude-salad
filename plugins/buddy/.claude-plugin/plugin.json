@@ -31,7 +31,7 @@
     "species": {
       "type": "string",
       "title": "Species",
-      "description": "Species of your original buddy: auto = the one it hatched with; or pick any of the 18.",
+      "description": "Species of your original buddy: auto = the one it hatched with; or pick any of the 20.",
       "default": "auto",
       "options": [
         "auto",
@@ -52,7 +52,9 @@
         "robot",
         "rabbit",
         "mushroom",
-        "chonk"
+        "chonk",
+        "imp",
+        "bat"
       ]
     },
     "language": {

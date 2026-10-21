@@ -1,7 +1,7 @@
 import { expect, test } from 'claude-code/testing'
 import { drawBuddy } from './sprite.ts'
 import type { Action } from './sprite.ts'
-import { SPECIES } from './bones.ts'
+import { ALL_SPECIES } from './bones.ts'
 
 type Opts = { isWorking?: boolean; action?: Action; hat?: 'none' | 'crown' | 'propeller'; isAsleep?: boolean; eye?: string }
 const rows = (species: string, tick: number, o: Opts = {}) =>
@@ -9,7 +9,7 @@ const rows = (species: string, tick: number, o: Opts = {}) =>
 const text = (species: string, tick: number, o: Opts = {}) => rows(species, tick, o).map(row => row.map(([t]) => t).join(''))
 
 test('every species, every state: 5 rows of 13 cells, no placeholder left', async () => {
-  for (const species of SPECIES)
+  for (const species of ALL_SPECIES)
     for (let tick = 0; tick < 30; tick++)
       for (const action of [undefined, { kind: 'pet', age: tick % 6 }, { kind: 'poke', age: tick % 5 }] as const) {
         const r = text(species, tick, { isWorking: tick % 2 === 0, action, hat: 'crown', isAsleep: tick % 7 === 0 })
@@ -33,7 +33,7 @@ test('penguin parts move on their own: tuft, flippers, foot tap; the beak is yel
   expect(text('penguin', 12)[1]).toContain('.-~-.')
   expect(text('penguin', 1)[3]).toContain('/(   )\\')
   expect(text('penguin', 3)[3]).toContain('|(   )|')
-  expect(text('penguin', 16)[4]).toContain('`--.´')
+  expect(text('penguin', 16)[4]).toContain("`--^'")
   expect(rows('penguin', 1)[2]).toContainEqual(['>', 'yellow'])
 })
 
@@ -46,13 +46,13 @@ test('hop: the empty top row drops and ~ ~ lands beneath', async () => {
 })
 
 test('working penguin: head bob, flippers flap, feet step, waddle', async () => {
-  expect(text('penguin', 3, { isWorking: true })).toEqual(['             ', '   .-^-.     ', '   (·>O)     ', '  /(   )\\    ', '   `---´     '])
-  expect(text('penguin', 4, { isWorking: true })).toEqual(['             ', '  .---.      ', '  (O>·)      ', ' \\(   )/     ', '  ´---`      '])
+  expect(text('penguin', 3, { isWorking: true })).toEqual(['             ', '    .-^-.    ', '    (·>O)    ', '   /(   )\\   ', "    `--^'    "])
+  expect(text('penguin', 4, { isWorking: true })).toEqual(['             ', '   .---.     ', '   (O>·)     ', '  \\(   )/    ', "   `---'     "])
 })
 
 test('moods move the body too: pet relaxes the flippers, poke ruffles the tuft, sleep slumps', async () => {
   const pet = text('penguin', 3, { action: { kind: 'pet', age: 1 } })
-  expect(pet[2]).toContain('(^>^)')
+  expect(pet[2]).toContain('(^v^)')
   expect(pet[3]).toContain('|(   )|')
   expect(pet[0]).toContain('♥')
   const poke = text('penguin', 3, { action: { kind: 'poke', age: 3 } })
@@ -71,11 +71,11 @@ test('hats sit on a free top row; the propeller spins', async () => {
 })
 
 test('other species: blink, look, spin, and their own moods', async () => {
-  expect(text('duck', 1, { eye: '·' })[2]).toContain('<(· )___')
-  expect(text('duck', 0, { eye: '·' })[2]).toContain('<(- )___')
-  expect(text('blob', 7, { eye: '·' })[2]).toContain('( ·  · )')
-  expect(text('cat', 15)[2]).toContain('( @   @)')
-  expect(text('turtle', 3, { action: { kind: 'poke', age: 3 } })[2]).toContain('(  --  )')
-  expect(text('capybara', 3, { action: { kind: 'pet', age: 1 } })[0]).toContain('(o)')
-  expect(text('cactus', 3, { action: { kind: 'pet', age: 1 } })[1]).toContain('_**_')
+  expect(text('duck', 1, { eye: '·' })[2]).toContain('___( ·)>')
+  expect(text('duck', 0, { eye: '·' })[2]).toContain('___( -)>')
+  expect(text('blob', 7, { eye: '·' })[2]).toContain('.·--·.')
+  expect(text('cat', 15)[2]).toContain('( @.@ )')
+  expect(text('turtle', 3, { action: { kind: 'poke', age: 3 } })[4]).toBe(' ""    ""    ')
+  expect(text('capybara', 3, { action: { kind: 'pet', age: 1 } })[1]).toContain('u.--.u')
+  expect(text('cactus', 3, { action: { kind: 'pet', age: 1 } })[3]).toContain('| ww |')
 })

@@ -46,7 +46,7 @@ export async function drawBand($: EngineInterface, e: RenderInput<'AbovePrompt'>
         {shown.map(i => {
           const c = crew[i]!
           const action = p && p.who === c.key && age < ACTION_TICKS[p.kind] ? { kind: p.kind, age } : undefined
-          const look = { isWorking: e.props.isWorking, eye: c.bones.eye, hat: c.bones.hat, action, isAsleep }
+          const look = { isWorking: e.props.isWorking, eye: c.bones.eye, hat: c.bones.hat, action, isAsleep, rarity: c.bones.rarity }
           return (
             <Box key={`buddy-${i}`} flexDirection="column" width={SPRITE.columns} flexShrink={0}>
               {drawBuddy(c.bones.species, frame + i * 7, look, RARITY_COLOR[c.bones.rarity]).map((row, r) => (

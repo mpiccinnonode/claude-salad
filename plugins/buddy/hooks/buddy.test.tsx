@@ -95,7 +95,7 @@ test('/buddy toggles the band', { options: { language: 'en' } }, async ($, on) =
 test('the ticker started at session.start animates the band', { options: { species: 'blob' } }, async ($, on) => {
   const { start, shows } = rig($, on)
   const clock = mock.clock(on)
-  const shut = /\(\s*-/
+  const shut = /\.----\.|'-  -'/
 
   await start()
   expect(await shows(shut)).toBe(true)
@@ -113,7 +113,7 @@ test('clicks: pet, poke and the buddy itself say a line; stats toggles, any othe
   await ui.press({ key: 'poke' })
   expect(await ui.find({ type: 'Text', text: /jiggles|oozes|wobbles|what\.|unimpressed|sarcasm/ })).toBeDefined()
   await ui.press({ key: 'body-0-2' })
-  expect(await ui.find({ type: 'Text', text: /\^  \^/ })).toBeDefined()
+  expect(await ui.find({ type: 'Text', text: /\^--\^/ })).toBeDefined()
 
   await ui.press({ key: 'stats' })
   expect(await ui.find({ type: 'Text', text: /PAT 30/ })).toBeDefined()
@@ -140,7 +140,7 @@ test('a failing Bash call gets a canned line, a quiet one does not', async ($, o
 
 test('the species option swaps the art and the lines', { options: { species: 'duck', language: 'en' } }, async ($, on) => {
   const ui = await rig($, on).mount()
-  expect(await ui.find({ type: 'Text', text: /<\([◉-] \)___/ })).toBeDefined()
+  expect(await ui.find({ type: 'Text', text: /___\( [◉-]\)/ })).toBeDefined()
   await ui.press({ key: 'poke' })
   expect(await ui.find({ type: 'Text', text: /quack|waddle|attentive|what\.|unimpressed|sarcasm/ })).toBeDefined()
   await ui.unmount()
@@ -173,7 +173,7 @@ test('buddies.json: its buddies are eggs until /buddy use spends one; a missing 
   expect(await run('list')).toMatch(/▸ Buddy[\s\S]*🥚 Nino \(duck\)[\s\S]*🥚 Pippo/)
   expect(await run('use Nino')).toContain('Nino hops in')
   expect(await shows(/Nino/)).toBe(true)
-  expect(await shows(/\)___/)).toBe(true)
+  expect(await shows(/___\(/)).toBe(true)
   expect(book()[0]).toEqual({ name: 'Nino', species: 'duck', mood: 'kept as is', personality: { tone: 'wry', traits: ['fussy', 'loyal', 'nosy'], catchphrase: 'Quack. Again.' } })
 
   expect(await run('use Pippo')).toContain('Pippo is still an egg: 1 more session together')

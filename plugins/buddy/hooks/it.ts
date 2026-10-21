@@ -40,6 +40,22 @@ export const PEAK_IT: Partial<Record<StatName, Pool>> = {
 }
 
 export const SPECIES_LINES_IT: Record<string, Pool> = {
+  bat: {
+    error: ["*strilla contro il bug*", "l'ecolocalizzazione ha trovato il problema. sei tu."],
+    'test-fail': ['*si appende a testa in giù per vederlo meglio*', 'è rosso anche da questa angolazione.'],
+    commit: ['*fa un giro di vittoria in volo*', '*chiude le ali* committato.'],
+    'late-night': ["finalmente un'ora civile.", '*appena sveglio* buongiorno!'],
+    pet: ['*squittisce piano*', "*ti avvolge con un'aletta*"],
+    poke: ['*strilla*', '*svolazza via e torna*', '*ti colpisce con un sonar*'],
+  },
+  imp: {
+    error: ['*ridacchia davanti allo stacktrace*', 'non sono stato io. stavolta.'],
+    'test-fail': ['*punzecchia il test fallito con la coda*', 'il rosso è il mio colore preferito.'],
+    commit: ['*firma il commit con lo zolfo*', 'un patto è un patto. committato.'],
+    'late-night': ['*gli occhi brillano di più* questa è la mia ora.', "l'ora delle streghe dona al tuo codice."],
+    pet: ['*fa le fusa come una piccola fornace*', '*arriccia la coda, contento*'],
+    poke: ['*soffia*', '*ti bruciacchia il dito*', 'che vuoi, mortale?'],
+  },
   duck: {
     error: ['*qua-qua contro il bug*', 'hai provato il rubber duck debugging? ah, già.'],
     'test-fail': ['*qua-qua triste*', 'i test non fanno qua-qua.'],

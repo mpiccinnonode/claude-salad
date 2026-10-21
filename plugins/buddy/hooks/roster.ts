@@ -2,6 +2,22 @@ import type { Reason } from './lines.ts'
 
 // Per-species lines, from ramarivera/coding-buddy (MIT).
 export const SPECIES_LINES: Record<string, Partial<Record<Reason, readonly string[]>>> = {
+  bat: {
+    "error": ["*screeches at the bug*", "my echolocation found the problem. it's you."],
+    "test-fail": ["*hangs upside down to see it differently*", "still red, from this angle too."],
+    "commit": ["*flaps a victory lap*", "*folds its wings* committed."],
+    "late-night": ["finally, a civilised hour.", "*just waking up* morning!"],
+    "pet": ["*squeaks softly*", "*wraps you in a tiny wing*"],
+    "poke": ["*screech*", "*flutters off and back*", "*pings you with sonar*"],
+  },
+  imp: {
+    "error": ["*cackles at the stack trace*", "not my doing. this time."],
+    "test-fail": ["*pokes the failing test with its tail*", "red is my favourite colour."],
+    "commit": ["*signs the commit in brimstone*", "a deal is a deal. committed."],
+    "late-night": ["*eyes glow brighter* this is my hour.", "the witching hour suits your code."],
+    "pet": ["*purrs like a tiny furnace*", "*tail curls happily*"],
+    "poke": ["*hisses*", "*singes your finger*", "what do you want, mortal?"],
+  },
   duck: {
     "error": ["*quacks at the bug*", "have you tried rubber duck debugging? oh wait."],
     "test-fail": ["*quacks sadly*", "the tests are not quacking up."],

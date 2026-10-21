@@ -2,7 +2,7 @@
 
 The `/buddy` companion Claude Code shipped in April 2026 and removed in 2.1.97, brought back as a mod. Your buddy sits above the prompt, animated, and reacts to your work.
 
-- **Random, and yours to keep.** Every buddy hatches from a random seed, the same odds for everyone: species (one of 18, equally likely), rarity (★ 60%, ★★ 25%, ★★★ 10%, ★★★★ 4%, ★★★★★ 1%), eyes, hat and five stats (DEBUGGING, PATIENCE, CHAOS, WISDOM, SNARK). A name or personality you don't give it, Haiku invents. Whatever hatches is kept: a buddy looks the same every session.
+- **Random, and yours to keep.** Every buddy hatches from a random seed, the same odds for everyone: species (one of 20, equally likely), rarity (★ 60%, ★★ 25%, ★★★ 10%, ★★★★ 4%, ★★★★★ 1%), eyes, hat and five stats (DEBUGGING, PATIENCE, CHAOS, WISDOM, SNARK). A name or personality you don't give it, Haiku invents. Whatever hatches is kept: a buddy looks the same every session.
 - **Keeps the buddy you had.** On its first run it reads `~/.claude.json` once and keeps the buddy you had (from the original `/buddy` or buddy 0.2.0): its name, personality and body, re-rolled from your account id with the original algorithm. It never reads the file again.
 - **Animated part by part.** It blinks, looks around, hops, flaps, wags and twitches. Every species has its own body language when petted, poked or asleep: a cat flattens its ears, a turtle hides in its shell, a cactus blooms. While Claude works it waddles, and after about 30 seconds of quiet it dozes off.
 - **Reacts to your work.** It has canned lines for failed commands, failing tests, commits and late-night commits, drawn from its species and its strongest stat. Every few turns Haiku writes it a fresh in-character quip.
@@ -50,7 +50,7 @@ The number keys work while the band has focus (`ctrl+x tab`, or click it). Click
 | `personality` | string | `""` | Overrides your original buddy's personality, an evolved one included. |
 | `everyNTurns` | number | `3` | Finished turns between Haiku quips. With a crew, each quip comes from the next buddy in turn. |
 | `banterChance` | number | `0.3` | With more than one buddy out, the chance that after a quip the next buddy answers it, once (one more Haiku call). `0` turns it off. |
-| `species` | string | `auto` | Your original buddy's species: `auto` keeps the hatched one; pick any of the 18 to try another. |
+| `species` | string | `auto` | Your original buddy's species: `auto` keeps the hatched one; pick any of the 20 to try another. |
 | `buddiesFile` | string | `~/.claude/buddy/buddies.json` | Where your extra buddies live (see below). |
 | `crewSize` | number | `3` | How many buddies can be out at once. The band shows as many as the terminal has room for (beside the bubble, then above it), always including the one talking; the rest are named in its bubble. |
 | `active` | string | `""` | Which buddies are out, comma separated, up to `crewSize` (e.g. `Pip,Mox`); empty means every buddy already hatched, your original first. `/buddy use`, `join` and `leave` override it. Unknown names and buddies still in their egg are skipped. |

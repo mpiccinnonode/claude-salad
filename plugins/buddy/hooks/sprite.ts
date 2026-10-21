@@ -1,11 +1,11 @@
-import type { Hat } from '../types'
+import type { Hat, Rarity } from '../types'
 import { HAT_ART } from './roster.ts'
-import { RIGS, rigRow } from './rigs.ts'
+import { rigOf, rigRow } from './rigs.ts'
 import type { Mood, Segment } from './rigs.ts'
 
 export type Row = readonly Segment[]
 export type Action = { kind: 'pet' | 'poke'; age: number }
-export type Look = { isWorking: boolean; eye: string; hat: Hat; action?: Action; isAsleep?: boolean }
+export type Look = { isWorking: boolean; eye: string; hat: Hat; action?: Action; isAsleep?: boolean; rarity?: Rarity }
 const H = 'magenta'
 const R = 'red'
 
@@ -33,8 +33,8 @@ const IDLE: readonly Beat[] = [
 const BUSY: readonly Beat[] = [{ eyes: 'squint', isLifted: true }, { isLifted: true }, { eyes: 'left' }, { eyes: 'right' }, { eyes: 'left' }, { eyes: 'right' }]
 
 // Any species: its rig, each part on its own rhythm unless the mood pins it; a lift drops the empty top row and leaves `~ ~` beneath.
-export function drawBuddy(species: string, tick: number, { isWorking, eye, hat, action, isAsleep }: Look, color: string): Row[] {
-  const rig = RIGS[species] ?? RIGS.blob!
+export function drawBuddy(species: string, tick: number, { isWorking, eye, hat, action, isAsleep, rarity }: Look, color: string): Row[] {
+  const rig = rigOf(species, rarity)
   const EYES = { wide: [eye, eye], shut: SHUT, left: [eye, '·'], right: ['·', eye], spin: SPIN, squint: SQUINT } as const
   let beat: Beat = (isWorking ? BUSY[tick % BUSY.length] : IDLE[tick % IDLE.length]) ?? {}
   let eyes: readonly [string, string] = EYES[beat.eyes ?? 'wide']

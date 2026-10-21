@@ -2,6 +2,8 @@ import type { Bones, Rarity, StatName } from '../types'
 
 // Original /buddy roll (wyhash → mulberry32), ported from ramarivera/coding-buddy (MIT) with the original 18 species.
 export const SPECIES = ['duck', 'goose', 'blob', 'cat', 'dragon', 'octopus', 'owl', 'penguin', 'turtle', 'snail', 'ghost', 'axolotl', 'capybara', 'cactus', 'robot', 'rabbit', 'mushroom', 'chonk'] as const
+// Species added after the original roll: eggs can hatch them, `roll` never picks them, so existing rolls stay put.
+export const ALL_SPECIES: readonly string[] = [...SPECIES, 'imp', 'bat']
 export const RARITIES: readonly Rarity[] = ['common', 'uncommon', 'rare', 'epic', 'legendary']
 export const STAT_NAMES: readonly StatName[] = ['DEBUGGING', 'PATIENCE', 'CHAOS', 'WISDOM', 'SNARK']
 export const EYES = ['·', '✦', '×', '◉', '@', '°'] as const

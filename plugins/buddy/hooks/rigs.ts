@@ -1,4 +1,7 @@
-// Rigs for all 18 species from the original /buddy frames; a row is 12 cells once {E} is one eye, {x} a part whose variants share one width.
+import type { Rarity } from '../types'
+import { RARITIES } from './bones.ts'
+
+// Rigs for every species and their evolution stages; a row is 12 cells once {E} is one eye, {x} a part whose variants share one width.
 type Rhythm = (tick: number, isWorking: boolean) => number
 export type Mood = 'pet' | 'poke' | 'asleep' | 'working'
 type Part = { v: readonly string[]; r: Rhythm; c?: string }
@@ -15,197 +18,784 @@ const step: Rhythm = (t, w) => (w ? t % 2 : beat(t) === 16 || beat(t) === 18 ? 1
 const flap: Rhythm = (t, w) => (w ? t % 2 : beat(t) === 4 || beat(t) === 5 ? 1 : 0)
 const arm = (offset: number): Rhythm => (t, w) => (w ? (t + offset) % 3 : ([0, 0, 2, 0, 1][Math.floor((t + offset * 3) / 2) % 5] ?? 0))
 const fast = (a: number, b: number): Rhythm => t => (t % 2 ? b : a)
+// The same rhythm `by` ticks late, so a trailing part follows the one that leads it.
+const lag = (r: Rhythm, by: number): Rhythm => (t, w) => r(Math.max(0, t - by), w)
 
 const BLANK = '            '
-const ARMS = (state: number) => ({ p: state, r: state, t: state, q: state, s: state, u: state })
+
+
+const ears: Rhythm = (t, w) => (w ? t % 3 : beat(t) === 3 ? 2 : beat(t) === 13 ? 1 : 0)
+const smoke = { v: [BLANK, "    '  '    ", "   '    '   "], r: special }
+const tufts = (t: number, w: boolean) => (w ? t % 3 : beat(t) === 2 ? 1 : beat(t) === 14 ? 2 : 0)
+const tuft = (t: number, w: boolean) => (w ? (t % 2 ? 2 : 0) : beat(t) === 12 || beat(t) === 13 ? 1 : 0)
+const hem = (n: number) => (t: number, w: boolean) => (w ? t % n : Math.floor(t / 2) % n)
+// Arm poses top to bottom: raised, held out, half-raised.
+const LEFT = [[' _ ', '| |', '\\__'], ['   ', '___', '(__'], ['   ', '| |', '\\__']]
+const RIGHT = [[' _ ', '| |', '__/'], ['   ', '___', '__)'], ['   ', '| |', '__/']]
+const armRow = (side: string[][], row: number) => side.map(pose => pose[row] ?? '')
+const ARMS = (pose: number) => ({ a: pose, b: pose, c: pose, d: pose, e: pose, f: pose })
+const arms = {
+  a: { v: armRow(LEFT, 0), r: arm(0) }, c: { v: armRow(LEFT, 1), r: arm(0) }, e: { v: armRow(LEFT, 2), r: arm(0) },
+  b: { v: armRow(RIGHT, 0), r: arm(1) }, d: { v: armRow(RIGHT, 1), r: arm(1) }, f: { v: armRow(RIGHT, 2), r: arm(1) },
+}
+const typing = (t: number, w: boolean) => (w ? t % 3 : Math.floor(t / 2) % 3)
 
 export const RIGS: Record<string, Rig> = {
-  penguin: {
-    rows: [BLANK, '  {h}     ', '  ({E}{b}{E})     ', ' {l}(   ){r}    ', '  {f}     '],
-    parts: {
-      h: { v: ['.---.', '.-~-.', '.-^-.'], r: (t, w) => (w ? (t % 2 ? 2 : 0) : beat(t) === 12 || beat(t) === 13 ? 1 : 0) },
-      b: { v: ['>'], r: () => 0, c: 'yellow' },
-      l: { v: ['/', '|', '\\'], r: (t, w) => (w ? (t % 2 ? 0 : 2) : Math.floor(beat(t) / 3) % 2) },
-      r: { v: ['\\', '|', '/'], r: (t, w) => (w ? (t % 2 ? 0 : 2) : Math.floor(beat(t) / 3) % 2) },
-      f: { v: ['`---´', '`--.´', '´---`'], r: (t, w) => (w ? (t % 2 ? 0 : 2) : beat(t) >= 16 && beat(t) % 2 === 0 ? 1 : 0) },
-    },
-    moods: { pet: { l: 1, r: 1, h: 0, f: 0 }, poke: { h: 1, l: 0, r: 0, f: fast(0, 1) }, asleep: { h: 0, l: 1, r: 1, f: 0 } },
-  },
   duck: {
-    rows: [BLANK, '    {c}      ', '  <({E} ){w}  ', '   (  {b}  ', "    `--'{t}   "],
+    rows: [BLANK, '      {c}    ', '  {w}( {E}){b}  ', '  \\ {g}. )   ', "   `---'{t}   "],
     parts: {
-      c: { v: ['__', '~~'], r: twitch(8) },
-      w: { v: ['___', '__/'], r: flap },
-      b: { v: ['._> ', '.__>'], r: special, c: 'yellow' },
+      c: { v: ['__', '_,'], r: twitch(8) },
+      w: { v: ['___', '__,'], r: wag(2, 3) },
+      b: { v: ['>', '='], r: special, c: 'yellow' },
+      g: { v: ['<_', '<-'], r: flap },
       t: { v: [' ', '~'], r: wag(2, 3) },
     },
-    moods: { pet: { c: 1, w: 1, t: fast(0, 1) }, poke: { b: 1, c: 1, w: fast(0, 1) }, asleep: { b: 0, w: 0, t: 0, c: 0 } },
+    moods: { pet: { c: 1, g: 1, t: fast(0, 1) }, poke: { b: 1, w: 1, g: fast(0, 1) }, asleep: { b: 0, g: 0, w: 0, c: 0, t: 0 } },
   },
   goose: {
-    rows: [BLANK, '    {h}', '     {n}     ', '   {w}   ', '   {f}   '],
+    rows: [BLANK, '  {b}{E} )      ', '    ) ){w}  ', '   ( {k}) ', "    `----'  "],
     parts: {
-      h: { v: [' ({E}>    ', '({E}>     ', ' ({E}>>   '], r: (t, w) => (special(t, w) ? 2 : wag(2, 4)(t, w)) },
-      n: { v: ['||', '/|'], r: wag(2, 4) },
-      w: { v: ['_(__)_', '/(__)\\'], r: flap },
-      f: { v: [' ^^^^ ', '^^  ^^'], r: step, c: 'yellow' },
+      b: { v: ['<', '='], r: special, c: 'yellow' },
+      w: { v: ['___', '__,', '_,-'], r: wag(3, 3) },
+      k: { v: ['`-._ ', '`-.__', '`--._'], r: lag(wag(3, 3), 1) },
     },
-    moods: { pet: { h: 2, n: 0, w: 1 }, poke: { h: 2, n: 0, w: fast(0, 1), f: fast(0, 1) }, asleep: { h: 1, n: 1, w: 0, f: 0 } },
+    moods: { pet: { w: 2, k: 2 }, poke: { b: 1, w: fast(0, 2), k: fast(0, 1) }, asleep: { b: 0, w: 0, k: 0 } },
   },
   blob: {
-    rows: [BLANK, '   {a}   ', '  ( {E}  {E} )  ', '{x}(  {m}  ){y}', '   {b}   '],
+    rows: [BLANK, BLANK, '   .{E}--{E}.   ', " _.' {m} '._ ", '({b})'],
     parts: {
-      a: { v: ['.----.', '.-~~-.'], r: wag(2, 3) },
-      x: { v: ['  ', ' ~'], r: breathe },
-      y: { v: ['  ', '~ '], r: breathe },
-      m: { v: ['  ', '--', 'o ', 'uu'], r: special },
-      b: { v: ["`----'", "`~~~~'"], r: breathe },
+      m: { v: ['  ', 'ww', 'o ', 'uu'], r: special },
+      b: { v: ['__________', '_.-~~~~-._', '__.-~~-.__'], r: wag(3, 3) },
     },
-    moods: { pet: { m: 3, x: fast(0, 1), y: fast(0, 1) }, poke: { m: 2, a: 1, b: 1 }, asleep: { m: 1, a: 0, b: 0, x: 0, y: 0 } },
+    moods: { pet: { m: 3, b: 1 }, poke: { m: 2, b: fast(1, 2) }, asleep: { m: 0, b: 0 } },
   },
   cat: {
-    rows: [BLANK, '   {e}    ', '  ( {E}   {E})  ', '  (  {m}  )   ', '  {p}{t}'],
+    rows: [BLANK, '   {e}    ', '  ( {E}.{E} )   ', '   {m}    ', '  {p}{t}'],
     parts: {
-      e: { v: ['/\\_/\\', '/\\-/\\', '/|_/\\', '-\\_/-'], r: (t, w) => (w ? t % 3 : beat(t) === 3 ? 2 : beat(t) === 13 ? 1 : 0) },
-      m: { v: ['ω', 'o', 'w'], r: special },
+      e: { v: ['/\\_/\\', '/\\-/\\', '/|_/\\', '-\\_/-'], r: ears },
+      m: { v: ['> ^ <', '= ^ =', '> o <', '> - <'], r: special },
       p: { v: ['(")_(")', "(')_(\")"], r: step },
-      t: { v: ['   ', '~  ', ' ~ ', '|  '], r: wag(3) },
+      t: { v: ['   ', ')  ', ' ) ', '~  '], r: wag(4) },
     },
-    moods: { pet: { e: 0, m: 2, t: fast(1, 2) }, poke: { e: 3, m: 1, t: 3, p: 1 }, asleep: { e: 3, m: 0, t: 0, p: 0 } },
+    moods: { pet: { e: 0, m: 1, t: fast(1, 2) }, poke: { e: 3, m: 2, t: 3, p: 1 }, asleep: { e: 3, m: 3, t: 0, p: 0 } },
   },
   dragon: {
-    rows: ['{s}', '  /^\\  /^\\  ', ' {l}  {E}  {E}  {r} ', ' (   {f}   ) ', "  `-{c}-'  "],
+    rows: ['{s}', '  /)____(\\  ', ' ( {E}    {E} ) ', '  \\ {n} /  ', '   \\_{f}_/   '],
     parts: {
-      s: { v: [BLANK, '   ~    ~   ', '    ~  ~    '], r: special },
-      l: { v: ['<', '('], r: breathe },
-      r: { v: ['>', ')'], r: breathe },
-      f: { v: ['~~', '  ', '^^'], r: wag(2, 2), c: 'red' },
-      c: { v: ['vvvv', 'VvvV'], r: step },
+      s: smoke,
+      n: { v: ["'..'", "'oo'"], r: breathe },
+      f: { v: ['vv', 'VV', '~~'], r: (t, w) => (special(t, w) ? 2 : step(t, w)), c: 'red' },
     },
-    moods: { pet: { s: 2, l: 1, r: 1, f: 0 }, poke: { s: fast(1, 2), f: 2, l: fast(0, 1), r: fast(0, 1) }, asleep: { s: 0, l: 0, r: 0, f: 1 } },
+    moods: { pet: { s: 0, n: 1, f: 0 }, poke: { s: fast(1, 2), n: 1, f: 2 }, asleep: { s: 0, n: 0, f: 1 } },
   },
   octopus: {
-    rows: ['{o}', '   .----.   ', '  ( {E}  {E} )  ', '  {s}  ', '  {t}  '],
+    rows: ['{o}', '   .-""-.   ', '  ( {E}  {E} )  ', '  {t}  ', ' {u} '],
     parts: {
       o: { v: [BLANK, '     o      ', '      O     '], r: special },
-      s: { v: ['(______)', '(~~~~~~)'], r: breathe },
-      t: { v: ['/\\/\\/\\/\\', '\\/\\/\\/\\/', '_/\\__/\\_'], r: wag(2, 2) },
+      t: { v: ['/`)  (`\\', '\\`)  (`/', '/`)  (`/'], r: wag(2, 3) },
+      u: { v: ['( (    ) )', ') )    ( (', '( )    ( )'], r: lag(wag(2, 3), 1) },
     },
-    moods: { pet: { t: 2, s: 1 }, poke: { o: 2, s: 1, t: fast(0, 1) }, asleep: { t: 2, o: 0, s: 0 } },
+    moods: { pet: { t: 2, u: 2 }, poke: { o: 2, t: fast(0, 1), u: fast(0, 1) }, asleep: { o: 0, t: 0, u: 2 } },
   },
   owl: {
-    rows: [BLANK, '   {e}   ', '  (({E})({E}))  ', '{l}(  {b}  ){r}', '   {c}   '],
+    rows: [BLANK, '   {e}    ', '   ({E}{b}{E})    ', '  {l}(   ){r}   ', '  --{f}--   '],
     parts: {
-      e: { v: ['/\\  /\\', '/|  /\\', '/\\  |\\', '-\\  /-'], r: (t, w) => (w ? t % 3 : beat(t) === 2 ? 1 : beat(t) === 14 ? 2 : 0) },
-      l: { v: ['  ', '/ '], r: flap },
-      r: { v: ['  ', ' \\'], r: flap },
-      b: { v: ['><', 'vv'], r: special, c: 'yellow' },
-      c: { v: ["`----'", '.----.'], r: breathe },
+      e: { v: [',___,', '.___,', ',___.'], r: tufts },
+      b: { v: [',', 'v'], r: special, c: 'yellow' },
+      l: { v: [' ', '/'], r: flap },
+      r: { v: [' ', '\\'], r: lag(flap, 1) },
+      f: { v: ['"-"', '"_"'], r: step },
     },
-    moods: { pet: { c: 1, b: 1, e: 0 }, poke: { e: 3, l: 1, r: 1, b: 1 }, asleep: { c: 1, e: 3, l: 0, r: 0, b: 0 } },
+    moods: { pet: { b: 1, l: 1, r: 1 }, poke: { e: 1, l: fast(0, 1), r: fast(1, 0), f: 1 }, asleep: { b: 0, e: 0, l: 0, r: 0, f: 0 } },
+  },
+  penguin: {
+    rows: [BLANK, '   {h}    ', '   ({E}{b}{E})    ', '  {l}(   ){r}   ', '   {f}    '],
+    parts: {
+      h: { v: ['.---.', '.-~-.', '.-^-.'], r: tuft },
+      b: { v: ['>', 'v'], r: special, c: 'yellow' },
+      l: { v: ['/', '|', '\\'], r: (t, w) => (w ? (t % 2 ? 0 : 2) : Math.floor(beat(t) / 3) % 2) },
+      r: { v: ['\\', '|', '/'], r: (t, w) => (w ? (t % 2 ? 0 : 2) : Math.floor(beat(t) / 3) % 2) },
+      f: { v: ["`---'", "`--^'", "^---'"], r: step },
+    },
+    moods: { pet: { l: 1, r: 1, h: 0, b: 1 }, poke: { h: 1, l: 0, r: 0, f: fast(1, 2) }, asleep: { h: 0, l: 1, r: 1, f: 0, b: 0 } },
   },
   turtle: {
-    rows: [BLANK, '   _,--._   ', '{h}', ' /[{s}]\\ ', '{f}'],
+    rows: [BLANK, ' _.----._   ', '/\\_/\\_/\\({E}{E})', "\\_/\\_/\\__/  ", '{f}'],
     parts: {
-      h: { v: ['  ( {E}  {E} )  ', '  (  --  )  '], r: () => 0 },
-      s: { v: ['______', '======', '_/\\/\\_'], r: (t, w) => (special(t, w) ? 1 : wag(2, 5)(t, w) * 2) },
-      f: { v: ['  ``    ``  ', '   ``  ``   ', '            '], r: step },
+      f: { v: ['  ""    ""  ', '   ""  ""   ', ' ""    ""   '], r: (t, w) => (w ? t % 3 : step(t, w)) },
     },
-    moods: { pet: { s: 2, f: fast(0, 1) }, poke: { h: 1, f: 2, s: 1 }, asleep: { h: 1, f: 2, s: 0 } },
+    moods: { pet: { f: 1 }, poke: { f: fast(0, 2) }, asleep: { f: 2 } },
   },
   snail: {
-    rows: [BLANK, '{a}  .--.  ', '  {k}  ( {c} )  ', "   \\_`--'   ", '  {d}   '],
+    rows: [BLANK, '  .--.  {a} ', ' ( {c}  ) {k}  ', "  `--'___/  ", '{f}'],
     parts: {
-      a: { v: [' {E}  ', '  {E} ', '    '], r: wag(2, 3) },
-      k: { v: ['\\', '|', ' '], r: wag(2, 3) },
+      a: { v: ['{E} {E}', ' {E}{E}', '{E}{E} '], r: wag(3, 3) },
+      k: { v: ['\\/', '||', '//'], r: lag(wag(3, 3), 1) },
       c: { v: ['@', 'o', '0'], r: special },
-      d: { v: ['~~~~~~~', ' ~~~~~~', '~ ~~~~~'], r: wag(3, 2) },
+      f: { v: [' (_______)  ', ' (_______)~ ', ' (_______)  '], r: step },
     },
-    moods: { pet: { c: 2, d: fast(1, 2) }, poke: { a: 2, k: 2, c: 1 }, asleep: { a: 2, k: 2, c: 0, d: 0 } },
+    moods: { pet: { c: 2, a: 1, k: 1 }, poke: { a: 1, k: 1, c: 1, f: fast(0, 1) }, asleep: { c: 0, a: 2, k: 2, f: 0 } },
   },
   ghost: {
-    rows: ['{w}', '   .----.   ', '{l}/ {E}  {E} \\{r}', '  |  {m}  |  ', '  {t}  '],
+    rows: [BLANK, '    .-.     ', '   ({E} {E})    ', '   | {m} \\{a}  ', '    {t}  '],
     parts: {
-      w: { v: [BLANK, '    ~  ~    '], r: special },
-      l: { v: ['  ', ' ~'], r: flap },
-      r: { v: ['  ', '~ '], r: flap },
-      m: { v: ['  ', 'oo', '--', 'O '], r: special },
-      t: { v: ['~`~``~`~', '`~`~~`~`', '~~`~~`~~'], r: (t, w) => (w ? t % 3 : Math.floor(t / 2) % 3) },
+      m: { v: ['O', 'o', '-', 'w'], r: special },
+      a: { v: ['  ', ' ~'], r: flap },
+      t: { v: ["`~~~~'", "`-~~~'", "`~~-~'"], r: hem(3) },
     },
-    moods: { pet: { m: 1, l: 1, r: 1, w: 1 }, poke: { m: 3, l: 1, r: 1, t: (t: number) => t % 3 }, asleep: { m: 2, l: 0, r: 0, w: 0, t: 0 } },
+    moods: { pet: { m: 3, a: 1 }, poke: { m: 0, a: fast(0, 1), t: fast(0, 1) }, asleep: { m: 2, a: 0, t: 0 } },
   },
   axolotl: {
-    rows: [BLANK, '{a}(______){b}', '{a}({E} {m} {E}){b}', '  ( {c} )  ', '  {d}  '],
+    rows: [BLANK, ' {a} .--. {b} ', '{c}( {E}  {E} ){d}', ' {e}( {m} ){f} ', "  `-^--^-'{t}"],
     parts: {
-      a: { v: ['}~', '~}'], r: wag(2, 2), c: 'magenta' },
-      b: { v: ['~{', '{~'], r: wag(2, 2), c: 'magenta' },
-      m: { v: ['..', 'ww', 'oo'], r: special },
-      c: { v: ['.--.', ' -- '], r: special },
-      d: { v: ['(_/  \\_)', '~_/  \\_~'], r: step },
+      a: { v: ['\\\\', '\\.'], r: wag(2, 2), c: 'magenta' },
+      b: { v: ['//', './'], r: lag(wag(2, 2), 1), c: 'magenta' },
+      c: { v: ['==', '~='], r: wag(2, 3), c: 'magenta' },
+      d: { v: ['==', '=~'], r: lag(wag(2, 3), 1), c: 'magenta' },
+      e: { v: ['//', "/'"], r: wag(2, 2), c: 'magenta' },
+      f: { v: ['\\\\', "'\\"], r: lag(wag(2, 2), 1), c: 'magenta' },
+      m: { v: ['ww', '--', 'oo', 'vv'], r: special },
+      t: { v: ['  ', '~ '], r: breathe },
     },
-    moods: { pet: { m: 1, a: fast(0, 1), b: fast(0, 1), c: 1 }, poke: { m: 2, d: 1, a: 0, b: 0 }, asleep: { m: 0, a: 0, b: 0, d: 0 } },
+    moods: { pet: { m: 3, a: fast(0, 1), b: fast(0, 1), t: 1 }, poke: { m: 2, c: 1, d: 1, e: 1, f: 1 }, asleep: { m: 1, a: 0, b: 0, c: 0, d: 0, e: 0, f: 0, t: 0 } },
   },
   capybara: {
-    rows: ['{s}', '  {e}______n  ', ' ( {E}    {E} ) ', ' (   {n}   ) ', "  `------'  "],
+    rows: [BLANK, '   {e}.--.{f}   ', '  ( {E}  {E} )  ', '  ( ({n}) )  ', '{w}'],
     parts: {
-      s: { v: [BLANK, '    ~  ~    ', '     (o)    '], r: special, c: 'yellow' },
       e: { v: ['n', 'u'], r: twitch(3, 9, 17) },
-      n: { v: ['oo', 'Oo', 'oO'], r: wag(3, 3) },
+      f: { v: ['n', 'u'], r: twitch(4, 10) },
+      n: { v: ['..', 'oo', '::'], r: special },
+      w: { v: ['~~~~~~~~~~~~', '-~~~-~~~-~~~', '~-~~~-~~~-~~'], r: wag(3, 2), c: 'cyan' },
     },
-    moods: { pet: { s: 2, n: 0, e: 0 }, poke: { e: 1, n: 1, s: 1 }, asleep: { s: 1, n: 0, e: 1 } },
+    moods: { pet: { e: 1, f: 1, n: 0 }, poke: { n: 1, w: fast(1, 2), e: fast(0, 1) }, asleep: { e: 1, f: 1, n: 2, w: 0 } },
   },
   cactus: {
-    rows: [' {p}        {q} ', ' {r}  {k}  {s} ', ' {t} |{E}  {E}| {u} ', ' |_|    |_| ', '   |    |   '],
-    parts: {
-      p: { v: [' ', ' ', 'n'], r: arm(0) },
-      r: { v: ['n', ' ', '|'], r: arm(0) },
-      t: { v: ['|', 'n', '|'], r: arm(0) },
-      q: { v: [' ', ' ', 'n'], r: arm(1) },
-      s: { v: ['n', ' ', '|'], r: arm(1) },
-      u: { v: ['|', 'n', '|'], r: arm(1) },
-      k: { v: ['____', '_**_'], r: () => 0, c: 'magenta' },
-    },
-    moods: { pet: { ...ARMS(2), k: 1 }, poke: { ...ARMS(1), k: 0 }, asleep: { ...ARMS(1), k: 0 } },
+    rows: [BLANK, '{a} .--. {b}', '{c}|{E}  {E}|{d}', '{e}| {m} |{f}', '   |____|   '],
+    parts: { ...arms, m: { v: ['  ', 'ww', 'oo', '--'], r: special } },
+    moods: { pet: { ...ARMS(0), m: 1 }, poke: { ...ARMS(1), m: 2 }, asleep: { ...ARMS(2), m: 3 } },
   },
   robot: {
-    rows: ['{a}', '   .[{l}].   ', '  [ {E}  {E} ]  ', '  [ {m} ]  ', "  `------'  "],
+    rows: [BLANK, '  .------.  ', '  |[{E}  {E}]|  ', '  |[ {m} ]|  ', "  '--||-{f}'  "],
     parts: {
-      a: { v: [BLANK, '     *      ', '     +      '], r: special, c: 'yellow' },
-      l: { v: ['||', '|-', '-|', '..'], r: wag(3, 2), c: 'green' },
-      m: { v: ['====', '-==-', '=--=', '\\__/'], r: wag(3, 3) },
+      m: { v: ['>_', '> ', '<>', 'u '], r: (t, w) => (special(t, w) ? 2 : breathe(t, w)), c: 'green' },
+      f: { v: ['-', 'o'], r: wag(2, 3), c: 'green' },
     },
-    moods: { pet: { m: 3, a: 2 }, poke: { m: 2, a: fast(1, 2), l: fast(1, 2) }, asleep: { l: 3, m: 1, a: 0 } },
+    moods: { pet: { m: 3, f: 1 }, poke: { m: 2, f: fast(0, 1) }, asleep: { m: 1, f: 0 } },
   },
   rabbit: {
-    rows: [BLANK, '   ({l}__{r})   ', '  ( {E}  {E} )  ', '{x}({n}){y}', '  {f}  '],
+    rows: [BLANK, '   {l}{r}     ', '   ( {E}{n}{E})   ', '   {t}(")(") ', '    {g}    '],
     parts: {
-      l: { v: ['\\', '|', '_'], r: twitch(3, 4) },
-      r: { v: ['/', '|', '_'], r: twitch(13) },
-      x: { v: [' =', ' -'], r: twitch(8, 9) },
-      y: { v: ['= ', '- '], r: twitch(8, 9) },
-      n: { v: ['  ..  ', ' .  . ', '  ^^  '], r: special },
-      f: { v: ['(")__(")', "(')__(\")"], r: step },
+      l: { v: ['(\\', '(|', '(_'], r: twitch(3, 4) },
+      r: { v: ['(\\', '(|', '(_'], r: twitch(13) },
+      n: { v: ['.', 'x', 'w'], r: special },
+      t: { v: ['o_', 'o-', 'O_'], r: wag(2, 3) },
+      g: { v: ["_''_", '_,,_'], r: wag(2, 4), c: 'green' },
     },
-    moods: { pet: { l: 1, r: 1, n: 2 }, poke: { l: 0, r: 0, f: fast(0, 1), x: fast(0, 1), y: fast(0, 1) }, asleep: { l: 2, r: 2, n: 0, x: 0, y: 0 } },
+    moods: { pet: { l: 2, r: 2, n: 2, t: fast(0, 2) }, poke: { l: 1, r: 1, n: 1, t: 2 }, asleep: { l: 2, r: 2, n: 0, t: 0, g: 0 } },
   },
   mushroom: {
-    rows: ['{s}', ' .-{c}-. ', '(__________)', '   |{E}  {E}|   ', '   |{g}|   '],
+    rows: ['{s}', '  .-{c}-.  ', " `-.____.-' ", '   ({E}{m}{E})   ', '   {g}   '],
     parts: {
-      s: { v: [BLANK, '   . o  .   ', '  o  .  o   '], r: special },
-      c: { v: ['o-OO-o', 'O-oo-O'], r: wag(2, 4), c: 'red' },
-      g: { v: ['____', '_/\\_'], r: step },
+      s: { v: [BLANK, '    .  o    ', '   o  .     '], r: special },
+      c: { v: ['o--O', 'O--o'], r: wag(2, 4), c: 'red' },
+      m: { v: ['__', 'ww', 'oo', '--'], r: special },
+      g: { v: ['(____)', '(_/\\_)'], r: step },
     },
-    moods: { pet: { s: 2, c: 1 }, poke: { s: fast(1, 2), c: fast(0, 1), g: 1 }, asleep: { s: 0, c: 0, g: 0 } },
+    moods: { pet: { s: 2, c: 1, m: 1 }, poke: { s: fast(1, 2), c: fast(0, 1), m: 2, g: 1 }, asleep: { s: 0, c: 0, m: 0, g: 0 } },
   },
   chonk: {
-    rows: [BLANK, '  {a}    {b}  ', ' ( {E}    {E} ) ', ' (   {m}   ) ', "  `------'{t} "],
+    rows: [BLANK, ' {a}_{b}      ', '( {E}{m}{E} )__.  ', ' (       ){t}', '  {p}    '],
     parts: {
       a: { v: ['/\\', '/|', '/-'], r: twitch(6) },
-      b: { v: ['/\\', '/|', '-\\'], r: twitch(14) },
-      m: { v: ['..', 'oo', '><', 'ww'], r: special },
-      t: { v: [' ', '~'], r: wag(2, 3) },
+      b: { v: ['/\\', '|\\', '-\\'], r: twitch(14) },
+      m: { v: ['.', 'w', 'o', 'x'], r: special },
+      t: { v: ['~ ', ') ', '_/'], r: wag(3, 2) },
+      p: { v: ['uu--uu', 'u-u-uu'], r: step },
     },
-    moods: { pet: { m: 3, t: fast(0, 1) }, poke: { a: 2, b: 2, m: 2 }, asleep: { m: 0, a: 0, b: 0, t: 0 } },
+    moods: { pet: { m: 1, t: fast(0, 1) }, poke: { a: 2, b: 2, m: 3, p: 1 }, asleep: { m: 0, a: 0, b: 0, t: 2, p: 0 } },
   },
+  imp: {
+    rows: [BLANK, '  {h}  ', '  ( {E}  {E} )  ', '   ( {m} ){t}', '    {d}    '],
+    parts: {
+      h: { v: ['(\\    /)', '(|    |)'], r: twitch(3, 13), c: 'red' },
+      m: { v: ['vv', 'ww', 'oo', '--'], r: special },
+      t: { v: ['~~>', '_/>', '~\\>'], r: wag(3), c: 'red' },
+      d: { v: ['v  v', ' vv '], r: step },
+    },
+    moods: { pet: { h: 1, m: 1, t: fast(0, 1) }, poke: { h: 1, m: 2, t: 2, d: 1 }, asleep: { h: 0, m: 3, t: 1, d: 0 } },
+  },
+  bat: {
+    rows: [BLANK, '{l}{f}{r}', '   ({w})   ', '   ({E}  {E})   ', '    {e}    '],
+    parts: {
+      l: { v: ['_____'], r: () => 0, c: 'green' },
+      r: { v: ['_____'], r: () => 0, c: 'green' },
+      f: { v: ['""', "''"], r: step },
+      w: { v: ['\\  /', '|  |', '\\__/'], r: wag(2, 4) },
+      e: { v: ['\\/\\/', '\\/|/', '\\|\\/'], r: twitch(6, 14) },
+    },
+    moods: { pet: { w: 2, f: fast(0, 1) }, poke: { w: 1, e: 1, f: 1 }, asleep: { w: 2, e: 0, f: 0 } },
+  },
+  'duck:rare': {
+    rows: [BLANK, '      {c}    ', '  {w}( {E}){b}  ', '  \\ {g}. )   ', "{x}`---'{y}"],
+    parts: {
+      c: { v: ['__', '_,'], r: twitch(8) },
+      w: { v: ['___', '__,'], r: wag(2, 3) },
+      b: { v: ['>', '='], r: special, c: 'yellow' },
+      g: { v: ['<_', '<-'], r: flap },
+      x: { v: ['~~~ ', ' ~~~', '~ ~~'], r: wag(3, 2), c: 'cyan' },
+      y: { v: ['~~~', '~ ~', ' ~~'], r: lag(wag(3, 2), 1), c: 'cyan' },
+    },
+    moods: { pet: { c: 1, g: 1, x: fast(0, 1) }, poke: { b: 1, w: 1, g: fast(0, 1) }, asleep: { b: 0, g: 0, w: 0, c: 0, x: 0, y: 0 } },
+  },
+  'duck:epic': {
+    rows: [BLANK, '     {c}    ', ' {w}( {E}){b}  ', ' {k}\\ {g}. )   ', "{x}`---'{y}"],
+    parts: {
+      c: { v: [',__', ',_,', '.__'], r: wag(3, 3), c: 'red' },
+      w: { v: ['____', '___/', '__/ '], r: wag(3, 2) },
+      b: { v: ['>', '='], r: special, c: 'yellow' },
+      k: { v: ['<', '{'], r: lag(flap, 1), c: 'cyan' },
+      g: { v: ['<_', '<-'], r: flap, c: 'cyan' },
+      x: { v: ['~~~ ', ' ~~~', '~ ~~'], r: wag(3, 2), c: 'cyan' },
+      y: { v: ['~~~', '~ ~', ' ~~'], r: lag(wag(3, 2), 1), c: 'cyan' },
+    },
+    moods: {
+      pet: { c: 2, g: 1, k: 1, x: fast(0, 1) },
+      poke: { b: 1, w: 1, g: fast(0, 1), k: fast(1, 0) },
+      asleep: { b: 0, g: 0, k: 0, w: 0, c: 0, x: 0, y: 0 },
+    },
+  },
+  'goose:rare': {
+    rows: [BLANK, '  {b}{E} )      ', '    ) ){w}  ', '   ( {k}) ', "{x}`----'{y}"],
+    parts: {
+      b: { v: ['<', '='], r: special, c: 'yellow' },
+      w: { v: ['___', '__,', '_,-'], r: wag(3, 3) },
+      k: { v: ['`-._ ', '`-.__', '`--._'], r: lag(wag(3, 3), 1) },
+      x: { v: ['~~~~', ' ~~~', '~ ~~'], r: wag(3, 2), c: 'cyan' },
+      y: { v: ['~~', '~ ', ' ~'], r: lag(wag(3, 2), 1), c: 'cyan' },
+    },
+    moods: { pet: { w: 2, k: 2, x: fast(0, 1) }, poke: { b: 1, w: fast(0, 2), k: fast(0, 1) }, asleep: { b: 0, w: 0, k: 0, x: 0, y: 0 } },
+  },
+  'goose:epic': {
+    rows: [BLANK, ' {c}{b}{E} ){a}', '    ) ){w}', '   ( {k}) ', "{x}`----'{y}"],
+    parts: {
+      c: { v: [' ', '*'], r: breathe, c: 'yellow' },
+      b: { v: ['<', '='], r: special, c: 'yellow' },
+      a: { v: ['   /\\ ', '  /\\/\\', '  //\\\\'], r: (t, w) => (flap(t, w) ? 1 + (t % 2) : 0) },
+      w: { v: ['/\\/\\/', '/\\/\\_', '_/\\/\\'], r: wag(3, 3) },
+      k: { v: ['`-._ ', '`-.__', '`--._'], r: lag(wag(3, 3), 1) },
+      x: { v: ['~~~~', ' ~~~', '~ ~~'], r: wag(3, 2), c: 'cyan' },
+      y: { v: ['~~', '~ ', ' ~'], r: lag(wag(3, 2), 1), c: 'cyan' },
+    },
+    moods: {
+      pet: { a: 1, c: 1, w: 2, x: fast(0, 1) },
+      poke: { a: fast(1, 2), b: 1, w: fast(0, 2), k: fast(0, 1) },
+      asleep: { a: 0, b: 0, c: 0, w: 0, k: 0, x: 0, y: 0 },
+    },
+  },
+  'blob:rare': {
+    rows: [BLANK, '    {a}    ', "  .'{E}  {E}'.  ", ' _)  {m}  (_ ', '({b})'],
+    parts: {
+      a: { v: ['.--.', '.~~.'], r: breathe },
+      m: { v: ['  ', 'ww', 'o ', 'uu'], r: special },
+      b: { v: ['__________', '_.-~~~~-._', '__.-~~-.__'], r: lag(wag(3, 3), 1) },
+    },
+    moods: { pet: { m: 3, a: 1, b: 1 }, poke: { m: 2, a: 1, b: fast(1, 2) }, asleep: { m: 0, a: 0, b: 0 } },
+  },
+  'blob:epic': {
+    rows: [BLANK, '  {p}{a}{q}  ', "  .'{E}  {E}'.  ", ' {x}(  {m}  ){y} ', '({b})'],
+    parts: {
+      p: { v: ['  ', ' o', ' .'], r: wag(3, 3), c: 'cyan' },
+      q: { v: ['  ', 'o ', '. '], r: lag(wag(3, 3), 1), c: 'cyan' },
+      a: { v: ['.~~.', '.--.'], r: breathe },
+      x: { v: [' ', '.', ':'], r: lag(wag(3, 2), 1) },
+      y: { v: [':', '.', ' '], r: lag(wag(3, 2), 2) },
+      m: { v: ['  ', 'ww', 'o ', 'uu'], r: special },
+      b: { v: ['_.-~~~~-._', '__.-~~-.__', '~._.--._.~'], r: wag(3, 2), c: 'cyan' },
+    },
+    moods: {
+      pet: { m: 3, a: 1, p: 1, q: 1, b: 1 },
+      poke: { m: 2, a: 1, p: fast(1, 2), q: fast(2, 1), b: fast(1, 2) },
+      asleep: { m: 0, a: 0, p: 0, q: 0, x: 0, y: 2, b: 0 },
+    },
+  },
+  'cat:rare': {
+    rows: [BLANK, '   {e}    ', '  ( {E}.{E} )   ', '   {m}  {k} ', '  {p}{t}'],
+    parts: {
+      e: { v: ['/\\_/\\', '/\\-/\\', '/|_/\\', '-\\_/-'], r: ears },
+      m: { v: ['> ^ <', '= ^ =', '> o <', '> - <'], r: special },
+      k: { v: [')', '|', '('], r: wag(3) },
+      t: { v: ['_/ ', '_| ', '_) '], r: lag(wag(3), 1) },
+      p: { v: ['(")_(")', "(')_(\")"], r: step },
+    },
+    moods: { pet: { e: 0, m: 1, k: fast(0, 2) }, poke: { e: 3, m: 2, k: 1, t: 1, p: 1 }, asleep: { e: 3, m: 3, k: 0, t: 0, p: 0 } },
+  },
+  'cat:epic': {
+    rows: [BLANK, '  {e}   ', '  ( {E}.{E} ) {u} ', '  =(_{b}_)= {k} ', '  {p}{t}'],
+    parts: {
+      e: { v: [',/\\_/\\,', ',/\\-/\\,', ',/|_/\\,', '-/\\_/\\-'], r: ears },
+      b: { v: ['*', 'o'], r: special, c: 'yellow' },
+      u: { v: [' ', '_', '.'], r: wag(3) },
+      k: { v: [')', '|', '('], r: lag(wag(3), 1) },
+      t: { v: ['_/ ', '_| ', '_) '], r: lag(wag(3), 2) },
+      p: { v: ['(")_(")', "(')_(\")"], r: step },
+    },
+    moods: { pet: { e: 0, b: 1, u: 1, k: fast(0, 2) }, poke: { e: 3, b: 1, k: 1, t: 1, p: 1 }, asleep: { e: 3, b: 0, u: 0, k: 0, t: 0, p: 0 } },
+  },
+  'dragon:rare': {
+    rows: ['{s}', ' {a})____({b} ', '<( {E}    {E} )>', '  \\ {n} /  ', '  {c}\\_{f}_/{d}  '],
+    parts: {
+      s: smoke,
+      a: { v: ['/\\', '/|'], r: wag(2, 3) },
+      b: { v: ['/\\', '|\\'], r: wag(2, 3) },
+      n: { v: ["'..'", "'oo'"], r: breathe },
+      c: { v: [' ', '<'], r: lag(wag(2, 3), 1) },
+      d: { v: [' ', '>'], r: lag(wag(2, 3), 1) },
+      f: { v: ['vv', 'VV', '~~'], r: (t, w) => (special(t, w) ? 2 : step(t, w)), c: 'red' },
+    },
+    moods: { pet: { s: 0, n: 1, f: 0, c: 1, d: 1 }, poke: { s: fast(1, 2), n: 1, f: 2, a: fast(0, 1), b: fast(0, 1) }, asleep: { s: 0, n: 0, f: 1, c: 0, d: 0 } },
+  },
+  'dragon:epic': {
+    rows: ['{s}', '{a}/)____(\\{b}', '{l}( {E}    {E} ){r}', '{c} \\ {n} / {d}', " `-\\_{f}_/-' "],
+    parts: {
+      s: smoke,
+      a: { v: ['/|', '_|', '\\|'], r: wag(3, 3) },
+      b: { v: ['|\\', '|_', '|/'], r: wag(3, 3) },
+      l: { v: ['/', '|', '\\'], r: lag(wag(3, 3), 1) },
+      r: { v: ['\\', '|', '/'], r: lag(wag(3, 3), 1) },
+      c: { v: ['\\', '|', '/'], r: lag(wag(3, 3), 2) },
+      d: { v: ['/', '|', '\\'], r: lag(wag(3, 3), 2) },
+      n: { v: ["'..'", "'oo'"], r: breathe },
+      f: { v: ['VV', 'vv', '~~'], r: (t, w) => (special(t, w) ? 2 : step(t, w)), c: 'red' },
+    },
+    moods: {
+      pet: { s: 0, n: 1, f: 0, a: 1, b: 1, l: 1, r: 1, c: 1, d: 1 },
+      poke: { s: fast(1, 2), n: 1, f: 2, a: fast(0, 2), b: fast(0, 2), l: fast(0, 2), r: fast(0, 2) },
+      asleep: { s: 0, n: 0, f: 1, a: 1, b: 1, l: 1, r: 1, c: 1, d: 1 },
+    },
+  },
+  'octopus:rare': {
+    rows: ['{o}', '  {d}  ', ' (  {E}  {E}  ) ', ' {t} ', '{u}'],
+    parts: {
+      o: { v: [BLANK, '     o      ', '      O     '], r: special },
+      d: { v: ['.-o""o-.', '.-"oo"-.'], r: wag(2, 4), c: 'magenta' },
+      t: { v: ['/`)/  \\(`\\', '\\`)\\  /(`/'], r: wag(2, 3) },
+      u: { v: ['( (( )( )) )', ') )( )( )( ('], r: lag(wag(2, 3), 1) },
+    },
+    moods: { pet: { d: 1, t: 1, u: 1 }, poke: { o: 2, t: fast(0, 1), u: fast(1, 0) }, asleep: { o: 0, d: 0, t: 0, u: 0 } },
+  },
+  'octopus:epic': {
+    rows: ['{o}', ' {a}.-{d}-.{b} ', '(( {E}    {E} ))', ' {t} ', '{u}'],
+    parts: {
+      o: { v: [BLANK, '     o      ', '    o  O    '], r: special },
+      a: { v: [',', '~', '('], r: wag(3, 3), c: 'magenta' },
+      b: { v: [',', '~', ')'], r: lag(wag(3, 3), 1), c: 'magenta' },
+      d: { v: ['o""o', '"oo"'], r: wag(2, 4), c: 'magenta' },
+      t: { v: ['\\`)/\\/\\(`/', '/`)\\/\\/(`\\'], r: wag(2, 3), c: 'magenta' },
+      u: { v: [' ~((_)(_))~ ', '~ ((_)(_)) ~'], r: lag(wag(2, 3), 1), c: 'magenta' },
+    },
+    moods: {
+      pet: { a: 2, b: 2, d: 1, t: 1, u: 0 },
+      poke: { o: 2, a: fast(0, 1), b: fast(1, 0), t: fast(0, 1), u: fast(1, 0) },
+      asleep: { o: 0, a: 0, b: 0, d: 0, t: 0, u: 0 },
+    },
+  },
+  'owl:rare': {
+    rows: [BLANK, '   {e}    ', '   ({E}{b}{E})    ', '  {l}({u}){r}   ', ' ---{f}---  '],
+    parts: {
+      e: { v: ['^___^', '.___^', '^___.'], r: tufts },
+      b: { v: [',', 'v'], r: special, c: 'yellow' },
+      l: { v: ['(', '/'], r: flap },
+      r: { v: [')', '\\'], r: lag(flap, 1) },
+      u: { v: [':::', '.:.'], r: breathe },
+      f: { v: ['"-"', '"_"'], r: step },
+    },
+    moods: { pet: { b: 1, l: 1, r: 1, u: 1 }, poke: { e: 1, l: fast(0, 1), r: fast(1, 0), f: 1 }, asleep: { b: 0, e: 0, l: 0, r: 0, u: 0, f: 0 } },
+  },
+  'owl:epic': {
+    rows: [BLANK, '  {e}   ', '  (({E}{b}{E}))   ', ' {l}(:{u}:){r}  ', ' {x}{f}{y}  '],
+    parts: {
+      e: { v: ['\\,___,/', '|,___,/', '\\,___,|'], r: tufts },
+      b: { v: [',', 'v'], r: special, c: 'yellow' },
+      l: { v: [' (', '//', '__'], r: (t, w) => (flap(t, w) ? 1 + (t % 2) : 0) },
+      r: { v: [') ', '\\\\', '__'], r: lag((t, w) => (flap(t, w) ? 1 + (t % 2) : 0), 1) },
+      u: { v: ['V', 'v'], r: breathe },
+      x: { v: ['*--', '-*-'], r: wag(2, 5), c: 'green' },
+      f: { v: ['"v"', '"-"'], r: step },
+      y: { v: ['--*', '-*-'], r: lag(wag(2, 5), 2), c: 'green' },
+    },
+    moods: {
+      pet: { b: 1, l: 1, r: 1, u: 1 },
+      poke: { e: 1, l: fast(1, 2), r: fast(2, 1), f: 1 },
+      asleep: { b: 0, e: 0, l: 0, r: 0, u: 0, f: 0, x: 0, y: 0 },
+    },
+  },
+  'penguin:rare': {
+    rows: [BLANK, '   {h}    ', '   ({E}{b}{E})    ', '  {l}({s}){r}{k}  ', '   {f}    '],
+    parts: {
+      h: { v: ['.---.', '.-~-.', '.-^-.'], r: tuft },
+      b: { v: ['>', 'v'], r: special, c: 'yellow' },
+      l: { v: ['/', '|'], r: breathe },
+      r: { v: ['\\', '|'], r: lag(breathe, 1) },
+      s: { v: ['===', '=-='], r: breathe, c: 'red' },
+      k: { v: ['~', '/', '_'], r: wag(3, 2), c: 'red' },
+      f: { v: ["`---'", "`--^'", "^---'"], r: step },
+    },
+    moods: { pet: { l: 1, r: 1, b: 1, k: 1 }, poke: { h: 1, l: fast(0, 1), r: fast(1, 0), k: 2 }, asleep: { h: 0, l: 1, r: 1, s: 0, k: 2, f: 0 } },
+  },
+  'penguin:epic': {
+    rows: [BLANK, '  {h}   ', '  ({k}{E}{b}{E}{q})   ', '{l}({s}){r}{z}', '  {f}   '],
+    parts: {
+      h: { v: ['.-----.', '.--~--.', '.--^--.'], r: tuft },
+      k: { v: ['~', '-'], r: wag(2, 4), c: 'yellow' },
+      q: { v: ['~', '-'], r: lag(wag(2, 4), 1), c: 'yellow' },
+      b: { v: ['>', 'v'], r: special, c: 'yellow' },
+      l: { v: ['_/', ' /', ' |'], r: wag(3, 3) },
+      r: { v: ['\\_', '\\ ', '| '], r: lag(wag(3, 3), 1) },
+      s: { v: ['=====', '==-=='], r: breathe, c: 'red' },
+      z: { v: ['~', '/', '_'], r: wag(3, 2), c: 'red' },
+      f: { v: ["`--^--'", "`-^-^-'"], r: step },
+    },
+    moods: {
+      pet: { l: 0, r: 0, b: 1, k: 0, q: 0, z: 1 },
+      poke: { h: 2, l: fast(1, 2), r: fast(2, 1), z: fast(0, 2), f: 1 },
+      asleep: { h: 0, l: 2, r: 2, k: 1, q: 1, s: 0, z: 2, f: 0 },
+    },
+  },
+  'turtle:rare': {
+    rows: [BLANK, ' _.{p}._   ', '{s}({E}{E})', "{u}__/  ", '{t}{f}'],
+    parts: {
+      p: { v: ['----', '-~~-'], r: wag(2, 5) },
+      s: { v: ['/\\_/\\_/\\', '/\\_/^\\_/'], r: special, c: 'green' },
+      u: { v: ['\\_/\\_/\\', '\\_/v\\_/'], r: lag(special, 1), c: 'green' },
+      t: { v: ['~', '-'], r: wag(2, 3) },
+      f: { v: [' ""    ""  ', '  ""  ""   '], r: step },
+    },
+    moods: { pet: { p: 1, t: fast(0, 1) }, poke: { s: 1, u: 1, f: fast(0, 1) }, asleep: { p: 0, t: 1, f: 1 } },
+  },
+  'turtle:epic': {
+    rows: [BLANK, '{p}', '{s}({E}{E})', "{u}__/  ", '{t}{f}'],
+    parts: {
+      p: { v: [' _,*~^~*,   ', ' _,^*~*^,   '], r: wag(2, 4), c: 'green' },
+      s: { v: ['/\\_/\\_/\\', '/\\_/^\\_/', '/\\/\\/\\/\\'], r: (t, w) => (special(t, w) ? 1 : wag(2, 6)(t, w) * 2), c: 'green' },
+      u: { v: ['\\_/\\_/\\', '\\_/v\\_/', '\\/\\/\\/\\'], r: lag((t, w) => (special(t, w) ? 1 : wag(2, 6)(t, w) * 2), 1), c: 'green' },
+      t: { v: ['~', '-'], r: wag(2, 3) },
+      f: { v: [' WW    WW  ', '  WW  WW   '], r: step },
+    },
+    moods: { pet: { p: 1, s: 2, u: 2, t: fast(0, 1) }, poke: { s: 1, u: 1, f: fast(0, 1) }, asleep: { p: 0, s: 0, u: 0, t: 1, f: 1 } },
+  },
+  'snail:rare': {
+    rows: [BLANK, ' .---.  {a} ', '( ({c}) ) {k}  ', " `---'___/  ", '{f}'],
+    parts: {
+      a: { v: ['{E} {E}', ' {E}{E}', '{E}{E} '], r: wag(3, 3) },
+      k: { v: ['\\/', '||', '//'], r: lag(wag(3, 3), 1) },
+      c: { v: ['@', 'o', '0'], r: special, c: 'yellow' },
+      f: { v: ['(_________) ', '(_________)~'], r: step },
+    },
+    moods: { pet: { c: 2, a: 1, k: 1 }, poke: { a: 1, k: 1, c: 1, f: 1 }, asleep: { c: 0, a: 2, k: 2, f: 0 } },
+  },
+  'snail:epic': {
+    rows: [BLANK, '{g} {a}', '(({c})) {k} ', "{h}___/  ", '{f}'],
+    parts: {
+      g: { v: [' .*-*. ', ' .-*-. ', ' *---* '], r: wag(3, 3), c: 'cyan' },
+      a: { v: ['{E} {E} ', ' {E}{E} ', '{E}{E}  '], r: wag(3, 3) },
+      k: { v: ['\\/ ', '|| ', '// '], r: lag(wag(3, 3), 1) },
+      c: { v: ['(@)', '(o)', '(*)'], r: special, c: 'yellow' },
+      h: { v: [" `*-*'", " `-*-'", " `*-*'"], r: lag(wag(3, 3), 1), c: 'cyan' },
+      f: { v: ['(_________)*', '(_________)~', '(_________) '], r: (t, w) => (w ? t % 3 : wag(3, 2)(t, w)) },
+    },
+    moods: { pet: { c: 2, a: 1, k: 1, g: 2 }, poke: { a: 1, k: 1, c: 1, f: fast(0, 1) }, asleep: { c: 0, a: 2, k: 2, g: 0, h: 0, f: 2 } },
+  },
+  'ghost:rare': {
+    rows: [BLANK, '    .-.     ', '   ({E} {E})    ', ' {k}-| {m} \\{a}  ', '    {t}  '],
+    parts: {
+      k: { v: ['*', '+'], r: wag(2, 3), c: 'yellow' },
+      m: { v: ['O', 'o', '-', 'w'], r: special },
+      a: { v: ['  ', ' ~'], r: flap },
+      t: { v: ["`~~~~'", "`-~~~'", "`~~-~'"], r: hem(3) },
+    },
+    moods: { pet: { m: 3, a: 1, k: 0 }, poke: { m: 0, k: fast(0, 1), t: fast(0, 1) }, asleep: { m: 2, a: 0, t: 0, k: 1 } },
+  },
+  'ghost:epic': {
+    rows: [BLANK, '   .-""-.   ', '  ( {E}  {E} )  ', '{k}-|  {m}  \\{a}', '   \\{t} '],
+    parts: {
+      k: { v: ['*', '+'], r: wag(2, 3), c: 'yellow' },
+      m: { v: ['O ', 'oo', '--', 'ww'], r: special },
+      a: { v: ['  ', ' ~', '~ '], r: wag(3, 2) },
+      t: { v: ["_~~~-~'", "_~~-~~'", "_~-~~~'"], r: hem(3) },
+    },
+    moods: { pet: { m: 3, a: 1, k: 0 }, poke: { m: 0, k: fast(0, 1), t: fast(0, 1), a: fast(0, 2) }, asleep: { m: 2, a: 0, t: 0, k: 1 } },
+  },
+  'axolotl:rare': {
+    rows: [BLANK, '{a} .--. {b}', '{c}( {E}  {E} ){d}', ' {e}( {m} ){f} ', "  `-^--^-'{t}"],
+    parts: {
+      a: { v: [' \\\\', ' \\.'], r: wag(2, 2), c: 'magenta' },
+      b: { v: ['// ', './ '], r: lag(wag(2, 2), 1), c: 'magenta' },
+      c: { v: ['=<', '~<'], r: wag(2, 3), c: 'magenta' },
+      d: { v: ['>=', '>~'], r: lag(wag(2, 3), 1), c: 'magenta' },
+      e: { v: ['//', "/'"], r: wag(2, 2), c: 'magenta' },
+      f: { v: ['\\\\', "'\\"], r: lag(wag(2, 2), 1), c: 'magenta' },
+      m: { v: ['ww', '--', 'oo', 'vv'], r: special },
+      t: { v: ['~>', '~-', '-~'], r: wag(3, 2) },
+    },
+    moods: { pet: { m: 3, a: fast(0, 1), b: fast(0, 1), t: 0 }, poke: { m: 2, c: 1, d: 1, e: 1, f: 1, t: fast(1, 2) }, asleep: { m: 1, a: 0, b: 0, c: 0, d: 0, e: 0, f: 0, t: 1 } },
+  },
+  'axolotl:epic': {
+    rows: ['{o}', '{a}.-ww-.{b}', '{c}( {E}  {E} ){d}', '{e}(*{m}*){f}', " ~`-^--^-'{t}"],
+    parts: {
+      o: { v: [BLANK, '     o      ', '      O  o  '], r: special, c: 'cyan' },
+      a: { v: ['\\\\\\', '\\\\.'], r: wag(2, 2), c: 'magenta' },
+      b: { v: ['///', './/'], r: lag(wag(2, 2), 1), c: 'magenta' },
+      c: { v: ['=<', '~<'], r: wag(2, 3), c: 'magenta' },
+      d: { v: ['>=', '>~'], r: lag(wag(2, 3), 1), c: 'magenta' },
+      e: { v: [' //', " /'"], r: wag(2, 2), c: 'magenta' },
+      f: { v: ['\\\\ ', "'\\ "], r: lag(wag(2, 2), 1), c: 'magenta' },
+      m: { v: ['ww', '--', 'oo', 'vv'], r: special },
+      t: { v: ['~>', '~-', '-~'], r: wag(3, 2) },
+    },
+    moods: {
+      pet: { m: 3, a: fast(0, 1), b: fast(0, 1), o: 1, t: 0 },
+      poke: { m: 2, o: fast(1, 2), c: 1, d: 1, e: 1, f: 1, t: fast(1, 2) },
+      asleep: { m: 1, o: 0, a: 0, b: 0, c: 0, d: 0, e: 0, f: 0, t: 1 },
+    },
+  },
+  'capybara:rare': {
+    rows: ['{s}', '  {e}.{k}.{f}  ', ' ( {E}    {E} ) ', ' (  ({n})  ) ', '{w}'],
+    parts: {
+      s: { v: [BLANK, '  ~      ~  ', '   ~    ~   '], r: special, c: 'white' },
+      e: { v: ['n', 'u'], r: twitch(3, 9, 17) },
+      f: { v: ['n', 'u'], r: twitch(4, 10) },
+      k: { v: ['====', '=-=='], r: breathe, c: 'white' },
+      n: { v: ['..', 'oo', '::'], r: special },
+      w: { v: ['~~~~~~~~~~~~', '-~~~-~~~-~~~', '~-~~~-~~~-~~'], r: wag(3, 2), c: 'cyan' },
+    },
+    moods: { pet: { e: 1, f: 1, n: 0, s: 1 }, poke: { n: 1, k: 1, w: fast(1, 2), e: fast(0, 1) }, asleep: { e: 1, f: 1, n: 2, s: 0, w: 0 } },
+  },
+  'capybara:epic': {
+    rows: ['{s}', '  {e}.={y}=.{f}  ', ' ( {E}    {E} ) ', ' (  ({n})  ) ', '{w}{u}{x}'],
+    parts: {
+      s: { v: [BLANK, ' ~        ~ ', '  ~      ~  '], r: special, c: 'white' },
+      e: { v: ['n', 'u'], r: twitch(3, 9, 17) },
+      f: { v: ['n', 'u'], r: twitch(4, 10) },
+      y: { v: ['()', '()'], r: () => 0, c: 'yellow' },
+      n: { v: ['..', 'oo', '::'], r: special },
+      w: { v: ['~~~~~~~~', '-~~~-~~~', '~-~~~-~~'], r: wag(3, 2), c: 'cyan' },
+      u: { v: ['()', 'o)'], r: lag(wag(2, 3), 1), c: 'yellow' },
+      x: { v: ['~~', '-~', '~-'], r: wag(3, 2), c: 'cyan' },
+    },
+    moods: { pet: { e: 1, f: 1, n: 0, s: 1 }, poke: { n: 1, u: 1, w: fast(1, 2), x: fast(1, 2), e: fast(0, 1) }, asleep: { e: 1, f: 1, n: 2, s: 0, w: 0, x: 0, u: 0 } },
+  },
+  'cactus:rare': {
+    rows: [BLANK, '{a} .{k}. {b}', '{c}|{E}  {E}|{d}', '{e}| {m} |{f}', '{s}|____|{t}'],
+    parts: {
+      ...arms,
+      k: { v: ['**', '*-'], r: twitch(6, 7), c: 'magenta' },
+      m: { v: ['  ', 'ww', 'oo', '--'], r: special },
+      s: { v: [' ~ ', '~  '], r: wag(2, 4), c: 'yellow' },
+      t: { v: [' ~ ', '  ~'], r: wag(2, 4), c: 'yellow' },
+    },
+    moods: { pet: { ...ARMS(0), m: 1, k: 0 }, poke: { ...ARMS(1), m: 2, k: 1 }, asleep: { ...ARMS(2), m: 3, k: 1, s: 0, t: 0 } },
+  },
+  'cactus:epic': {
+    rows: [BLANK, '{a}{k}{b}', '{c}|{E}  {E}|{d}', '{e}| {m} |{f}', '  {p}  '],
+    parts: {
+      ...arms,
+      k: { v: ['(@**@)', '(@*-@)', '(*@@*)'], r: (t, w) => (special(t, w) ? 2 : twitch(6, 7)(t, w)), c: 'magenta' },
+      m: { v: ['  ', 'ww', 'oo', '--'], r: special },
+      p: { v: ['\\______/', '\\_.__._/'], r: breathe, c: 'red' },
+    },
+    moods: { pet: { ...ARMS(0), m: 1, k: 2 }, poke: { ...ARMS(1), m: 2, k: 1 }, asleep: { ...ARMS(2), m: 3, k: 1, p: 0 } },
+  },
+  'robot:rare': {
+    rows: [BLANK, '  .\\----/.  ', '  |[{E}  {E}]|  ', '  |[ {m} ]|  ', ' [{k}] '],
+    parts: {
+      m: { v: ['>_', '> ', '<>', 'u '], r: (t, w) => (special(t, w) ? 2 : breathe(t, w)), c: 'green' },
+      k: { v: ['::::::::', ':.:::::.', '::.::.::'], r: typing },
+    },
+    moods: { pet: { m: 3, k: 0 }, poke: { m: 2, k: fast(1, 2) }, asleep: { m: 1, k: 0 } },
+  },
+  'robot:epic': {
+    rows: ['{s}', '  .\\----/.  ', '  |[{E}  {E}]|  ', '{a}|[ {m} ]|{b}', ' [{k}] '],
+    parts: {
+      s: { v: [BLANK, '   ((  ))   ', '  ((    ))  '], r: special, c: 'cyan' },
+      a: { v: ['o_', 'o-', 'o.'], r: typing },
+      b: { v: ['_o', '-o', '.o'], r: (t, w) => typing(t + 1, w) },
+      m: { v: ['>_', '> ', '<>', 'u '], r: (t, w) => (special(t, w) ? 2 : breathe(t, w)), c: 'green' },
+      k: { v: ['::::::::', ':.:::::.', '::.::.::'], r: typing },
+    },
+    moods: { pet: { m: 3, k: 0, a: 0, b: 0, s: 2 }, poke: { m: 2, k: fast(1, 2), a: fast(0, 1), b: fast(1, 0), s: fast(1, 2) }, asleep: { m: 1, k: 0, a: 0, b: 0, s: 0 } },
+  },
+  'rabbit:rare': {
+    rows: [BLANK, '   {l}{r}     ', '  {x}( {E}{n}{E}){y}  ', '   {t}(")(") ', '  {g}  '],
+    parts: {
+      l: { v: ['(\\', '(|', '(_'], r: twitch(3, 4) },
+      r: { v: ['(\\', '(|', '(_'], r: twitch(13) },
+      x: { v: ['=', '-'], r: twitch(8, 9) },
+      y: { v: ['=', '-'], r: twitch(8, 9) },
+      n: { v: ['.', 'x', 'w'], r: special },
+      t: { v: ['o_', 'o-', 'O_'], r: wag(2, 3) },
+      g: { v: ["_,_''_,_", "_'_,,_'_"], r: wag(2, 4), c: 'green' },
+    },
+    moods: {
+      pet: { l: 2, r: 2, n: 2, t: fast(0, 2) },
+      poke: { l: 1, r: 1, n: 1, t: 2, x: fast(0, 1), y: fast(0, 1) },
+      asleep: { l: 2, r: 2, n: 0, t: 0, x: 0, y: 0, g: 0 },
+    },
+  },
+  'rabbit:epic': {
+    rows: ['{s}', ' {a} {l}{r}  {b}  ', '  {x}( {E}{n}{E}){y}  ', '   {t}(")(") ', ' {g}{k}{c} '],
+    parts: {
+      s: { v: [BLANK, '  +      .  ', '  .      +  '], r: special, c: 'yellow' },
+      a: { v: ['*', '.', '+'], r: wag(3, 3), c: 'yellow' },
+      b: { v: ['+', '*', '.'], r: wag(3, 3), c: 'yellow' },
+      l: { v: ['(\\', '(|', '(_'], r: twitch(3, 4) },
+      r: { v: ['(\\', '(|', '(_'], r: lag(twitch(3, 4), 1) },
+      x: { v: ['=', '-'], r: twitch(8, 9) },
+      y: { v: ['=', '-'], r: twitch(8, 9) },
+      n: { v: ['.', 'x', 'w'], r: special, c: 'magenta' },
+      t: { v: ['o_', 'o-', 'O_'], r: wag(2, 3) },
+      g: { v: ["_,_''", "_'_,,"], r: wag(2, 4), c: 'green' },
+      k: { v: ['}', '{'], r: lag(wag(2, 4), 1), c: 'green' },
+      c: { v: ['===>', '==->'], r: wag(2, 5), c: 'yellow' },
+    },
+    moods: {
+      pet: { l: 2, r: 2, n: 2, s: 1, a: 0, t: fast(0, 2) },
+      poke: { l: 1, r: 1, n: 1, t: 2, k: fast(0, 1), x: fast(0, 1), y: fast(0, 1) },
+      asleep: { l: 2, r: 2, n: 0, t: 0, x: 0, y: 0, s: 0, a: 1, g: 0, k: 0, c: 0 },
+    },
+  },
+  'mushroom:rare': {
+    rows: ['{s}', ' .-{c}-. ', "`-.______.-'", '{b}({E}{m}{E})   ', ' {a} {g}   '],
+    parts: {
+      s: { v: [BLANK, '    .  o    ', '   o  .     '], r: special },
+      c: { v: ['o--O-o', 'O-o--O'], r: wag(2, 4), c: 'red' },
+      m: { v: ['__', 'ww', 'oo', '--'], r: special },
+      b: { v: [' n ', ' n.'], r: lag(wag(2, 4), 1), c: 'red' },
+      a: { v: ['|', '!'], r: lag(wag(2, 4), 1) },
+      g: { v: ['(____)', '(_/\\_)'], r: step },
+    },
+    moods: {
+      pet: { s: 2, c: 1, m: 1, b: 1 },
+      poke: { s: fast(1, 2), c: fast(0, 1), m: 2, g: 1, b: fast(0, 1) },
+      asleep: { s: 0, c: 0, m: 0, g: 0, b: 0, a: 0 },
+    },
+  },
+  'mushroom:epic': {
+    rows: ['{s}', ' .-{c}-. ', '{k}', '{b}({E}{m}{E}){d}', '{a}{g}{h}'],
+    parts: {
+      s: { v: [BLANK, '  *  .  o   ', '   o  *  .  '], r: special, c: 'yellow' },
+      c: { v: ['o-@@-o', 'O-@@-O'], r: wag(2, 4), c: 'magenta' },
+      k: { v: ["`-.______.-'", "`-._.--._.-'"], r: lag(wag(2, 4), 1) },
+      m: { v: ['__', 'ww', 'oo', '--'], r: special },
+      b: { v: [' n ', ' n.'], r: lag(wag(2, 4), 1), c: 'red' },
+      d: { v: [' n ', '.n '], r: lag(wag(2, 4), 2), c: 'red' },
+      a: { v: ['_|_', '_!_'], r: lag(wag(2, 4), 1) },
+      h: { v: ['_|_', '_!_'], r: lag(wag(2, 4), 2) },
+      g: { v: ['(____)', '(_/\\_)'], r: step },
+    },
+    moods: {
+      pet: { s: 2, c: 1, k: 1, m: 1, b: 1, d: 1 },
+      poke: { s: fast(1, 2), c: fast(0, 1), m: 2, g: 1, k: fast(0, 1) },
+      asleep: { s: 0, c: 0, k: 0, m: 0, g: 0, b: 0, d: 0, a: 0, h: 0 },
+    },
+  },
+  'chonk:rare': {
+    rows: [BLANK, ' {a}_{b}      ', '( {E}{m}{E} ){s}. ', ' ( {x}    ){t}', '  {p}    '],
+    parts: {
+      a: { v: ['/\\', '/|', '/-'], r: twitch(6) },
+      b: { v: ['/\\', '|\\', '-\\'], r: twitch(14) },
+      m: { v: ['.', 'w', 'o', 'x'], r: special },
+      s: { v: [',,,', ',,,'], r: () => 0, c: 'yellow' },
+      x: { v: ['//', '/,'], r: lag(wag(2, 4), 1), c: 'yellow' },
+      t: { v: ['~ ', ') ', '_/'], r: wag(3, 2) },
+      p: { v: ['uu--uu', 'u-u-uu'], r: step },
+    },
+    moods: { pet: { m: 1, t: fast(0, 1), x: 1 }, poke: { a: 2, b: 2, m: 3, p: 1 }, asleep: { m: 0, a: 0, b: 0, t: 2, p: 0, x: 0 } },
+  },
+  'chonk:epic': {
+    rows: [BLANK, ' {a}_{b}      ', '( {E}{m}{E} ){s}. ', ' ( {x}    ){t}', '{c}'],
+    parts: {
+      a: { v: ['/\\', '/|', '/-'], r: twitch(6) },
+      b: { v: ['/\\', '|\\', '-\\'], r: twitch(14) },
+      m: { v: ['.', 'w', 'o', 'x'], r: special },
+      s: { v: [',,,', ',,,'], r: () => 0, c: 'yellow' },
+      x: { v: ['//', '/,'], r: lag(wag(2, 4), 1), c: 'yellow' },
+      t: { v: ['~ ', ') ', '_/'], r: wag(3, 2) },
+      c: { v: ['(=uu==uu==)Y', '(=u=u=uu==)Y'], r: step, c: 'magenta' },
+    },
+    moods: { pet: { m: 1, t: fast(0, 1), x: 1 }, poke: { a: 2, b: 2, m: 3, c: 1 }, asleep: { m: 0, a: 0, b: 0, t: 2, x: 0, c: 0 } },
+  },
+  'imp:rare': {
+    rows: [BLANK, '{f}{h} ', ' {k} ( {E}  {E} ) ', ' {k}  ( {m} ){t}', ' {k}   {d}   '],
+    parts: {
+      f: { v: ['\\|/', '\\+/'], r: twitch(7, 17), c: 'yellow' },
+      k: { v: ['|'], r: () => 0, c: 'yellow' },
+      h: { v: ['(\\    /)', '(|    |)'], r: twitch(3, 13), c: 'red' },
+      m: { v: ['vv', 'ww', 'oo', '--'], r: special },
+      t: { v: ['~>', '_>', '-^'], r: wag(3), c: 'red' },
+      d: { v: ['v  v', ' vv '], r: step },
+    },
+    moods: { pet: { h: 1, m: 1, f: 1, t: fast(0, 1) }, poke: { h: 1, m: 2, t: 2, d: 1 }, asleep: { h: 0, m: 3, f: 0, t: 1, d: 0 } },
+  },
+  'imp:epic': {
+    rows: [BLANK, '{a}{h}{b}', '{c}( {E}  {E} ){d}', '   ( {m} ){t}', '    {g}{u}'],
+    parts: {
+      a: { v: ['/\\', '/|', '__'], r: wag(3, 3) },
+      b: { v: ['/\\', '|\\', '__'], r: wag(3, 3) },
+      h: { v: ['(\\ ^^ /)', '(| ^^ |)'], r: twitch(3, 13), c: 'red' },
+      c: { v: ['\\_', '\\/', ' \\'], r: lag(wag(3, 3), 1) },
+      d: { v: ['_/', '\\/', '/ '], r: lag(wag(3, 3), 1) },
+      m: { v: ['vv', 'ww', 'oo', '--'], r: special },
+      t: { v: ['~\\ ', '~/ ', '~~ '], r: wag(3), c: 'red' },
+      g: { v: ['W  W', ' WW '], r: step },
+      u: { v: [' _\\>', ' _/>', '  ~>'], r: lag(wag(3), 2), c: 'red' },
+    },
+    moods: {
+      pet: { h: 1, m: 1, a: fast(0, 1), b: fast(0, 1) },
+      poke: { h: 1, m: 2, a: 0, b: 0, c: fast(0, 1), d: fast(0, 1) },
+      asleep: { m: 3, a: 2, b: 2, c: 2, d: 2, t: 2, u: 2, g: 0 },
+    },
+  },
+  'bat:rare': {
+    rows: [BLANK, '{l}{f}{r}', '  {a}({w}){b}  ', '   ({E}  {E})   ', '    {e}    '],
+    parts: {
+      l: { v: ['_____', '__,__'], r: wag(2, 5), c: 'green' },
+      r: { v: ['__.__', '_____'], r: wag(2, 5), c: 'green' },
+      f: { v: ['""', "''"], r: step },
+      a: { v: [' ', '/'], r: wag(2, 3) },
+      b: { v: [' ', '\\'], r: lag(wag(2, 3), 1) },
+      w: { v: ['\\  /', '|  |', '\\__/'], r: wag(2, 4) },
+      e: { v: ['\\/\\/', '\\/|/', '\\|\\/'], r: twitch(6, 14) },
+    },
+    moods: { pet: { w: 2, a: 1, b: 1, f: fast(0, 1) }, poke: { w: 1, e: 1, a: 1, b: 1 }, asleep: { w: 2, a: 0, b: 0, e: 0, f: 0 } },
+  },
+  'bat:epic': {
+    rows: [BLANK, '{l}{f}{r}', '{a}({w}){b}', '{c}({E}  {E}){d}', '    {e}    '],
+    parts: {
+      l: { v: ['__,__', '_,___'], r: wag(2, 5), c: 'green' },
+      r: { v: ['__.__', '___._'], r: wag(2, 5), c: 'green' },
+      f: { v: ['""', "''"], r: step },
+      a: { v: ['/\\/', '/\\_', '_/\\'], r: wag(3, 2) },
+      b: { v: ['\\/\\', '_/\\', '/\\_'], r: wag(3, 2) },
+      c: { v: ['\\ \\', ' \\ ', '\\  '], r: lag(wag(3, 2), 1) },
+      d: { v: ['/ /', ' / ', '  /'], r: lag(wag(3, 2), 1) },
+      w: { v: ['\\  /', '|  |', '\\__/'], r: wag(2, 4), c: 'red' },
+      e: { v: ['\\/\\/', '\\/|/', '\\|\\/'], r: twitch(6, 14) },
+    },
+    moods: {
+      pet: { w: 2, a: 1, b: 1, f: fast(0, 1) },
+      poke: { w: 1, e: 1, a: fast(0, 2), b: fast(0, 2) },
+      asleep: { w: 2, a: 2, b: 2, c: 0, d: 0, e: 0, f: 0 },
+    },
+  },
+}
+
+// A stage is a rig keyed `species:rarity`; a buddy wears the highest one at or below its rarity, else the base rig.
+export function rigOf(species: string, rarity: Rarity = 'common'): Rig {
+  for (const r of RARITIES.slice(0, RARITIES.indexOf(rarity) + 1).reverse()) {
+    const staged = RIGS[`${species}:${r}`]
+    if (staged) return staged
+  }
+  return RIGS[species] ?? RIGS.blob!
 }
 
 export type Segment = readonly [text: string, color: string]

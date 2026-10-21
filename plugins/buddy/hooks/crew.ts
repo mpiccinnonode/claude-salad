@@ -1,6 +1,6 @@
 import type { EngineInterface } from 'claude-code'
 import type { Bones, Member } from '../types'
-import { evolve, RARITIES, roll, SPECIES } from './bones.ts'
+import { ALL_SPECIES, evolve, RARITIES, roll } from './bones.ts'
 import { dreamOn, dreamUp } from './dream.ts'
 import { describe, findFriend, keyOf, parseBook, upsert } from './friends.ts'
 import type { Friend, Personality } from './friends.ts'
@@ -150,11 +150,11 @@ export async function eggs($: EngineInterface, per: number) {
   return { done: Math.min(per, sessions - hatched * per), left: (hatched + 1) * per - sessions }
 }
 
-// A random roll; with `fresh`, rerolls until the species is one nobody in the roster has, unless all 18 are taken.
+// A random roll over every species; with `fresh`, one nobody in the roster has, unless all are taken.
 function rollNew(have: Set<string | undefined>, fresh: boolean): Bones {
-  let b = roll(String(Math.random()))
-  while (fresh && have.has(b.species) && SPECIES.some(s => !have.has(s))) b = roll(String(Math.random()))
-  return b
+  const free = ALL_SPECIES.filter(s => !have.has(s))
+  const pool = fresh && free.length ? free : ALL_SPECIES
+  return { ...roll(String(Math.random())), species: pool[Math.floor(Math.random() * pool.length)]! }
 }
 
 // Spends an egg, only on success: random bones, a name and soul dreamt up when missing, written back into buddies.json.

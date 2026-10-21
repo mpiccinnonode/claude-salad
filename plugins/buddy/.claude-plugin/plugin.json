@@ -1,6 +1,6 @@
 {
   "name": "buddy",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "The /buddy companion, revived as a mod: random buddies hatched from eggs you earn, each with its own species, rarity, stats and Haiku-written personality, animated above the prompt, reacting to your work, and evolving with you over time.",
   "types": "./types/index.d.ts",
   "userConfig": {
@@ -31,7 +31,7 @@
     "species": {
       "type": "string",
       "title": "Species",
-      "description": "Species of your original buddy: auto = the one it hatched with; or pick any of the 18.",
+      "description": "Species of your original buddy: auto = the one it hatched with; or pick any of the 20.",
       "default": "auto",
       "options": [
         "auto",
@@ -52,7 +52,9 @@
         "robot",
         "rabbit",
         "mushroom",
-        "chonk"
+        "chonk",
+        "imp",
+        "bat"
       ]
     },
     "language": {

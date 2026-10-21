@@ -1,5 +1,9 @@
 # Changelog
 
+## buddy 0.7.0 → 0.8.0
+
+- feat(buddy): evolution-stage sprites and a redesign of every species
+
 ## buddy 0.6.1 → 0.7.0
 
 - feat(buddy): evolution gap grows with rarity

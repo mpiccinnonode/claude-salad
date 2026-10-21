@@ -1,4 +1,4 @@
-import { SPECIES } from './bones.ts'
+import { ALL_SPECIES } from './bones.ts'
 
 export type Soul = { tone?: string; traits?: string[]; quirks?: string[]; backstory?: string; speech?: string; catchphrase?: string; likes?: string[]; dislikes?: string[] }
 export type Personality = string | Soul
@@ -7,7 +7,7 @@ export type Friend = { name: string; species?: string; personality?: Personality
 const TEXT_KEYS = ['tone', 'backstory', 'speech', 'catchphrase'] as const
 const LIST_KEYS = ['traits', 'quirks', 'likes', 'dislikes'] as const
 
-const isSpecies = (s: unknown): s is string => (SPECIES as readonly string[]).includes(String(s))
+const isSpecies = (s: unknown): s is string => ALL_SPECIES.includes(String(s))
 export const keyOf = (name: string) => name.trim().toLowerCase()
 const isNamed = (entry: unknown, name: string) => keyOf(String((entry as Friend | null)?.name ?? '')) === keyOf(name)
 export const texts = (v: unknown) => (Array.isArray(v) ? v : [v]).filter((x): x is string => typeof x === 'string' && x.trim() !== '').map(x => x.trim())

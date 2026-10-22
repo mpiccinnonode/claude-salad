@@ -820,11 +820,10 @@ export const RIGS: Record<string, Rig> = {
     },
   },
   'skeleton:epic': {
-    rows: [BLANK, '{f}({E}{p}{E}){g}', '  {h}\\{m}/{i}  ', '{k}{a}(={r}=){b}{j}', '   {l}   '],
+    rows: [BLANK, '{f}({E}  {E}){g}', '  {h}\\{m}/{i}  ', '{k}{a}(={r}=){b}{j}', '   {l}   '],
     parts: {
       f: { v: [' *@', '*@ ', ' @*'], r: wag(3, 3), c: 'yellow' },
       g: { v: ['@* ', ' @*', '*@ '], r: lag(wag(3, 3), 1), c: 'yellow' },
-      p: { v: ['<>', '**'], r: twitch(7, 17), c: 'magenta' },
       h: { v: ['* ', ' *'], r: wag(2, 3), c: 'magenta' },
       i: { v: [' *', '* '], r: lag(wag(2, 3), 1), c: 'magenta' },
       m: { v: ['nn', 'ww', 'oo', '--'], r: special },
@@ -836,9 +835,9 @@ export const RIGS: Record<string, Rig> = {
       l: { v: ['_/  \\_', '_|  \\_', '_/  |_'], r: step },
     },
     moods: {
-      pet: { m: 1, p: 1, a: 0, b: 0, k: fast(0, 1), j: fast(1, 0), l: fast(1, 2) },
+      pet: { m: 1, a: 0, b: 0, k: fast(0, 1), j: fast(1, 0), l: fast(1, 2) },
       poke: { m: 2, r: 1, a: 2, b: 2, k: 2, j: 2, f: 1, g: 1 },
-      asleep: { m: 3, p: 0, a: 2, b: 2, k: 2, j: 2, r: 0, l: 0, f: 0, g: 0, h: 0, i: 0 },
+      asleep: { m: 3, a: 2, b: 2, k: 2, j: 2, r: 0, l: 0, f: 0, g: 0, h: 0, i: 0 },
     },
   },
 }

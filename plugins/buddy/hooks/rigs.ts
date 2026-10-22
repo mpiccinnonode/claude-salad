@@ -235,6 +235,21 @@ export const RIGS: Record<string, Rig> = {
     },
     moods: { pet: { w: 2, f: fast(0, 1) }, poke: { w: 1, e: 1, f: 1 }, asleep: { w: 2, e: 0, f: 0 } },
   },
+  skeleton: {
+    rows: [BLANK, '   ({E}  {E})   ', '    \\{m}/    ', '{a}(={r}=){b}', '   {l}   '],
+    parts: {
+      m: { v: ['nn', 'ww', 'oo', '--'], r: special },
+      r: { v: ['||', '::'], r: wag(2, 4) },
+      a: { v: [' \\_', ' __', '  /'], r: wag(3, 2) },
+      b: { v: ['_/ ', '__ ', '\\  '], r: lag(wag(3, 2), 1) },
+      l: { v: ['_/  \\_', '_|  \\_', '_/  |_'], r: step },
+    },
+    moods: {
+      pet: { m: 1, a: 0, b: 0, l: fast(1, 2) },
+      poke: { m: 2, r: 1, a: 2, b: 2, l: 0 },
+      asleep: { m: 3, a: 2, b: 2, r: 0, l: 0 },
+    },
+  },
   'duck:rare': {
     rows: [BLANK, '      {c}    ', '  {w}( {E}){b}  ', '  \\ {g}. )   ', "{x}`---'{y}"],
     parts: {
@@ -785,6 +800,44 @@ export const RIGS: Record<string, Rig> = {
       pet: { w: 2, a: 1, b: 1, f: fast(0, 1) },
       poke: { w: 1, e: 1, a: fast(0, 2), b: fast(0, 2) },
       asleep: { w: 2, a: 2, b: 2, c: 0, d: 0, e: 0, f: 0 },
+    },
+  },
+  'skeleton:rare': {
+    rows: [BLANK, '   ({E}  {E})   ', '    \\{m}/    ', '{k}{a}(={r}=){b}{j}', '   {l}   '],
+    parts: {
+      m: { v: ['nn', 'ww', 'oo', '--'], r: special },
+      r: { v: ['||', '::'], r: wag(2, 4) },
+      k: { v: ['o', '0', ' '], r: fast(0, 1), c: 'yellow' },
+      j: { v: ['o', '0', ' '], r: fast(1, 0), c: 'yellow' },
+      a: { v: ['\\_', '__', ' /'], r: wag(3, 2) },
+      b: { v: ['_/', '__', '\\ '], r: lag(wag(3, 2), 1) },
+      l: { v: ['_/  \\_', '_|  \\_', '_/  |_'], r: step },
+    },
+    moods: {
+      pet: { m: 1, a: 0, b: 0, k: fast(0, 1), j: fast(1, 0), l: fast(1, 2) },
+      poke: { m: 2, r: 1, a: 2, b: 2, k: 2, j: 2 },
+      asleep: { m: 3, a: 2, b: 2, k: 2, j: 2, r: 0, l: 0 },
+    },
+  },
+  'skeleton:epic': {
+    rows: [BLANK, '{f}({E}  {E}){g}', '  {h}\\{m}/{i}  ', '{k}{a}(={r}=){b}{j}', '   {l}   '],
+    parts: {
+      f: { v: [' *@', '*@ ', ' @*'], r: wag(3, 3), c: 'yellow' },
+      g: { v: ['@* ', ' @*', '*@ '], r: lag(wag(3, 3), 1), c: 'yellow' },
+      h: { v: ['* ', ' *'], r: wag(2, 3), c: 'magenta' },
+      i: { v: [' *', '* '], r: lag(wag(2, 3), 1), c: 'magenta' },
+      m: { v: ['nn', 'ww', 'oo', '--'], r: special },
+      r: { v: ['||', '::'], r: wag(2, 4), c: 'cyan' },
+      k: { v: ['o', '0', ' '], r: fast(0, 1), c: 'yellow' },
+      j: { v: ['o', '0', ' '], r: fast(1, 0), c: 'yellow' },
+      a: { v: ['\\_', '__', ' /'], r: wag(3, 2) },
+      b: { v: ['_/', '__', '\\ '], r: lag(wag(3, 2), 1) },
+      l: { v: ['_/  \\_', '_|  \\_', '_/  |_'], r: step },
+    },
+    moods: {
+      pet: { m: 1, a: 0, b: 0, k: fast(0, 1), j: fast(1, 0), l: fast(1, 2) },
+      poke: { m: 2, r: 1, a: 2, b: 2, k: 2, j: 2, f: 1, g: 1 },
+      asleep: { m: 3, a: 2, b: 2, k: 2, j: 2, r: 0, l: 0, f: 0, g: 0, h: 0, i: 0 },
     },
   },
 }

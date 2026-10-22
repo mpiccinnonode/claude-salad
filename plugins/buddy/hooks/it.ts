@@ -40,6 +40,14 @@ export const PEAK_IT: Partial<Record<StatName, Pool>> = {
 }
 
 export const SPECIES_LINES_IT: Record<string, Pool> = {
+  skeleton: {
+    error: ['*sbatacchia davanti allo stacktrace*', 'ne ho visti di peggio. sono stato di peggio.'],
+    'test-fail': ['*gli cade la mascella. davvero.*', 'quel test è morto. me ne intendo.'],
+    commit: ['*batte i denti, approva*', 'committato. sopravvivrà a tutti noi.'],
+    'late-night': ['*si alza* ah, inizia il mio turno.', 'il turno di notte. il mio preferito.'],
+    pet: ['*sferragliata felice*', 'piano, sono tutto ossa.'],
+    poke: ['*tintinna*', '*gli cade una costola, la rimette a posto*', 'mi fai il solletico alle ossa.'],
+  },
   bat: {
     error: ["*strilla contro il bug*", "l'ecolocalizzazione ha trovato il problema. sei tu."],
     'test-fail': ['*si appende a testa in giù per vederlo meglio*', 'è rosso anche da questa angolazione.'],

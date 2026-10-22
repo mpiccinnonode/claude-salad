@@ -9,9 +9,8 @@ import { HINT, WORDS } from './words.ts'
 
 export const register: Register = (on, options) => {
   const o: Ctx = {
-    name: String(options.name),
-    personality: String(options.personality),
-    species: options.species && options.species !== 'auto' ? String(options.species) : undefined,
+    // Still declared only because undeclared options never reach register: 0.8's overrides are carried into the buddies file once.
+    old: { name: String(options.name ?? ''), personality: String(options.personality ?? ''), species: options.species && options.species !== 'auto' ? String(options.species) : undefined },
     active: String(options.active),
     file: String(options.buddiesFile || '~/.claude/buddy/buddies.json'),
     lang: options.language === 'en' ? 'en' : 'it',
@@ -55,7 +54,7 @@ export const register: Register = (on, options) => {
     // ponytail: one canned line per ~10s so a failing loop doesn't spam the bubble
     if (reason && now - live.lastCannedAt >= 33) {
       live.lastCannedAt = now
-      await react($, o, reason, await crewNow($, o))
+      await react($, o, reason, await crewNow($))
     }
     return result
   }).catch(($, e, next) => next(e)) // the reaction is cosmetic: if it throws, the Bash result it already had goes through
@@ -69,7 +68,7 @@ export const register: Register = (on, options) => {
     if (++live.turns % o.every !== 0) return result
 
     // The floor passes on each time; now and then the next one answers back, once, never a chain.
-    const crew = await crewNow($, o)
+    const crew = await crewNow($)
     const i = await nextSpeaker($, crew)
     const said = await quipFromModel($, o, crew, i, `${w.turnDone}\n\n${live.lastAnswer}`)
     // ponytail: a turn costs 1 + banterChance Haiku calls on average; a reply already pending is not cancelled by the next turn

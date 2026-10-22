@@ -138,12 +138,29 @@ test('a failing Bash call gets a canned line, a quiet one does not', async ($, o
   expect(await shows(quiet)).toBe(false)
 })
 
-test('the species option swaps the art and the lines', { options: { species: 'duck', language: 'en' } }, async ($, on) => {
-  const ui = await rig($, on).mount()
+test('0.8\'s name, personality and species options move into the buddies file with the original, and the species swaps the art and the lines', { options: { name: 'Rex', personality: 'Grumpy.', species: 'duck', language: 'en' } }, async ($, on) => {
+  const { start, mount, book } = rig($, on, { '/home/t/.claude.json': LEGACY })
+  await start()
+  expect(book()).toEqual([{ name: 'Rex', species: 'duck', personality: 'Grumpy.' }])
+  const ui = await mount()
   expect(await ui.find({ type: 'Text', text: /___\( [◉-]\)/ })).toBeDefined()
   await ui.press({ key: 'poke' })
   expect(await ui.find({ type: 'Text', text: /quack|waddle|attentive|what\.|unimpressed|sarcasm/ })).toBeDefined()
   await ui.unmount()
+})
+
+test('0.8\'s original moves from the store to the top of the buddies file under a free name, keeping its body, epithet, sessions and place in the crew', { options: { language: 'en', sessionsPerEvolve: 5 } }, async ($, on) => {
+  const original = { bones: { ...roll('x'), rarity: 'common' as const }, name: 'Pebble', personality: 'Kind.', title: { en: 'the Kind', it: 'il Gentile' } }
+  const { start, run, shows, book, toasts } = rig($, on, { [FILE]: JSON.stringify([ZED, { name: 'Pebble' }]) }, { migrated: true, born: { ...born(), '': original }, together: { '': 4 }, crew: ['', 'zed'] })
+  await start()
+  expect(book()).toEqual([{ name: 'Pebble 2', species: original.bones.species, personality: 'Kind.' }, { ...ZED, species: expect.any(String) }, { name: 'Pebble' }])
+  expect(await shows(/Pebble 2, the Kind/)).toBe(true)
+  expect(toasts).toContain('Pebble 2 is glowing! Type /buddy evolve when you are ready.')
+  const list = await run('list')
+  for (const row of ['▸ Pebble 2', '● Zed', '🥚 Pebble']) expect(list).toContain(row)
+  expect(await run('rm Pebble 2')).toContain('waves goodbye')
+  await start()
+  expect(book().map(b => b.name)).toEqual(['Zed', 'Pebble'])
 })
 
 test('language it: command text and canned lines are Italian', { options: { language: 'it' } }, async ($, on) => {
@@ -174,23 +191,23 @@ test('buddies.json: its buddies are eggs until /buddy use spends one; a missing 
   expect(await run('use Nino')).toContain('Nino hops in')
   expect(await shows(/Nino/)).toBe(true)
   expect(await shows(/___\(/)).toBe(true)
-  expect(book()[0]).toEqual({ name: 'Nino', species: 'duck', mood: 'kept as is', personality: { tone: 'wry', traits: ['fussy', 'loyal', 'nosy'], catchphrase: 'Quack. Again.' } })
+  expect(book()[1]).toEqual({ name: 'Nino', species: 'duck', mood: 'kept as is', personality: { tone: 'wry', traits: ['fussy', 'loyal', 'nosy'], catchphrase: 'Quack. Again.' } })
 
   expect(await run('use Pippo')).toContain('Pippo is still an egg: 1 more session together')
   await start()
   expect(await run('use Pippo')).toContain('Pippo hops in')
   // One for the original (no ~/.claude.json), one for Nino; none for Pippo, who brought his own.
   expect(systems.filter(s => s.includes('invent personalities'))).toHaveLength(2)
-  expect(book()[1]).toEqual({ name: 'Pippo', species: expect.any(String), personality: { tone: 'anxious', traits: 'always' } })
+  expect(book()[2]).toEqual({ name: 'Pippo', species: expect.any(String), personality: { tone: 'anxious', traits: 'always' } })
   const ui = await mount()
   await ui.press({ key: 'talk' })
   await ui.unmount()
   expect(systems.at(-1)).toContain('You are Pippo, a tiny terminal companion. Tone: anxious. Traits: always.')
 
   expect(await run('use Zorro')).toContain('No buddy called Zorro')
-  expect(await run('rm Buddy')).toContain('No buddy called Buddy')
+  expect(await run('rm Ghost')).toContain('No buddy called Ghost')
   expect(await run('rm nino')).toContain('waves goodbye')
-  expect(book().map(b => b.name)).toEqual(['Pippo'])
+  expect(book().map(b => b.name)).toEqual(['Buddy', 'Pippo'])
 })
 
 test('a broken buddies.json is reported and never written', { options: { language: 'en', sessionsPerHatch: 1 } }, async ($, on) => {
@@ -213,7 +230,7 @@ test('a new buddy hatches only every N sessions together, and removing one frees
   await start()
   expect(toasts).toHaveLength(1)
   expect(await run('add Zed robot Calm and precise.')).toContain('Zed hatched')
-  expect(book()).toEqual([{ name: 'Zed', species: 'robot', personality: 'Calm and precise.' }])
+  expect(book().slice(1)).toEqual([{ name: 'Zed', species: 'robot', personality: 'Calm and precise.' }])
   expect(await run('add zed')).toContain('already')
   expect(await run('rm Zed')).toContain('waves goodbye')
   expect(await run('add Ada owl')).toContain('2 more sessions')
@@ -224,8 +241,14 @@ test('a new buddy hatches only every N sessions together, and removing one frees
   await start()
   expect(toasts).toHaveLength(3)
   expect(await run('add Ada owl')).toContain('Ada hatched')
-  expect(book()).toEqual([{ name: 'Ada', species: 'owl' }])
+  expect(book().slice(1)).toEqual([{ name: 'Ada', species: 'owl' }])
   expect(await run('dance')).toContain('Usage')
+})
+
+test('the egg counter never goes negative when sessions fall behind hatched eggs or the price changes', { options: { language: 'en', sessionsPerHatch: 70 } }, async ($, on) => {
+  const { run } = rig($, on, {}, { sessions: 75, hatched: 3 })
+  expect(await run('list')).toContain('Next egg: 0/70')
+  expect(await run('add Zed robot Calm.')).toContain('70 more sessions')
 })
 
 test('hatching: ~/.claude.json is read once to keep the original, the others are random, and what is born stays', { options: { language: 'en', active: 'Zed', sessionsPerHatch: 1 } }, async ($, on) => {
@@ -284,7 +307,7 @@ test('no companion in ~/.claude.json: the original is random, name and personali
   expect(await shows(/Brisa/)).toBe(true)
   expect(await card()).not.toContain('PAT 78')
   expect(await run('add')).toContain('Quillon hatched')
-  expect(book()).toEqual([{ name: 'Quillon', species: expect.any(String), personality: { tone: 'dry', traits: ['odd'] } }])
+  expect(book()).toEqual(['Brisa', 'Quillon'].map(name => ({ name, species: expect.any(String), personality: { tone: 'dry', traits: ['odd'] } })))
   expect(await run('add')).toContain('1 more session')
 })
 
@@ -299,7 +322,7 @@ test('with an egg ready, a bare /buddy hatches a surprise named by Haiku and bri
   expect(await run('')).toContain('Crack! Say hi to Tortellino.')
   expect(await shows(/Tortellino/)).toBe(true)
   expect(await shows(/Crack!/)).toBe(true)
-  expect(book().map(b => b.name)).toEqual(['Tortellino'])
+  expect(book().map(b => b.name)).toEqual(['Brisa', 'Tortellino'])
   expect(await run('')).toContain('Tortellino waddles off')
 })
 
@@ -353,11 +376,11 @@ test('evolution: if Haiku fails nothing changes; a file buddy gets its new soul 
   expect(await run('use Zed')).toContain('Zed hops in')
   await start()
   expect(await run('evolve')).toContain('nothing changed')
-  expect(book()).toEqual([{ ...ZED, species: expect.any(String) }])
+  expect(book().slice(1)).toEqual([{ ...ZED, species: expect.any(String) }])
   isBroken = false
   expect(await run('evolve')).toContain('Zed, the Unbothered has evolved!')
   expect(await shows(/Zed, the Unbothered/)).toBe(true)
-  expect(book()).toEqual([{ name: 'Zed', species: expect.any(String), personality: { tone: 'eerily calm' } }])
+  expect(book().slice(1)).toEqual([{ name: 'Zed', species: expect.any(String), personality: { tone: 'eerily calm' } }])
 })
 
 test('crew: the 0.4 `active` in the store still picks the buddy until /buddy use; the option is a comma list that skips unknown names and eggs', { options: { language: 'en', active: 'Ghost, Nino, Ada' } }, async ($, on) => {
@@ -382,7 +405,7 @@ test('crew: every buddy out counts the session and glows on its own; /buddy evol
   expect(await run('evolve Ghost')).toContain('No buddy called Ghost')
   expect(await run('evolve Pebble')).toContain('Pebble, the Unbothered has evolved!')
   expect(await run('evolve')).toContain('Zed, the Unbothered has evolved!')
-  expect(book()).toEqual([{ name: 'Zed', species: expect.any(String), personality: { tone: 'eerily calm' } }])
+  expect(book()).toEqual(['Pebble', 'Zed'].map(name => ({ name, species: expect.any(String), personality: { tone: 'eerily calm' } })))
   expect(await run('evolve')).toContain('Zed evolves after 2 more sessions together')
 })
 

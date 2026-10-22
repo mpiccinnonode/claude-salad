@@ -1,5 +1,13 @@
 # Changelog
 
+## buddy 0.8.0 → 0.9.0
+
+- feat(buddy): add the skeleton species, with rare and epic stages
+- feat(buddy): the buddies file is the single source of every buddy, the original included
+- fix(buddy): drop the diamond between the epic skeleton's eyes, it read as a mouth
+- fix(buddy): keep 0.8's name, personality and species options declared so the migration receives them
+- fix(buddy): egg counter never goes negative after session loss or sessionsPerHatch change
+
 ## buddy 0.7.0 → 0.8.0
 
 - feat(buddy): evolution-stage sprites and a redesign of every species

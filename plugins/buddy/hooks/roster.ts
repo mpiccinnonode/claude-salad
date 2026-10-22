@@ -2,6 +2,14 @@ import type { Reason } from './lines.ts'
 
 // Per-species lines, from ramarivera/coding-buddy (MIT).
 export const SPECIES_LINES: Record<string, Partial<Record<Reason, readonly string[]>>> = {
+  skeleton: {
+    "error": ["*rattles at the stack trace*", "I've seen worse. I've been worse."],
+    "test-fail": ["*jaw drops. literally.*", "that test is dead. I would know."],
+    "commit": ["*clacks its teeth in approval*", "committed. it'll outlive us all."],
+    "late-night": ["*rises* ah, my shift starts.", "the graveyard shift. my favourite."],
+    "pet": ["*happy rattle*", "careful, I'm all bones."],
+    "poke": ["*clatters*", "*a rib falls off, put back*", "that tickles my funny bone."],
+  },
   bat: {
     "error": ["*screeches at the bug*", "my echolocation found the problem. it's you."],
     "test-fail": ["*hangs upside down to see it differently*", "still red, from this angle too."],

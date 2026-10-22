@@ -19,7 +19,7 @@ export async function drawBand($: EngineInterface, e: RenderInput<'AbovePrompt'>
   if (e.props.hasSurvey || hidden) return undefined
 
   const w = WORDS[o.lang]
-  const crew = crewOr(o, out)
+  const crew = crewOr(out)
   const at = floor % crew.length
   const m = crew[at]!
   const b = m.bones

@@ -3,7 +3,7 @@ import { eggs, evolveNow, evolvesIn, forget, hatchCrew, hatchNew, openBook, outO
 import type { Ctx, Entry, Roster } from './crew.ts'
 import type { Lang } from './lines.ts'
 import { findFriend, keyOf, parseAdd, without } from './friends.ts'
-import { crewNow, hatchInto, membersNow, say, setHidden, speak, toggleHidden } from './state.ts'
+import { crewNow, crewOr, hatchInto, membersNow, say, setHidden, speak, toggleHidden } from './state.ts'
 import { WORDS } from './words.ts'
 
 // /buddy <verb> <words>: each verb answers with the text to show.
@@ -44,7 +44,7 @@ async function toggle($: EngineInterface, o: Ctx) {
     if ('name' in hatched) return welcome($, o, hatched.name)
     failed = hatched.failed
   }
-  const [lead] = await crewNow($, o)
+  const [lead] = await crewNow($)
   const hidden = await toggleHidden($)
   return [hidden ? w.off(lead.name) : w.on(lead.name), ...(failed ? [failed] : [])].join('\n')
 }
@@ -67,7 +67,7 @@ async function welcome($: EngineInterface, o: Ctx, name: string) {
 
 async function list($: EngineInterface, o: Ctx) {
   const w = WORDS[o.lang]
-  const [{ roster, born, book }, { done }, crew] = await Promise.all([rosterOf($, o), eggs($, o.perEgg), crewNow($, o)])
+  const [{ roster, born, book }, { done }, crew] = await Promise.all([rosterOf($, o), eggs($, o.perEgg), crewNow($)])
   // ▸ the lead, ● the rest of the crew, blank the bench, 🥚 still an egg.
   const keys = crew.map(m => m.key)
   const mark = (e: Entry) => (e.key === keys[0] ? '▸' : keys.includes(e.key) ? '●' : born[e.key] ? ' ' : '🥚')
@@ -132,7 +132,7 @@ async function add($: EngineInterface, o: Ctx, words: string[]) {
 // A name picks who; without one, the first that is ready, else the lead, to say how long is left.
 async function evolveOne($: EngineInterface, o: Ctx, wanted: string) {
   const w = WORDS[o.lang]
-  const crew = (await membersNow($)) ?? (await hatchInto($, o))
+  const crew = crewOr((await membersNow($)) ?? (await hatchInto($, o)))
   const named = wanted ? findFriend(crew, wanted) : undefined
   if (wanted && !named) return missing(w, wanted)
   const leftOf = await evolvesIn($, o.perEvolve)

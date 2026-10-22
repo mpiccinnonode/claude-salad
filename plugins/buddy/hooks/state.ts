@@ -20,24 +20,24 @@ const speaker = atom({ plugin: 'buddy', key: 'speaker' } as const, 0)
 // What the session remembers between events, outside the atoms.
 export type Live = { turns: number; lastAnswer: string; lastCannedAt: number; lastActiveAt: number }
 
-// Before the first hatch there is no crew: a plain common blob with the options' name, soul and species stands in.
+// Before anyone hatches, or with the buddies file broken, there is no crew: a plain common blob stands in, under the key ''.
 const FALLBACK: Bones = { rarity: 'common', species: 'blob', eye: '·', hat: 'none', isShiny: false, stats: { DEBUGGING: 30, PATIENCE: 30, CHAOS: 30, WISDOM: 30, SNARK: 30 }, peak: 'PATIENCE' }
-export const crewOr = (o: Ctx, crew: Member[] | null): [Member, ...Member[]] =>
-  crew?.length ? (crew as [Member, ...Member[]]) : [{ key: '', name: o.name || SOUL.name, personality: o.personality || SOUL.personality, bones: { ...FALLBACK, species: o.species ?? FALLBACK.species } }]
+export const crewOr = (crew: Member[] | null): [Member, ...Member[]] =>
+  crew?.length ? (crew as [Member, ...Member[]]) : [{ key: '', ...SOUL, bones: FALLBACK }]
 
-// Fills the session's atoms from disk; safe to call again whenever they come back empty (a /clear starts them over).
+// Fills the session's atoms from disk; safe to call again whenever they come back empty (a /clear starts them over). Resolves who is out, the stand-in included.
 export async function hatchInto($: EngineInterface, o: Ctx) {
   const [hatched, wasHidden] = await Promise.all([hatchCrew($, o), $.store.get('isHidden')])
   await Promise.all([update($, members, () => hatched), update($, isHidden, () => wasHidden === true), update($, speaker, () => 0), clearDialogue($)])
-  return hatched
+  return crewOr(hatched)
 }
 
 export async function membersNow($: EngineInterface) {
   return read($, members)
 }
 
-export async function crewNow($: EngineInterface, o: Ctx) {
-  return crewOr(o, await read($, members))
+export async function crewNow($: EngineInterface) {
+  return crewOr(await read($, members))
 }
 
 export async function tickNow($: EngineInterface) {
@@ -130,11 +130,12 @@ export async function countSessionTogether($: EngineInterface, o: Ctx) {
     $.ui.toast(w.ready, { timeoutMs: 10000 })
     await say($, w.ready)
   }
-  await countSession($, crew.map(m => m.key))
+  // The stand-in ('') never counts, so it never glows.
+  await countSession($, crew.map(m => m.key).filter(Boolean))
   // Same rule as the egg: repeats until /buddy evolve is spent.
   const leftOf = await evolvesIn($, o.perEvolve)
   for (const [i, m] of crew.entries()) {
-    if (leftOf(m.key) > 0) continue
+    if (!m.key || leftOf(m.key) > 0) continue
     $.ui.toast(w.glow(m.name), { timeoutMs: 10000 })
     await speak($, i, w.glow(m.name))
   }

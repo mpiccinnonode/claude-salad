@@ -6,32 +6,20 @@
   "userConfig": {
     "name": {
       "type": "string",
-      "title": "Name override",
-      "description": "Overrides your original buddy's name.",
+      "title": "Name override (0.8)",
+      "description": "Only for upgrading from 0.8: the override you had is copied into your original buddy's entry in the buddies file, once. Changing it afterwards does nothing; edit the file.",
       "default": ""
     },
     "personality": {
       "type": "string",
-      "title": "Personality override",
-      "description": "Overrides your original buddy's personality, an evolved one included.",
+      "title": "Personality override (0.8)",
+      "description": "Only for upgrading from 0.8: the override you had is copied into your original buddy's entry in the buddies file, once. Changing it afterwards does nothing; edit the file.",
       "default": ""
-    },
-    "everyNTurns": {
-      "type": "number",
-      "title": "Speak every N turns",
-      "description": "How many finished turns between quips (each quip is one Haiku call).",
-      "default": 3
-    },
-    "banterChance": {
-      "type": "number",
-      "title": "Banter chance",
-      "description": "With more than one buddy out: the chance, from 0 to 1, that after a quip the next buddy answers it (one more Haiku call). 0 turns it off.",
-      "default": 0.3
     },
     "species": {
       "type": "string",
-      "title": "Species",
-      "description": "Species of your original buddy: auto = the one it hatched with; or pick any of the 20.",
+      "title": "Species (0.8)",
+      "description": "Only for upgrading from 0.8: the species you had picked is copied into your original buddy's entry in the buddies file, once. Changing it afterwards does nothing; edit the file.",
       "default": "auto",
       "options": [
         "auto",
@@ -56,6 +44,18 @@
         "imp",
         "bat"
       ]
+    },
+    "everyNTurns": {
+      "type": "number",
+      "title": "Speak every N turns",
+      "description": "How many finished turns between quips (each quip is one Haiku call).",
+      "default": 3
+    },
+    "banterChance": {
+      "type": "number",
+      "title": "Banter chance",
+      "description": "With more than one buddy out: the chance, from 0 to 1, that after a quip the next buddy answers it (one more Haiku call). 0 turns it off.",
+      "default": 0.3
     },
     "language": {
       "type": "string",
@@ -86,7 +86,7 @@
     "active": {
       "type": "string",
       "title": "Active buddies",
-      "description": "Names of the buddies to show, comma separated, up to the crew size (e.g. Pip,Mox); empty = every buddy already hatched, your original first. /buddy use, join and leave override it. Unknown names and buddies still in their egg are skipped; with none left, the original comes out.",
+      "description": "Names of the buddies to show, comma separated, up to the crew size (e.g. Pip,Mox); empty = every buddy already hatched, in file order. /buddy use, join and leave override it. Unknown names and buddies still in their egg are skipped; with none left, the first one hatched comes out.",
       "default": ""
     },
     "sessionsPerHatch": {
@@ -104,7 +104,7 @@
     "buddiesFile": {
       "type": "string",
       "title": "Buddies file",
-      "description": "JSON list of your extra buddies: { name, species?, personality? }; personality is a string or { tone, traits, quirks, backstory, speech, catchphrase, likes, dislikes }. /buddy add, rm and evolve write to it.",
+      "description": "JSON list of all your buddies, your original first: { name, species?, personality? }; personality is a string or { tone, traits, quirks, backstory, speech, catchphrase, likes, dislikes }. /buddy add, rm and evolve write to it.",
       "default": "~/.claude/buddy/buddies.json"
     }
   },

@@ -58,14 +58,23 @@ async function withOriginal($: EngineInterface, o: Ctx, book: Book): Promise<{ b
   const kept = (born[''] as Kept | undefined) ?? (migrated === true ? null : await readLegacy($))
   // Claude Code may be mid-write: nothing stored, and the next session tries again.
   if (kept === undefined) return { born, book }
+  // Sessions started together race here: one rekeyed `born` before `moved` landed, so the original is already in the file.
+  if (!kept && Object.keys(born).length) return settled($, o)
   const bones = kept?.bones ?? roll(String(Math.random()))
   const dreamt = kept ? undefined : await dreamUp($, o.old.name || undefined, bones, o.lang)
+  // shortcut: two first sessions whose dreams end within the same instant still both hatch; a store with compare-and-set would close it.
+  if (dreamt && (await $.store.get('moved')) === true) return settled($, o)
   const wanted = o.old.name || kept?.name || dreamt?.name || SOUL.name
+  const species = o.old.species ?? bones.species
+  const personality = asPersonality(o.old.personality) ?? kept?.personality ?? dreamt?.soul
+  // The same original written by a session started alongside is reused, not numbered.
+  const twin = findFriend(book.friends, wanted)
+  const isTwin = !!kept && twin?.species === species && JSON.stringify(twin.personality) === JSON.stringify(asPersonality(personality))
   let name = wanted
-  for (let n = 2; findFriend(book.friends, name); n++) name = `${wanted} ${n}`
-  const friend: Friend = { name, species: o.old.species ?? bones.species, personality: asPersonality(o.old.personality) ?? kept?.personality ?? dreamt?.soul }
-  const raw = [friend, ...book.raw]
-  await writeBook($, book, raw)
+  for (let n = 2; !isTwin && findFriend(book.friends, name); n++) name = `${wanted} ${n}`
+  const friend: Friend = { name, species, personality }
+  const raw = isTwin ? book.raw : [friend, ...book.raw]
+  if (!isTwin) await writeBook($, book, raw)
   const key = keyOf(name)
   const [together, crew] = await Promise.all([togetherOf($), $.store.get('crew')])
   const { '': _, ...others } = born
@@ -77,7 +86,13 @@ async function withOriginal($: EngineInterface, o: Ctx, book: Book): Promise<{ b
     Array.isArray(crew) && $.store.set('crew', crew.map(k => (k === '' ? key : k))),
     $.store.set('moved', true),
   ])
-  return { born: rekeyed, book: { ...book, raw, friends: [friend, ...book.friends] } }
+  return { born: rekeyed, book: { ...book, raw, friends: isTwin ? book.friends : [friend, ...book.friends] } }
+}
+
+// Another session moved the original: fresh reads, so a stale file is never written back over its entry.
+async function settled($: EngineInterface, o: Ctx): Promise<{ born: Births; book: Book }> {
+  await $.store.set('moved', true)
+  return { born: await bornOf($), book: await openBook($, o) }
 }
 
 // A missing file is an empty list; a broken one reports its error and is never written.

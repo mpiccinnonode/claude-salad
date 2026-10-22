@@ -143,11 +143,12 @@ export const titled = (m: Member) => {
   return t ? `${m.name}, ${t}` : m.name
 }
 
-// Every `per` sessions earns one egg; `hatched` only grows, so removing a buddy frees no slot.
+// Eggs are counted from `eggBase` (sessions when the last egg was spent), so changing `per` or losing sessions never leaves a negative count; `hatched * per` seeds it for older stores.
 export async function eggs($: EngineInterface, per: number) {
-  const [s, h] = await Promise.all([$.store.get('sessions'), $.store.get('hatched')])
-  const [sessions, hatched] = [Number(s ?? 0), Number(h ?? 0)]
-  return { done: Math.min(per, sessions - hatched * per), left: (hatched + 1) * per - sessions }
+  const [s, h, b] = await Promise.all([$.store.get('sessions'), $.store.get('hatched'), $.store.get('eggBase')])
+  const sessions = Number(s ?? 0)
+  const base = Math.min(Number(b ?? Number(h ?? 0) * per), sessions)
+  return { base, done: Math.min(per, sessions - base), left: base + per - sessions }
 }
 
 // A random roll over every species; with `fresh`, one nobody in the roster has, unless all are taken.
@@ -171,8 +172,8 @@ export async function hatchNew($: EngineInterface, o: Ctx, friend: Friend, { ros
   const soul = friend.personality ? undefined : dreamt?.soul
   const species = friend.species ?? rolled.species
   if (isNew || soul || !friend.species) await writeBook($, book, upsert(book.raw, name, isNew ? { name, species, personality: friend.personality ?? soul } : { species, personality: soul }))
-  const [born, hatched] = await Promise.all([bornOf($), $.store.get('hatched')])
-  await Promise.all([$.store.set('born', { ...born, [keyOf(name)]: { bones: rolled } }), $.store.set('hatched', Number(hatched ?? 0) + 1)])
+  const [born, hatched, { base }] = await Promise.all([bornOf($), $.store.get('hatched'), eggs($, o.perEgg)])
+  await Promise.all([$.store.set('born', { ...born, [keyOf(name)]: { bones: rolled } }), $.store.set('hatched', Number(hatched ?? 0) + 1), $.store.set('eggBase', base + o.perEgg)])
   return { name }
 }
 

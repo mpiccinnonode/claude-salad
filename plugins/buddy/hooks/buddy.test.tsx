@@ -228,6 +228,12 @@ test('a new buddy hatches only every N sessions together, and removing one frees
   expect(await run('dance')).toContain('Usage')
 })
 
+test('the egg counter never goes negative when sessions fall behind hatched eggs or the price changes', { options: { language: 'en', sessionsPerHatch: 70 } }, async ($, on) => {
+  const { run } = rig($, on, {}, { sessions: 75, hatched: 3 })
+  expect(await run('list')).toContain('Next egg: 0/70')
+  expect(await run('add Zed robot Calm.')).toContain('70 more sessions')
+})
+
 test('hatching: ~/.claude.json is read once to keep the original, the others are random, and what is born stays', { options: { language: 'en', active: 'Zed', sessionsPerHatch: 1 } }, async ($, on) => {
   const { reads, run, start, card } = rig($, on, { '/home/t/.claude.json': LEGACY, [FILE]: JSON.stringify([ZED]) })
 

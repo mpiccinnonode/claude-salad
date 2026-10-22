@@ -3,11 +3,11 @@
 The `/buddy` companion Claude Code shipped in April 2026 and removed in 2.1.97, brought back as a mod. Your buddy sits above the prompt, animated, and reacts to your work.
 
 - **Random, and yours to keep.** Every buddy hatches from a random seed, the same odds for everyone: species (one of 20, equally likely), rarity (★ 60%, ★★ 25%, ★★★ 10%, ★★★★ 4%, ★★★★★ 1%), eyes, hat and five stats (DEBUGGING, PATIENCE, CHAOS, WISDOM, SNARK). A name or personality you don't give it, Haiku invents. Whatever hatches is kept: a buddy looks the same every session.
-- **Keeps the buddy you had.** On its first run it reads `~/.claude.json` once and keeps the buddy you had (from the original `/buddy` or buddy 0.2.0): its name, personality and body, re-rolled from your account id with the original algorithm. It never reads the file again.
+- **Keeps the buddy you had.** On its first run it reads `~/.claude.json` once and keeps the buddy you had (from the original `/buddy` or buddy 0.2.0): its name, personality and body, re-rolled from your account id with the original algorithm. It never reads the file again, and writes that buddy at the top of the buddies file like any other.
 - **Animated part by part.** It blinks, looks around, hops, flaps, wags and twitches. Every species has its own body language when petted, poked or asleep: a cat flattens its ears, a turtle hides in its shell, a cactus blooms. While Claude works it waddles, and after about 30 seconds of quiet it dozes off.
 - **Reacts to your work.** It has canned lines for failed commands, failing tests, commits and late-night commits, drawn from its species and its strongest stat. Every few turns Haiku writes it a fresh in-character quip.
 - **Clickable.** Click the buddy (or press `1`) to pet it. `2` pokes it, `3` asks it to talk, `4` shows its stats card, `×` hides it.
-- **More than one.** Keep extra buddies in a JSON file, each with its own species, personality and random rarity, hat and stats, and pick which one is out. Each new one costs an egg, earned by sessions together. Put it on the left or the right of the band.
+- **More than one.** Keep every buddy in one JSON file, your first one included, each with its own species, personality and random rarity, hat and stats, and pick which one is out. Each new one costs an egg, earned by sessions together. Put it on the left or the right of the band.
 - **Evolves.** Enough sessions together and a buddy can evolve when you say so: a rarity up, better stats, a stranger personality and an epithet after its name.
 - **Personalities with depth.** Write one as a sentence or field by field (tone, traits, quirks, backstory, speech, catchphrase, likes, dislikes). Leave it out and Haiku dreams one up when the buddy hatches, shaped by its species and stats, and writes it into the file for you to tweak.
 
@@ -46,14 +46,11 @@ The number keys work while the band has focus (`ctrl+x tab`, or click it). Click
 
 | Option | Type | Default | Effect |
 | --- | --- | --- | --- |
-| `name` | string | `""` | Overrides your original buddy's name, whether it came from `~/.claude.json` or from Haiku. |
-| `personality` | string | `""` | Overrides your original buddy's personality, an evolved one included. |
 | `everyNTurns` | number | `3` | Finished turns between Haiku quips. With a crew, each quip comes from the next buddy in turn. |
 | `banterChance` | number | `0.3` | With more than one buddy out, the chance that after a quip the next buddy answers it, once (one more Haiku call). `0` turns it off. |
-| `species` | string | `auto` | Your original buddy's species: `auto` keeps the hatched one; pick any of the 20 to try another. |
-| `buddiesFile` | string | `~/.claude/buddy/buddies.json` | Where your extra buddies live (see below). |
+| `buddiesFile` | string | `~/.claude/buddy/buddies.json` | Where your buddies live (see below). |
 | `crewSize` | number | `3` | How many buddies can be out at once. The band shows as many as the terminal has room for (beside the bubble, then above it), always including the one talking; the rest are named in its bubble. |
-| `active` | string | `""` | Which buddies are out, comma separated, up to `crewSize` (e.g. `Pip,Mox`); empty means every buddy already hatched, your original first. `/buddy use`, `join` and `leave` override it. Unknown names and buddies still in their egg are skipped. |
+| `active` | string | `""` | Which buddies are out, comma separated, up to `crewSize` (e.g. `Pip,Mox`); empty means every buddy already hatched, in file order. `/buddy use`, `join` and `leave` override it. Unknown names and buddies still in their egg are skipped. |
 | `sessionsPerHatch` | number | `70` | Sessions together for each egg. |
 | `sessionsPerEvolve` | number | `50` | Sessions with a buddy out before a common one can evolve; each rarity up multiplies it (see below). |
 | `position` | string | `left` | `left` or `right`: on the right the buddy sits against the right edge, its bubble to its left. |
@@ -61,11 +58,13 @@ The number keys work while the band has focus (`ctrl+x tab`, or click it). Click
 
 Set them in `/config`, or in `settings.json` under `pluginConfigs`, keyed `buddy@mpiccinnonode`.
 
-No buddy in `~/.claude.json`? Your first one hatches random, and Haiku gives it a name and a personality (Buddy, with a plain personality, if that call fails).
+No buddy in `~/.claude.json`? Your first one hatches free and random, and Haiku gives it a name and a personality (Buddy, with a plain personality, if that call fails); it is written into the buddies file.
+
+Upgrading from 0.8: your original buddy moves from the plugin's store to the top of the buddies file once, with its body, epithet, sessions and place in the crew. The `name`, `personality` and `species` options are gone: whatever you had set goes into its entry, where you edit it from now on. If its name is already taken in the file it becomes `Name 2`. While the file is not valid JSON the move waits, and a plain stand-in shows.
 
 ## The buddies file
 
-A JSON list. Only `name` is required; any other field you add is kept as is.
+The one place every buddy lives, a JSON list. Only `name` is required; any other field you add is kept as is.
 
 ```json
 [
@@ -87,17 +86,17 @@ A JSON list. Only `name` is required; any other field you add is kept as is.
 ]
 ```
 
-Every buddy in the file starts as an egg: you earn one egg every `sessionsPerHatch` sessions (70 by default), and `/buddy use <name>` spends it. A toast, and the buddy itself, tell you when an egg is ready; a bare `/buddy` then hatches a brand-new one whose name is the surprise; it leads the crew, or waits on the bench when the crew is full. Hatching rolls the rest at random. If the buddy has no personality, Haiku writes one into the file then. A file that is not valid JSON is reported by `/buddy list` and never written.
+Every buddy you add to the file starts as an egg: you earn one egg every `sessionsPerHatch` sessions (70 by default), and `/buddy use <name>` spends it. A toast, and the buddy itself, tell you when an egg is ready; a bare `/buddy` then hatches a brand-new one whose name is the surprise; it leads the crew, or waits on the bench when the crew is full. Hatching rolls the rest at random. If the buddy has no personality, Haiku writes one into the file then. A file that is not valid JSON is reported by `/buddy list` and never written.
 
 ## Crew
 
-Up to `crewSize` buddies (3 by default) can be out at once. Until you pick with `/buddy use`, `join` or `leave` (or set `active`), the crew forms on its own: every buddy already hatched, your original first; the one picked with `/buddy use` in 0.4 leads it. A newborn joins while there is room. They sit side by side and take turns: each quip, canned line or button press comes from the one with the floor, marked by `▲`/`▼` under its sprite, and clicking a buddy gives it the floor. Now and then the next one answers back (`banterChance`). Each counts its own sessions towards evolving.
+Up to `crewSize` buddies (3 by default) can be out at once. Until you pick with `/buddy use`, `join` or `leave` (or set `active`), the crew forms on its own: every buddy already hatched, in file order; the one picked with `/buddy use` in 0.4 leads it. A newborn joins while there is room. They sit side by side and take turns: each quip, canned line or button press comes from the one with the floor, marked by `▲`/`▼` under its sprite, and clicking a buddy gives it the floor. Now and then the next one answers back (`banterChance`). Each counts its own sessions towards evolving.
 
 As the terminal narrows the band gives way in steps: the sprites move above the bubble, then fewer of them, always with the one talking (the others are listed after its name), and below about 42 columns it is a single line, `Name: quip`. A short band skips the stacked steps.
 
 ## Evolution
 
-Like a Pokémon, the rarer a buddy, the longer it takes: from its last evolution (or its hatching), a common buddy needs `sessionsPerEvolve` sessions out (50 by default), an uncommon one twice that, a rare one three times, an epic one four, a legendary one five. Then it is ready to evolve: a toast, and the buddy itself, say so. Nothing happens until you type `/buddy evolve`. Then its rarity goes up one step (legendary stays legendary), it gets a hat if it had none, every stat goes up (its strongest one most), and Haiku rewrites its personality: the same buddy, only stranger, pushed along its stats. It also earns an epithet after its name, in the language you set, e.g. "Urchin, the Winged Sarcasm" or "Urchin, Sarcasmo Alato"; each evolution replaces it with a grander one. A file buddy's new personality is written into the buddies file. If Haiku fails, nothing changes and you can try again.
+Like a Pokémon, the rarer a buddy, the longer it takes: from its last evolution (or its hatching), a common buddy needs `sessionsPerEvolve` sessions out (50 by default), an uncommon one twice that, a rare one three times, an epic one four, a legendary one five. Then it is ready to evolve: a toast, and the buddy itself, say so. Nothing happens until you type `/buddy evolve`. Then its rarity goes up one step (legendary stays legendary), it gets a hat if it had none, every stat goes up (its strongest one most), and Haiku rewrites its personality: the same buddy, only stranger, pushed along its stats. It also earns an epithet after its name, in the language you set, e.g. "Urchin, the Winged Sarcasm" or "Urchin, Sarcasmo Alato"; each evolution replaces it with a grander one. The new personality is written into the buddies file. If Haiku fails, nothing changes and you can try again.
 
 ## What it hooks
 

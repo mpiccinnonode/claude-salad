@@ -1,5 +1,9 @@
 # Changelog
 
+## buddy 0.9.0 → 0.9.1
+
+- fix(buddy): sessions started together move the original into the buddies file once, with no numbered twin or extra random buddy
+
 ## buddy 0.8.0 → 0.9.0
 
 - feat(buddy): add the skeleton species, with rare and epic stages

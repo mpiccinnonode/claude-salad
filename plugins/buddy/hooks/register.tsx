@@ -9,7 +9,7 @@ import { HINT, WORDS } from './words.ts'
 
 export const register: Register = (on, options) => {
   const o: Ctx = {
-    // No longer declared: whatever 0.8 had set is carried into the buddies file once.
+    // Still declared only because undeclared options never reach register: 0.8's overrides are carried into the buddies file once.
     old: { name: String(options.name ?? ''), personality: String(options.personality ?? ''), species: options.species && options.species !== 'auto' ? String(options.species) : undefined },
     active: String(options.active),
     file: String(options.buddiesFile || '~/.claude/buddy/buddies.json'),

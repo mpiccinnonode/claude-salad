@@ -60,7 +60,7 @@ Set them in `/config`, or in `settings.json` under `pluginConfigs`, keyed `buddy
 
 No buddy in `~/.claude.json`? Your first one hatches free and random, and Haiku gives it a name and a personality (Buddy, with a plain personality, if that call fails); it is written into the buddies file.
 
-Upgrading from 0.8: your original buddy moves from the plugin's store to the top of the buddies file once, with its body, epithet, sessions and place in the crew. The `name`, `personality` and `species` options are gone: whatever you had set goes into its entry, where you edit it from now on. If its name is already taken in the file it becomes `Name 2`. While the file is not valid JSON the move waits, and a plain stand-in shows.
+Upgrading from 0.8: your original buddy moves from the plugin's store to the top of the buddies file once, with its body, epithet, sessions and place in the crew. Whatever you had set in the `name`, `personality` and `species` options goes into its entry, where you edit it from now on; those options stay in `/config` only for this move and do nothing afterwards. If its name is already taken in the file it becomes `Name 2`. While the file is not valid JSON the move waits, and a plain stand-in shows.
 
 ## The buddies file
 

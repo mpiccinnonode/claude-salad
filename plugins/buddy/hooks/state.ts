@@ -1,7 +1,7 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface } from 'claude-code'
 import type { Bones, Member, Pressed, Quip } from '../types'
-import { countSession, eggs, evolvesIn, hatchCrew, SOUL, titled } from './crew.ts'
+import { countSession, eggs, evolvesIn, hatchCrew, soulUp, SOUL, titled } from './crew.ts'
 import type { Ctx } from './crew.ts'
 import { line } from './lines.ts'
 import type { Reason } from './lines.ts'
@@ -27,6 +27,7 @@ export const crewOr = (crew: Member[] | null): [Member, ...Member[]] =>
 
 // Fills the session's atoms from disk; safe to call again whenever they come back empty (a /clear starts them over). Resolves who is out, the stand-in included.
 export async function hatchInto($: EngineInterface, o: Ctx) {
+  await soulUp($, o)
   const [hatched, wasHidden] = await Promise.all([hatchCrew($, o), $.store.get('isHidden')])
   await Promise.all([update($, members, () => hatched), update($, isHidden, () => wasHidden === true), update($, speaker, () => 0), clearDialogue($)])
   return crewOr(hatched)

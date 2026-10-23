@@ -1,5 +1,9 @@
 # Changelog
 
+## buddy 0.9.1 → 0.9.2
+
+- fix(buddy): a buddy born without a personality (Haiku failed at hatch) gets one dreamt at the next session instead of staying bare
+
 ## buddy 0.9.0 → 0.9.1
 
 - fix(buddy): sessions started together move the original into the buddies file once, with no numbered twin or extra random buddy

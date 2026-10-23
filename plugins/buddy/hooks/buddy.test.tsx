@@ -184,6 +184,17 @@ test('sessions started together: one that finds the original already moved adds 
   expect(dreams).toBe(0)
 })
 
+test('a buddy born without a personality gets one dreamt at the next session and written back; a failed dream retries later', { options: { language: 'en' } }, async ($, on) => {
+  let ok = false
+  on('model.complete', () => answer(ok ? JSON.stringify({ tone: 'prim', traits: ['fussy'] }) : 'not json'))
+  const { start, book } = rig($, on, { [FILE]: JSON.stringify([{ name: 'Buddy', species: 'goose' }]) }, { moved: true, born: { buddy: { bones: roll('x') } } })
+  await start()
+  expect(book()).toEqual([{ name: 'Buddy', species: 'goose' }])
+  ok = true
+  await start()
+  expect(book()).toEqual([{ name: 'Buddy', species: 'goose', personality: { tone: 'prim', traits: ['fussy'] } }])
+})
+
 test('language it: command text and canned lines are Italian', { options: { language: 'it' } }, async ($, on) => {
   expect(await rig($, on).run('')).toContain('ondeggiando')
   expect(line('commit', 'SNARK', 'cat', 0, 'it')).toContain('tastiera')
@@ -217,8 +228,8 @@ test('buddies.json: its buddies are eggs until /buddy use spends one; a missing 
   expect(await run('use Pippo')).toContain('Pippo is still an egg: 1 more session together')
   await start()
   expect(await run('use Pippo')).toContain('Pippo hops in')
-  // One for the original (no ~/.claude.json), one for Nino; none for Pippo, who brought his own.
-  expect(systems.filter(s => s.includes('invent personalities'))).toHaveLength(2)
+  // One for the original (no ~/.claude.json), one for Nino, one retry for the original's missing soul at the second start; none for Pippo, who brought his own.
+  expect(systems.filter(s => s.includes('invent personalities'))).toHaveLength(3)
   expect(book()[2]).toEqual({ name: 'Pippo', species: expect.any(String), personality: { tone: 'anxious', traits: 'always' } })
   const ui = await mount()
   await ui.press({ key: 'talk' })
@@ -502,6 +513,8 @@ for (const banterChance of [0, 1])
     on('turn.complete', ($, e) => ({ text: e.answer }))
     const asks: { system: string; prompt: string }[] = []
     on('model.complete', ($, e) => {
+      // Pebble has no soul, so each start also dreams one; not a quip.
+      if (e.system?.includes('invent personalities')) return answer('{}')
       asks.push({ system: e.system ?? '', prompt: e.prompt ?? '' })
       return answer(`line ${asks.length}`)
     })

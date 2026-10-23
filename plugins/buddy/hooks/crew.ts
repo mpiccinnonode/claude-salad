@@ -126,6 +126,19 @@ export async function rosterOf($: EngineInterface, o: Ctx) {
   await recordSpecies($, book, roster, born)
   return { roster, born, book }
 }
+// A buddy born without a personality (Haiku failed at hatch) gets one dreamt at the next session start; a failure changes nothing and retries then.
+export async function soulUp($: EngineInterface, o: Ctx) {
+  const { roster, born, book } = await rosterOf($, o)
+  const bare = book.error ? [] : roster.filter(e => born[e.key] && !e.personality)
+  const dreamt = await Promise.all(bare.map(e => dreamUp($, e.name, { ...born[e.key]!.bones, species: e.species ?? born[e.key]!.bones.species }, o.lang)))
+  const souls = bare.flatMap((e, i) => (dreamt[i]?.soul ? [{ name: e.name, soul: dreamt[i]!.soul }] : []))
+  if (!souls.length) return
+  // Fresh read, so a file edited while Haiku was thinking is never written back stale.
+  const fresh = await openBook($, o)
+  if (fresh.error) return
+  await writeBook($, fresh, souls.reduce((raw, { name, soul }) => (findFriend(fresh.friends, name)?.personality ? raw : upsert(raw, name, { personality: soul })), fresh.raw))
+}
+
 // A buddy hatched before species lived in the file gets its rolled one written once, so the file can override it.
 async function recordSpecies($: EngineInterface, book: Book, roster: Entry[], born: Births) {
   const missing = book.error ? [] : roster.filter(e => !e.species && born[e.key])

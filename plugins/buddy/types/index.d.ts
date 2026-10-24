@@ -13,10 +13,12 @@ export type Bones = {
 // A buddy that is out: `key` is its slot in `born` ('' for the stand-in), `personality` already prompt text.
 export type Member = { key: string; name: string; title?: string; personality: string; bones: Bones }
 export type Quip = string | null
+// What is ready to spend: an egg, and the names of the buddies out that can evolve.
+export type Ready = { egg: boolean; glow: string[] }
 export type Pressed = { kind: 'pet' | 'poke'; at: number; who: string } | null
 
 declare module 'claude-code' {
   interface PluginState {
-    buddy: { quip: Quip; isHidden: boolean; tick: number; members: Member[] | null; pressed: Pressed; isStats: boolean; speaker: number }
+    buddy: { quip: Quip; isHidden: boolean; tick: number; members: Member[] | null; pressed: Pressed; isStats: boolean; speaker: number; ready: Ready }
   }
 }

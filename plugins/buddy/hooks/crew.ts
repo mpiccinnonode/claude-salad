@@ -12,8 +12,8 @@ export type Ctx = { old: { name: string; personality: string; species?: string }
 
 export const SOUL = { name: 'Buddy', personality: 'A small, curious terminal companion who comments on your work.' }
 
-// `stage` counts evolutions, `at` the sessions together when the last one was spent; `title` is the epithet, in both languages.
-type Born = { bones: Bones; stage?: number; at?: number; title?: Record<Lang, string> }
+// `stage` counts evolutions, `ats` the turns together when the last one was spent (`at`: the same in sessions, before turns counted); `title` is the epithet, in both languages.
+type Born = { bones: Bones; stage?: number; at?: number; ats?: number; title?: Record<Lang, string> }
 type Births = Record<string, Born>
 // Until 0.9 the original kept its name and soul in the store, under ''.
 type Kept = Born & { name?: string; personality?: Personality }
@@ -24,8 +24,40 @@ async function bornOf($: EngineInterface) {
   return ((await $.store.get('born')) ?? {}) as Births
 }
 
-async function togetherOf($: EngineInterface) {
+// Before turns counted, 0.9 kept sessions per buddy here; it is read, never written again.
+async function legacyTogether($: EngineInterface) {
   return ((await $.store.get('together')) ?? {}) as Record<string, number>
+}
+
+// What a session counts: every turn, and the turns of each buddy that was out for it.
+export type Tally = { all: number; by: Record<string, number> }
+const TALLY = 'tally:'
+// A session's sessions were worth about this many turns when 0.9's counts are carried over.
+const TURNS_PER_SESSION = 20
+
+// The store has no compare-and-set, so no counter is read-modify-written by two sessions: each session writes only its own `tally:<id>` and a total is the sum of them all.
+// ponytail: tallies are never folded together, ~60 bytes a session against the store's 4 MiB; fold them under one idempotent key if that ever shows.
+export async function writeTally($: EngineInterface, id: string, tally: Tally) {
+  await $.store.set(`${TALLY}${id}`, tally)
+}
+
+async function tallies($: EngineInterface) {
+  const keys = (await $.store.keys()).filter(k => k.startsWith(TALLY))
+  return (await Promise.all(keys.map(k => $.store.get(k)))).filter((t): t is Tally => !!t) as Tally[]
+}
+
+async function turnsTogether($: EngineInterface) {
+  const [sessions, all] = await Promise.all([$.store.get('sessions'), tallies($)])
+  return Number(sessions ?? 0) * TURNS_PER_SESSION + all.reduce((n, t) => n + t.all, 0)
+}
+
+// Turns per buddy; `zero` is what each one had when it was removed, so a buddy added again under the same name starts over.
+async function togetherOf($: EngineInterface) {
+  const [legacy, all, zero] = await Promise.all([legacyTogether($), tallies($), $.store.get('zero')])
+  const total: Record<string, number> = Object.fromEntries(Object.entries(legacy).map(([k, n]) => [k, n * TURNS_PER_SESSION]))
+  for (const t of all) for (const [k, n] of Object.entries(t.by)) total[k] = (total[k] ?? 0) + n
+  for (const [k, n] of Object.entries((zero ?? {}) as Record<string, number>)) if (k in total) total[k] = Math.max(0, total[k]! - n)
+  return total
 }
 
 // Claude Code's own ~: USERPROFILE on Windows (even where Git Bash sets HOME), HOME elsewhere.
@@ -76,10 +108,10 @@ async function withOriginal($: EngineInterface, o: Ctx, book: Book): Promise<{ b
   const raw = isTwin ? book.raw : [friend, ...book.raw]
   if (!isTwin) await writeBook($, book, raw)
   const key = keyOf(name)
-  const [together, crew] = await Promise.all([togetherOf($), $.store.get('crew')])
+  const [together, crew] = await Promise.all([legacyTogether($), $.store.get('crew')])
   const { '': _, ...others } = born
   const { '': count, ...counts } = together
-  const rekeyed = { ...others, [key]: { bones, stage: kept?.stage, at: kept?.at, title: kept?.title } }
+  const rekeyed = { ...others, [key]: { bones, stage: kept?.stage, at: kept?.at, ats: kept?.ats, title: kept?.title } }
   await Promise.all([
     $.store.set('born', rekeyed),
     $.store.set('together', count === undefined ? counts : { ...counts, [key]: count }),
@@ -183,12 +215,11 @@ export const titled = (m: Member) => {
   return t ? `${m.name}, ${t}` : m.name
 }
 
-// Eggs are counted from `eggBase` (sessions when the last egg was spent), so changing `per` or losing sessions never leaves a negative count; `hatched * per` seeds it for older stores.
+// Eggs are counted from `eggAt` (turns when the last egg was spent), so changing `per` or losing turns never leaves a negative count; the sessions-based `eggBase` of 0.9, else `hatched * per`, seeds it for older stores.
 export async function eggs($: EngineInterface, per: number) {
-  const [s, h, b] = await Promise.all([$.store.get('sessions'), $.store.get('hatched'), $.store.get('eggBase')])
-  const sessions = Number(s ?? 0)
-  const base = Math.min(Number(b ?? Number(h ?? 0) * per), sessions)
-  return { base, done: Math.min(per, sessions - base), left: base + per - sessions }
+  const [turns, h, at, b] = await Promise.all([turnsTogether($), $.store.get('hatched'), $.store.get('eggAt'), $.store.get('eggBase')])
+  const base = Math.min(Number(at ?? (b === undefined ? Number(h ?? 0) * per : Number(b) * TURNS_PER_SESSION)), turns)
+  return { base, done: Math.min(per, turns - base), left: base + per - turns }
 }
 
 // A random roll over every species; with `fresh`, one nobody in the roster has, unless all are taken.
@@ -213,7 +244,7 @@ export async function hatchNew($: EngineInterface, o: Ctx, friend: Friend, { ros
   const species = friend.species ?? rolled.species
   if (isNew || soul || !friend.species) await writeBook($, book, upsert(book.raw, name, isNew ? { name, species, personality: friend.personality ?? soul } : { species, personality: soul }))
   const [born, hatched, { base }] = await Promise.all([bornOf($), $.store.get('hatched'), eggs($, o.perEgg)])
-  await Promise.all([$.store.set('born', { ...born, [keyOf(name)]: { bones: rolled } }), $.store.set('hatched', Number(hatched ?? 0) + 1), $.store.set('eggBase', base + o.perEgg)])
+  await Promise.all([$.store.set('born', { ...born, [keyOf(name)]: { bones: rolled } }), $.store.set('hatched', Number(hatched ?? 0) + 1), $.store.set('eggAt', base + o.perEgg)])
   return { name }
 }
 
@@ -226,21 +257,15 @@ export async function outOfEgg($: EngineInterface, o: Ctx, e: Entry, r: Roster):
   return 'failed' in hatched ? hatched.failed : undefined
 }
 
-// Each evolution costs `per` sessions times the rarity step (common 1×, legendary 5×), counted from the last one. Sessions left, by key.
+// Each evolution costs `per` turns times the rarity step (common 1×, legendary 5×), counted from the last one. Turns left, by key.
 export async function evolvesIn($: EngineInterface, per: number) {
   const [together, born] = await Promise.all([togetherOf($), bornOf($)])
   return (key: string) => {
     const b = born[key]
-    // Buddies evolved before `at` existed: estimate the last evolution as stage × per; the rarity gap still applies.
-    const since = b?.at ?? (b?.stage ?? 0) * per
+    // `at` is 0.9's, in sessions; before it existed, estimate the last evolution as stage × per. The rarity gap still applies.
+    const since = b?.ats ?? (b?.at === undefined ? (b?.stage ?? 0) * per : b.at * TURNS_PER_SESSION)
     return since + per * (RARITIES.indexOf(b?.bones.rarity ?? 'common') + 1) - Number(together[key] ?? 0)
   }
-}
-
-// One write for the whole crew, so no count is lost to a parallel read.
-export async function countSession($: EngineInterface, keys: string[]) {
-  const together = await togetherOf($)
-  await $.store.set('together', { ...together, ...Object.fromEntries(keys.map(k => [k, (together[k] ?? 0) + 1])) })
 }
 
 // Spends a ready evolution on a buddy that is out; nothing changes unless Haiku delivers the new soul. The line to show when it fails.
@@ -254,13 +279,13 @@ export async function evolveNow($: EngineInterface, o: Ctx, m: Member): Promise<
   const dreamt = await dreamOn($, m.name, m.personality, { ...grown, species: m.bones.species }, m.title, o.lang)
   if (!dreamt) return w.noEvolve
   await writeBook($, book, upsert(book.raw, m.name, { personality: dreamt.soul }))
-  await $.store.set('born', { ...born, [m.key]: { ...was, bones: grown, stage: (was.stage ?? 0) + 1, at: Number(together[m.key] ?? 0), title: dreamt.title } })
+  await $.store.set('born', { ...born, [m.key]: { ...was, bones: grown, stage: (was.stage ?? 0) + 1, ats: Number(together[m.key] ?? 0), title: dreamt.title } })
   return undefined
 }
 
 export async function forget($: EngineInterface, key: string) {
-  const [born, together] = await Promise.all([bornOf($), togetherOf($)])
+  const [born, together, zero] = await Promise.all([bornOf($), togetherOf($), ($.store.get('zero') as Promise<Record<string, number> | undefined>).then(z => z ?? {})])
   delete born[key]
-  delete together[key]
-  await Promise.all([$.store.set('born', born), $.store.set('together', together)])
+  // `together` is already net of the old zero, so the new one adds to it.
+  await Promise.all([$.store.set('born', born), $.store.set('zero', { ...zero, [key]: (zero[key] ?? 0) + (together[key] ?? 0) })])
 }

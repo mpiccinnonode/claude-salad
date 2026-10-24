@@ -1,6 +1,6 @@
 import type { EngineInterface, RenderInput } from 'claude-code'
 import type { Bones, StatName } from '../types'
-import { layoutFor, SPRITE, windowOf } from './band.ts'
+import { layoutFor, NOTICE, SPRITE, windowOf } from './band.ts'
 import { RARITIES, STAT_NAMES } from './bones.ts'
 import { titled } from './crew.ts'
 import type { Ctx } from './crew.ts'
@@ -15,7 +15,7 @@ const BUTTONS = ['pet', 'poke', 'talk', 'stats'] as const
 
 // The band above the prompt; undefined when it yields, to a survey or because the buddy is hidden.
 export async function drawBand($: EngineInterface, e: RenderInput<'AbovePrompt'>, o: Ctx, live: Live) {
-  const { hidden, said, frame, out, p, showStats, floor } = await snapshot($)
+  const { hidden, said, frame, out, p, showStats, floor, due } = await snapshot($)
   if (e.props.hasSurvey || hidden) return undefined
 
   const w = WORDS[o.lang]
@@ -27,7 +27,8 @@ export async function drawBand($: EngineInterface, e: RenderInput<'AbovePrompt'>
   // ponytail: ~30s with nothing happening and it dozes off
   const isAsleep = frame - Math.max(live.lastActiveAt, p?.at ?? 0) > 100
   const age = p ? frame - p.at : 0
-  const layout = layoutFor(e.props.bodyColumns, e.props.maxRows, crew.length)
+  const notes = [...(due.egg ? [w.eggBox] : []), ...due.glow.map(w.glowBox)]
+  const layout = layoutFor(e.props.bodyColumns, e.props.maxRows, crew.length, notes.length > 0)
   const shown = windowOf(crew.length, layout.count, at)
   const { Box, Button, Text } = $.ui.resolve(e)
 
@@ -91,6 +92,13 @@ export async function drawBand($: EngineInterface, e: RenderInput<'AbovePrompt'>
       </Box>
     </Box>
   )
+  // Beside the bubble, never over it: what is ready to spend, one line each, the rest counted.
+  const shownNotes = notes.length > 3 ? [...notes.slice(0, 2), w.moreBox(notes.length - 2)] : notes
+  const notice = layout.hasNotice && (
+    <Box key="notice" flexDirection="column" borderStyle="round" paddingX={1} marginLeft={1} width={NOTICE.columns - 1} flexShrink={0}>
+      {shownNotes.map((text, i) => <Text key={`note-${i}`} color="yellow" wrap="truncate-end">{text}</Text>)}
+    </Box>
+  )
   const hide = <Button key="hide" label="×" onPress={() => setHidden($, true)} />
   const width = o.isRight ? '100%' : undefined
   const row = o.isRight ? 'row-reverse' : 'row'
@@ -99,13 +107,13 @@ export async function drawBand($: EngineInterface, e: RenderInput<'AbovePrompt'>
     return (
       <Box key="band" flexDirection="column" alignItems={o.isRight ? 'flex-end' : 'flex-start'} width={width}>
         <Box key="top" flexDirection={row}>{sprites}{hide}</Box>
-        {bubble}
+        <Box key="speech" flexDirection={row}>{bubble}{notice}</Box>
       </Box>
     )
   }
   return (
     <Box key="band" flexDirection={row} width={width}>
-      {sprites}{bubble}{hide}
+      {sprites}{bubble}{notice}{hide}
     </Box>
   )
 }

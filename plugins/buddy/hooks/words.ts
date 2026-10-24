@@ -2,8 +2,8 @@ import type { Lang } from './lines.ts'
 
 export const HINT = 'list | use <name> | join <name> | leave <name> | add [name] [species] [personality] | rm <name> | evolve [name]'
 
-const sessions = (n: number) => `${n} more session${n === 1 ? '' : 's'}`
-const sessioni = (n: number) => (n === 1 ? 'manca una sessione' : `mancano ${n} sessioni`)
+const turns = (n: number) => `${n} more turn${n === 1 ? '' : 's'}`
+const turni = (n: number) => (n === 1 ? 'manca un turno' : `mancano ${n} turni`)
 
 const en = {
   thinks: '*thinks*',
@@ -15,8 +15,8 @@ const en = {
   added: (n: string) => `${n} hatched.`,
   taken: (n: string) => `There is already a buddy called ${n}.`,
   removed: (n: string) => `${n} waves goodbye.`,
-  locked: (left: number) => `No egg yet: ${sessions(left)} together and one hatches.`,
-  stillEgg: (n: string, left: number) => `${n} is still an egg: ${sessions(left)} together.`,
+  locked: (left: number) => `No egg yet: ${turns(left)} together and one hatches.`,
+  stillEgg: (n: string, left: number) => `${n} is still an egg: ${turns(left)} together.`,
   joined: (n: string) => `${n} joins the crew.`,
   full: (max: number) => `The crew is full (${max}). /buddy leave <name> first.`,
   already: (n: string) => `${n} is already in the crew.`,
@@ -28,13 +28,14 @@ const en = {
   noHome: 'Neither USERPROFILE nor HOME is set, so ~/ in buddiesFile leads nowhere.',
   noName: 'Haiku could not name it, so no egg was spent. Try /buddy add <name>.',
   dream: 'Write every value in English.',
-  ready: 'An egg is wobbling! Type /buddy to find out who hatches.',
+  eggBox: '★ Egg ready · /buddy',
   born: (n: string) => `Crack! Say hi to ${n}.`,
-  glow: (n: string) => `${n} is glowing! Type /buddy evolve when you are ready.`,
+  glowBox: (n: string) => `★ ${n} · /buddy evolve`,
+  moreBox: (n: number) => `+${n}`,
   evolved: (n: string) => `${n} has evolved!`,
-  notYet: (n: string, left: number) => `${n} evolves after ${sessions(left)} together.`,
+  notYet: (n: string, left: number) => `${n} evolves after ${turns(left)} together.`,
   noEvolve: 'Haiku could not evolve it, so nothing changed. Try again.',
-  egg: (done: number, per: number) => `Next egg: ${done}/${per} sessions together.`,
+  egg: (done: number, per: number) => `Next egg: ${done}/${per} turns together.`,
   usage: `Usage: /buddy [${HINT}]`,
   chatAnswer: 'Someone clicked you to chat. What the assistant last said:',
   chatEmpty: 'Someone clicked you to chat. Say something.',
@@ -55,8 +56,8 @@ const it: typeof en = {
   added: n => `${n} è nato.`,
   taken: n => `C'è già un buddy di nome ${n}.`,
   removed: n => `${n} ti saluta e se ne va.`,
-  locked: left => `Ancora nessun uovo: ${sessioni(left)} insieme perché se ne schiuda uno.`,
-  stillEgg: (n, left) => `${n} è ancora un uovo: ${sessioni(left)} insieme.`,
+  locked: left => `Ancora nessun uovo: ${turni(left)} insieme perché se ne schiuda uno.`,
+  stillEgg: (n, left) => `${n} è ancora un uovo: ${turni(left)} insieme.`,
   joined: n => `${n} si unisce alla squadra.`,
   full: (max: number) => `La squadra è al completo (${max}). Prima /buddy leave <nome>.`,
   already: n => `${n} è già in squadra.`,
@@ -68,13 +69,14 @@ const it: typeof en = {
   noHome: 'Né USERPROFILE né HOME sono impostate, quindi ~/ in buddiesFile non porta da nessuna parte.',
   noName: 'Haiku non è riuscito a dargli un nome, quindi nessun uovo è stato speso. Prova /buddy add <nome>.',
   dream: 'Scrivi ogni valore in italiano.',
-  ready: 'Un uovo si sta muovendo! Scrivi /buddy e scopri chi nasce.',
+  eggBox: '★ Uovo pronto · /buddy',
   born: n => `Crac! Saluta ${n}.`,
-  glow: n => `${n} brilla! Scrivi /buddy evolve quando sei pronto.`,
+  glowBox: n => `★ ${n} · /buddy evolve`,
+  moreBox: n => `+${n}`,
   evolved: n => `${n} si è evoluto!`,
-  notYet: (n, left) => `${n} si evolve dopo ${left === 1 ? 'un\'altra sessione' : `altre ${left} sessioni`} insieme.`,
+  notYet: (n, left) => `${n} si evolve dopo ${left === 1 ? 'un altro turno' : `altri ${left} turni`} insieme.`,
   noEvolve: 'Haiku non è riuscito a farlo evolvere, quindi non è cambiato nulla. Riprova.',
-  egg: (done, per) => `Prossimo uovo: ${done}/${per} sessioni insieme.`,
+  egg: (done, per) => `Prossimo uovo: ${done}/${per} turni insieme.`,
   usage: `Uso: /buddy [${HINT}]`,
   chatAnswer: 'Qualcuno ti ha cliccato per chiacchierare. Ultima cosa detta dall\'assistente:',
   chatEmpty: 'Qualcuno ti ha cliccato per chiacchierare. Di\' qualcosa.',

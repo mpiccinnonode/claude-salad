@@ -1,6 +1,6 @@
 {
   "name": "buddy",
-  "version": "0.9.2",
+  "version": "0.10.0",
   "description": "The /buddy companion, revived as a mod: random buddies hatched from eggs you earn, each with its own species, rarity, stats and Haiku-written personality, animated above the prompt, reacting to your work, and evolving with you over time.",
   "types": "./types/index.d.ts",
   "userConfig": {
@@ -90,17 +90,17 @@
       "description": "Names of the buddies to show, comma separated, up to the crew size (e.g. Pip,Mox); empty = every buddy already hatched, in file order. /buddy use, join and leave override it. Unknown names and buddies still in their egg are skipped; with none left, the first one hatched comes out.",
       "default": ""
     },
-    "sessionsPerHatch": {
+    "turnsPerHatch": {
       "type": "number",
-      "title": "Sessions per egg",
-      "description": "Sessions together for each egg; a ready egg hatches with /buddy.",
-      "default": 70
+      "title": "Turns per egg",
+      "description": "Finished turns together, across every session, for each egg; a ready egg hatches with /buddy.",
+      "default": 1400
     },
-    "sessionsPerEvolve": {
+    "turnsPerEvolve": {
       "type": "number",
-      "title": "Sessions per evolution",
-      "description": "Sessions with a buddy out before it can evolve; /buddy evolve spends it.",
-      "default": 50
+      "title": "Turns per evolution",
+      "description": "Finished turns with a buddy out before it can evolve; /buddy evolve spends it. Rarer buddies need more.",
+      "default": 1000
     },
     "buddiesFile": {
       "type": "string",

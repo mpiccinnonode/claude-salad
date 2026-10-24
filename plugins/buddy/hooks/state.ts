@@ -1,8 +1,8 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface } from 'claude-code'
-import type { Bones, Member, Pressed, Quip } from '../types'
-import { countSession, eggs, evolvesIn, hatchCrew, soulUp, SOUL, titled } from './crew.ts'
-import type { Ctx } from './crew.ts'
+import type { Bones, Member, Pressed, Quip, Ready } from '../types'
+import { eggs, evolvesIn, hatchCrew, soulUp, SOUL, titled, writeTally } from './crew.ts'
+import type { Ctx, Tally } from './crew.ts'
 import { line } from './lines.ts'
 import type { Reason } from './lines.ts'
 import { WORDS } from './words.ts'
@@ -16,9 +16,15 @@ const pressed = atom({ plugin: 'buddy', key: 'pressed' } as const, null as Press
 const isStats = atom({ plugin: 'buddy', key: 'isStats' } as const, false)
 // Index into `members` of the one whose bubble shows; wrapped, so a crew that shrank still points at someone.
 const speaker = atom({ plugin: 'buddy', key: 'speaker' } as const, 0)
+// What is ready to spend, drawn in its own box beside the bubble so it never covers what a buddy says.
+const ready = atom({ plugin: 'buddy', key: 'ready' } as const, { egg: false, glow: [] } as Ready)
 
 // What the session remembers between events, outside the atoms.
-export type Live = { turns: number; lastAnswer: string; lastCannedAt: number; lastActiveAt: number }
+export type Live = { turns: number; lastAnswer: string; lastCannedAt: number; lastActiveAt: number; id: string; tally: Tally; isRefreshing: boolean }
+
+// The band looks at the disk again every this many beats (~3s).
+const REFRESH_BEATS = 10
+const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b)
 
 // Before anyone hatches, or with the buddies file broken, there is no crew: a plain common blob stands in, under the key ''.
 const FALLBACK: Bones = { rarity: 'common', species: 'blob', eye: '·', hat: 'none', isShiny: false, stats: { DEBUGGING: 30, PATIENCE: 30, CHAOS: 30, WISDOM: 30, SNARK: 30 }, peak: 'PATIENCE' }
@@ -29,7 +35,8 @@ export const crewOr = (crew: Member[] | null): [Member, ...Member[]] =>
 export async function hatchInto($: EngineInterface, o: Ctx) {
   await soulUp($, o)
   const [hatched, wasHidden] = await Promise.all([hatchCrew($, o), $.store.get('isHidden')])
-  await Promise.all([update($, members, () => hatched), update($, isHidden, () => wasHidden === true), update($, speaker, () => 0), clearDialogue($)])
+  const now = await readinessOf($, o, hatched)
+  await Promise.all([update($, members, () => hatched), update($, ready, () => now), update($, isHidden, () => wasHidden === true), update($, speaker, () => 0), clearDialogue($)])
   return crewOr(hatched)
 }
 
@@ -45,17 +52,40 @@ export async function tickNow($: EngineInterface) {
   return read($, tick)
 }
 
-// One beat of the band's clock; an empty crew is hatched again.
-export async function beat($: EngineInterface, o: Ctx) {
+// An egg is ready, and the buddies out that can evolve.
+async function readinessOf($: EngineInterface, o: Ctx, crew: Member[]): Promise<Ready> {
+  const [{ left }, leftOf] = await Promise.all([eggs($, o.perEgg), evolvesIn($, o.perEvolve)])
+  return { egg: left <= 0, glow: crew.filter(m => m.key && leftOf(m.key) <= 0).map(m => m.name) }
+}
+
+// Reads again what another session or an edit of the buddies file may have changed, so the band follows without a reload. The dialogue, the speaker and the hidden flag stay as they are.
+export async function refresh($: EngineInterface, o: Ctx) {
+  const hatched = await hatchCrew($, o)
+  const [was, wasReady, now] = await Promise.all([read($, members), read($, ready), readinessOf($, o, hatched)])
+  if (!same(hatched, was)) await update($, members, () => hatched)
+  if (!same(now, wasReady)) await update($, ready, () => now)
+}
+
+// One beat of the band's clock; an empty crew is hatched again, and now and then the disk is read again.
+export async function beat($: EngineInterface, o: Ctx, live: Live) {
   await update($, tick, n => n + 1)
-  if (!(await read($, members))) await hatchInto($, o)
+  if (!(await read($, members))) return hatchInto($, o)
+  if ((await read($, tick)) % REFRESH_BEATS || live.isRefreshing) return
+  live.isRefreshing = true
+  try {
+    await refresh($, o)
+  } catch {
+    // A read caught mid-write: the next one is a few seconds away.
+  } finally {
+    live.isRefreshing = false
+  }
 }
 
 export async function snapshot($: EngineInterface) {
-  const [hidden, said, frame, out, p, showStats, floor] = await Promise.all([
-    read($, isHidden), read($, quip), read($, tick), read($, members), read($, pressed), read($, isStats), read($, speaker),
+  const [hidden, said, frame, out, p, showStats, floor, due] = await Promise.all([
+    read($, isHidden), read($, quip), read($, tick), read($, members), read($, pressed), read($, isStats), read($, speaker), read($, ready),
   ])
-  return { hidden, said, frame, out, p, showStats, floor }
+  return { hidden, said, frame, out, p, showStats, floor, due }
 }
 
 export async function clearDialogue($: EngineInterface) {
@@ -121,24 +151,11 @@ export async function quipFromModel($: EngineInterface, o: Ctx, crew: Member[], 
   return said
 }
 
-// One session together: the global count, the egg, each buddy out, and the toasts that say something is ready.
-export async function countSessionTogether($: EngineInterface, o: Ctx) {
-  const w = WORDS[o.lang]
-  await $.store.set('sessions', Number((await $.store.get('sessions')) ?? 0) + 1)
-  const crew = await hatchInto($, o)
-  // Every session until the egg is hatched: a toast missed once is not lost.
-  if ((await eggs($, o.perEgg)).left <= 0) {
-    $.ui.toast(w.ready, { timeoutMs: 10000 })
-    await say($, w.ready)
-  }
-  // The stand-in ('') never counts, so it never glows.
-  await countSession($, crew.map(m => m.key).filter(Boolean))
-  // Same rule as the egg: repeats until /buddy evolve is spent.
-  const leftOf = await evolvesIn($, o.perEvolve)
-  for (const [i, m] of crew.entries()) {
-    if (!m.key || leftOf(m.key) > 0) continue
-    $.ui.toast(w.glow(m.name), { timeoutMs: 10000 })
-    await speak($, i, w.glow(m.name))
-  }
-  return crew
+// One finished turn together: counted for the session and for each buddy out, in the session's own tally, then what is ready is read again.
+export async function countTurnTogether($: EngineInterface, o: Ctx, live: Live) {
+  live.tally.all += 1
+  // The stand-in ('') never counts.
+  for (const m of await crewNow($)) if (m.key) live.tally.by[m.key] = (live.tally.by[m.key] ?? 0) + 1
+  await writeTally($, live.id, live.tally)
+  await refresh($, o)
 }

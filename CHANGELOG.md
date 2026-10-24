@@ -1,5 +1,10 @@
 # Changelog
 
+## buddy 0.9.2 → 0.10.0
+
+- feat(buddy): eggs and evolution count turns instead of sessions, a separate notice box shows when an egg or evolution is ready, and the band follows the disk without a reload
+- fix(buddy): sessions started together no longer lose each other's tallies (concurrent store writes)
+
 ## buddy 0.9.1 → 0.9.2
 
 - fix(buddy): a buddy born without a personality (Haiku failed at hatch) gets one dreamt at the next session instead of staying bare

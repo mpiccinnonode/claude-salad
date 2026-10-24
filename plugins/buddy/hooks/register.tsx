@@ -2,7 +2,7 @@ import type { Register } from 'claude-code'
 import { runBuddy } from './commands.ts'
 import type { Ctx } from './crew.ts'
 import { reasonFor } from './lines.ts'
-import { beat, clearDialogue, countSessionTogether, crewNow, nextSpeaker, quipFromModel, react, tickNow } from './state.ts'
+import { beat, clearDialogue, countTurnTogether, crewNow, hatchInto, nextSpeaker, quipFromModel, react, tickNow } from './state.ts'
 import type { Live } from './state.ts'
 import { drawBand } from './view.tsx'
 import { HINT, WORDS } from './words.ts'
@@ -15,31 +15,31 @@ export const register: Register = (on, options) => {
     file: String(options.buddiesFile || '~/.claude/buddy/buddies.json'),
     lang: options.language === 'en' ? 'en' : 'it',
     every: Math.max(1, Number(options.everyNTurns)),
-    perEgg: Math.max(1, Number(options.sessionsPerHatch)),
-    perEvolve: Math.max(1, Number(options.sessionsPerEvolve)),
+    perEgg: Math.max(1, Number(options.turnsPerHatch)),
+    perEvolve: Math.max(1, Number(options.turnsPerEvolve)),
     banterChance: Math.min(1, Math.max(0, Number(options.banterChance))),
     isRight: options.position === 'right',
     crewSize: Math.max(1, Math.floor(Number(options.crewSize))),
   }
   const w = WORDS[o.lang]
-  const live: Live = { turns: 0, lastAnswer: '', lastCannedAt: -Infinity, lastActiveAt: 0 }
+  // ponytail: the id only has to differ from other sessions' (and from this one before a hot reload), so no uuid
+  const live: Live = { turns: 0, lastAnswer: '', lastCannedAt: -Infinity, lastActiveAt: 0, id: Math.random().toString(36).slice(2, 10), tally: { all: 0, by: {} }, isRefreshing: false }
 
   on('session.start', async ($, e, next) => {
-    const crew = await countSessionTogether($, o)
+    const crew = await hatchInto($, o)
     await $.command.register({ name: 'buddy', description: w.toggle(crew[0].name), argumentHint: HINT })
     // ponytail: band redraws ~3x/s forever; pause the ticker while hidden if that ever shows up in profiles
     live.lastActiveAt = await tickNow($)
-    $.clock.every(300, () => beat($, o))
+    $.clock.every(300, () => beat($, o, live))
     return next(e)
   })
 
-  // /clear ends the session without a new session.start: drop this conversation's dialogue, count it as a new session.
+  // /clear ends the session without a new session.start: drop this conversation's dialogue.
   on('session.end', async ($, e, next) => {
     if (e.reason === 'clear') {
       live.lastAnswer = ''
       live.turns = 0
       await clearDialogue($)
-      await countSessionTogether($, o)
     }
     return next(e)
   })
@@ -65,6 +65,7 @@ export const register: Register = (on, options) => {
     if (e.agentId || e.reason !== 'answer') return result
     live.lastActiveAt = await tickNow($)
     live.lastAnswer = e.answer.slice(-1500)
+    await countTurnTogether($, o, live)
     if (++live.turns % o.every !== 0) return result
 
     // The floor passes on each time; now and then the next one answers back, once, never a chain.

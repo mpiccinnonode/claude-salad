@@ -1,5 +1,9 @@
 # Changelog
 
+## buddy 0.10.0 → 0.10.1
+
+- fix(buddy): the egg counter fills again for stores upgraded from 0.9 (it stayed at 0 turns because its starting point was never saved)
+
 ## buddy 0.9.2 → 0.10.0
 
 - feat(buddy): eggs and evolution count turns instead of sessions, a separate notice box shows when an egg or evolution is ready, and the band follows the disk without a reload

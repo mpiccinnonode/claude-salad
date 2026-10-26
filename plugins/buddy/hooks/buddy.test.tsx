@@ -287,9 +287,12 @@ test('a new buddy hatches only every N turns together, and removing one frees no
 })
 
 test('the egg counter never goes negative when turns fall behind hatched eggs or the price changes', { options: { language: 'en', turnsPerHatch: 70 } }, async ($, on) => {
-  const { run } = rig($, on, {}, { sessions: 1, hatched: 3 })
+  const { run, start, turns } = rig($, on, {}, { sessions: 1, hatched: 3 })
   expect(await run('list')).toContain('Next egg: 0/70')
   expect(await run('add Zed robot Calm.')).toContain('70 more turns')
+  await start()
+  await turns(2)
+  expect(await run('list')).toContain('Next egg: 2/70')
 })
 
 test('hatching: ~/.claude.json is read once to keep the original, the others are random, and what is born stays', { options: { language: 'en', active: 'Zed', turnsPerHatch: 1 } }, async ($, on) => {

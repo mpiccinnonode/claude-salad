@@ -219,6 +219,8 @@ export const titled = (m: Member) => {
 export async function eggs($: EngineInterface, per: number) {
   const [turns, h, at, b] = await Promise.all([turnsTogether($), $.store.get('hatched'), $.store.get('eggAt'), $.store.get('eggBase')])
   const base = Math.min(Number(at ?? (b === undefined ? Number(h ?? 0) * per : Number(b) * TURNS_PER_SESSION)), turns)
+  // A seed or clamp not written down would be redone from the new total at every read, and the egg would never fill.
+  if (at === undefined || Number(at) > turns) await $.store.set('eggAt', base)
   return { base, done: Math.min(per, turns - base), left: base + per - turns }
 }
 

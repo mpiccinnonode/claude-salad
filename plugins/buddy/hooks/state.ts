@@ -1,7 +1,7 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface } from 'claude-code'
-import type { Bones, Member, Pressed, Quip, Ready } from '../types'
-import { eggs, evolvesIn, hatchCrew, soulUp, SOUL, titled, writeTally } from './crew.ts'
+import type { Bones, Listing, Member, PaneUi, Pressed, Quip, Ready } from '../types'
+import { eggs, evolvesIn, hatchCrew, listingOf, soulUp, SOUL, titled, writeTally } from './crew.ts'
 import type { Ctx, Tally } from './crew.ts'
 import { line } from './lines.ts'
 import type { Reason } from './lines.ts'
@@ -18,6 +18,10 @@ const isStats = atom({ plugin: 'buddy', key: 'isStats' } as const, false)
 const speaker = atom({ plugin: 'buddy', key: 'speaker' } as const, 0)
 // What is ready to spend, drawn in its own box beside the bubble so it never covers what a buddy says.
 const ready = atom({ plugin: 'buddy', key: 'ready' } as const, { egg: false, glow: [] } as Ready)
+// The list pane: what it shows, read from disk (null while it is shut), and what the person picked in it.
+const listing = atom({ plugin: 'buddy', key: 'listing' } as const, null as Listing | null)
+export const PANE_START: PaneUi = { sel: '', filter: 'all', rarity: 'all', species: 'all', query: '', mode: 'view', note: '', isBusy: false, draft: { name: '', species: '', soul: '' } }
+const pane = atom({ plugin: 'buddy', key: 'pane' } as const, PANE_START)
 
 // What the session remembers between events, outside the atoms.
 export type Live = { turns: number; lastAnswer: string; lastCannedAt: number; lastActiveAt: number; id: string; tally: Tally; isRefreshing: boolean }
@@ -64,6 +68,25 @@ export async function refresh($: EngineInterface, o: Ctx) {
   const [was, wasReady, now] = await Promise.all([read($, members), read($, ready), readinessOf($, o, hatched)])
   if (!same(hatched, was)) await update($, members, () => hatched)
   if (!same(now, wasReady)) await update($, ready, () => now)
+  if (await read($, listing)) await relist($, o)
+}
+
+// Reads every buddy again for the list pane; it redraws only when something changed.
+export async function relist($: EngineInterface, o: Ctx) {
+  const [now, was] = await Promise.all([listingOf($, o), read($, listing)])
+  if (!same(now, was)) await update($, listing, () => now)
+}
+
+export async function shutList($: EngineInterface) {
+  await Promise.all([update($, listing, () => null), update($, pane, () => PANE_START)])
+}
+
+export async function listNow($: EngineInterface) {
+  return Promise.all([read($, listing), read($, pane)])
+}
+
+export async function setPane($: EngineInterface, patch: Partial<PaneUi>) {
+  await update($, pane, p => ({ ...p, ...patch }))
 }
 
 // One beat of the band's clock; an empty crew is hatched again, and now and then the disk is read again.

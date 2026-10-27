@@ -635,3 +635,142 @@ test('crew: the band fits three buddies to its width: beside the bubble, above i
   expect(await bare.find({ key: 'pet' })).toBeUndefined()
   await bare.unmount()
 })
+
+// The list pane, docked and wide enough for cards; Zed, Ada and Pip hatched, Nino still an egg.
+const PANE = { plugin: 'buddy', component: 'Pane', requestId: 'buddy-list', props: { title: 'Buddy', isFocused: true, bodyColumns: 120, placement: 'dock', scroll: { offset: 0, bodyRows: 60 }, view: {} } } as const
+const ROSTER = ['Zed', 'Ada', 'Pip', 'Nino'].map(name => ({ name, personality: 'Calm.' }))
+const settledStore = (extra: Record<string, unknown> = {}) => ({ migrated: true, moved: true, born: born(), crew: ['zed', 'ada'], ...extra })
+function paneRig($: Engine, on: On, files: Record<string, string>, store: Record<string, unknown>, isPlaced = true) {
+  const r = rig($, on, files, store)
+  on('ui.open', () => ({ value: isPlaced ? { isPlaced: true } : { isPlaced: false, reason: 'narrow' } }) as never)
+  const open = async () => {
+    await r.start()
+    await r.run('list')
+    return $.ui.mount({ ...PANE, surface: 'terminal' })
+  }
+  return { ...r, open }
+}
+
+test('list: opens a pane where one can be drawn, else the plain list', { options: { language: 'en' } }, async ($, on) => {
+  const files = { [FILE]: JSON.stringify(ROSTER) }
+  const shut = paneRig($, on, files, settledStore(), false)
+  await shut.start()
+  expect(await shut.run('list')).toContain('▸ Zed')
+})
+
+test('list: the pane shows every buddy and filters them by status, rarity and name', { options: { language: 'en' } }, async ($, on) => {
+  const { open, run } = paneRig($, on, { [FILE]: JSON.stringify(ROSTER) }, settledStore())
+  const ui = await open()
+  expect(await run('list')).toBe('Buddy list opened.')
+  for (const name of ['▸ Zed', '● Ada', '  Pip', '○ Nino']) expect(await ui.find({ type: 'Button', key: `pick-${name.slice(2).toLowerCase()}` })).toBeDefined()
+  expect(await ui.find({ type: 'Text', text: /4 · crew 2\/3/ })).toBeDefined()
+
+  await ui.press({ key: 'filter-egg' })
+  expect(await ui.find({ type: 'Button', key: 'pick-zed' })).toBeUndefined()
+  expect(await ui.find({ type: 'Button', key: 'pick-nino' })).toBeDefined()
+  expect(await ui.find({ type: 'Text', text: /still in its egg/ })).toBeDefined()
+
+  await ui.press({ key: 'filter-all' })
+  await ui.input({ key: 'query', text: 'ghost', kind: 'change' })
+  expect(await ui.find({ type: 'Text', text: /No buddy matches/ })).toBeDefined()
+  await ui.press({ key: 'reset' })
+  expect(await ui.find({ type: 'Button', key: 'pick-pip' })).toBeDefined()
+  await ui.unmount()
+})
+
+test('list: a rename keeps the buddy whole, its turns too; a name in use is refused, so is the old one for a newcomer', { options: { language: 'en', turnsPerHatch: 1 } }, async ($, on) => {
+  const { open, book, turns, run } = paneRig($, on, { [FILE]: JSON.stringify(ROSTER) }, settledStore({ 'tally:t': { all: 0, by: { zed: 7 } } }))
+  const ui = await open()
+  await ui.input({ key: 'name-zed', text: 'Ada' })
+  expect(await ui.find({ type: 'Text', text: /already a buddy called Ada/ })).toBeDefined()
+  expect(book()[0]!.name).toBe('Zed')
+
+  await ui.input({ key: 'name-zed', text: 'Zorro' })
+  expect(await ui.find({ type: 'Text', text: /Zed is now Zorro/ })).toBeDefined()
+  expect(book()[0]).toMatchObject({ name: 'Zorro', personality: 'Calm.' })
+  // Same key in the store, so the same body, crew place and turns.
+  expect(await ui.find({ type: 'Button', key: 'pick-zed' })).toBeDefined()
+  expect(await run('use Zorro')).toContain('Zorro hops in')
+  await turns(2)
+  expect(await run('add Zed')).toContain('already a buddy called Zed')
+  await ui.unmount()
+})
+
+test('list: species and personality are written into the file, other fields kept; a sentence splits into fields and back', { options: { language: 'en' } }, async ($, on) => {
+  const roster = [{ name: 'Zed', personality: { tone: 'calm', traits: ['wry'], mood: 'kept' }, extra: 1 }, ...ROSTER.slice(1)]
+  const { open, book } = paneRig($, on, { [FILE]: JSON.stringify(roster) }, settledStore())
+  const ui = await open()
+  await ui.select({ key: 'species-zed', value: 'owl' })
+  expect(book()[0]).toMatchObject({ species: 'owl', extra: 1 })
+  await ui.input({ key: 'soul-traits-zed', text: 'wry\n  nosy \n' })
+  expect(book()[0]!.personality).toEqual({ tone: 'calm', traits: ['wry', 'nosy'], mood: 'kept' })
+  await ui.input({ key: 'soul-tone-zed', text: '' })
+  expect(book()[0]!.personality).toEqual({ traits: ['wry', 'nosy'], mood: 'kept' })
+  await ui.press({ key: 'flip' })
+  expect(book()[0]!.personality).toBe('wry. nosy')
+  await ui.press({ key: 'flip' })
+  expect(book()[0]!.personality).toEqual({ tone: 'wry. nosy' })
+  await ui.unmount()
+})
+
+test('list: a full crew asks who makes way; removal asks first', { options: { language: 'en', crewSize: 2 } }, async ($, on) => {
+  const { open, book, run } = paneRig($, on, { [FILE]: JSON.stringify(ROSTER) }, settledStore())
+  const ui = await open()
+  await ui.press({ key: 'pick-pip' })
+  await ui.press({ key: 'crew' })
+  expect(await ui.find({ type: 'Text', text: /crew is full \(2\): who makes way for Pip/ })).toBeDefined()
+  await ui.press({ key: 'swap-ada' })
+  expect(await run('list')).toBe('Buddy list opened.')
+  expect(await ui.find({ type: 'Button', key: 'pick-pip' })).toMatchObject({ text: '● Pip' })
+
+  await ui.press({ key: 'remove' })
+  expect(await ui.find({ type: 'Text', text: /Remove Pip from the buddies file/ })).toBeDefined()
+  expect(book()).toHaveLength(4)
+  await ui.press({ key: 'rm-yes' })
+  expect(book().map(b => b.name)).toEqual(['Zed', 'Ada', 'Nino'])
+  await ui.unmount()
+})
+
+test('list: without an egg ready a new buddy goes into the file as an egg, and needs a name', { options: { language: 'en', turnsPerHatch: 100 } }, async ($, on) => {
+  const { open, book } = paneRig($, on, { [FILE]: JSON.stringify(ROSTER) }, settledStore({ eggAt: 0 }))
+  const ui = await open()
+  await ui.press({ key: 'add' })
+  await ui.press({ key: 'add-go' })
+  expect(await ui.find({ type: 'Text', text: /Give it a name/ })).toBeDefined()
+  await ui.select({ key: 'add-species', value: 'owl' })
+  await ui.input({ key: 'add-name', text: 'Fiocca' })
+  expect(book().at(-1)).toEqual({ name: 'Fiocca', species: 'owl' })
+  expect(await ui.find({ type: 'Text', text: /Fiocca is in the file, still an egg/ })).toBeDefined()
+  await ui.unmount()
+})
+
+test('list: a broken file is shown read-only', { options: { language: 'en' } }, async ($, on) => {
+  const broken = paneRig($, on, { [FILE]: '[{' }, settledStore())
+  const ui = await broken.open()
+  expect(await ui.find({ type: 'Text', text: /not valid JSON/ })).toBeDefined()
+  expect(await ui.find({ type: 'Input' })).toBeUndefined()
+  await ui.unmount()
+})
+
+test('list: on mobile the pane shows without fields', { options: { language: 'en' } }, async ($, on) => {
+  const { start, run } = paneRig($, on, { [FILE]: JSON.stringify(ROSTER) }, settledStore())
+  await start()
+  await run('list')
+  const ui = await $.ui.mount({ ...PANE, surface: 'mobile' })
+  expect(await ui.find({ type: 'Button', key: 'pick-zed' })).toBeDefined()
+  expect(await ui.find({ type: 'Input' })).toBeUndefined()
+  await ui.unmount()
+})
+
+test('list: a buddy ready on the bench evolves from the pane, announced by the lead', { options: { language: 'en', turnsPerEvolve: 2 } }, async ($, on) => {
+  on('model.complete', ($, e) => answer(e.system?.includes('You evolve') ? JSON.stringify({ title_en: 'the Odd', title_it: 'lo Strano', tone: 'odd' }) : 'Hm.'))
+  const { open, book } = paneRig($, on, { [FILE]: JSON.stringify(ROSTER) }, settledStore({ born: commonZed(), crew: ['ada'], 'tally:t': { all: 2, by: { zed: 2 } } }))
+  const ui = await open()
+  await ui.press({ key: 'pick-zed' })
+  expect(await ui.find({ type: 'Text', text: /ready to evolve/ })).toBeDefined()
+  await ui.press({ key: 'evolve' })
+  expect(await ui.find({ type: 'Text', text: /Zed, the Odd has evolved!/ })).toBeDefined()
+  expect(book()[0]!.personality).toEqual({ tone: 'odd' })
+  expect(await ui.find({ type: 'Text', text: /evolves in 4 turns/ })).toBeDefined()
+  await ui.unmount()
+})

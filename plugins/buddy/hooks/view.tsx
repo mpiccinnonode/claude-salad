@@ -9,7 +9,7 @@ import { crewOr, press, quipFromModel, setHidden, snapshot, toggleStats } from '
 import type { Live } from './state.ts'
 import { WORDS } from './words.ts'
 
-const RARITY_COLOR: Record<Bones['rarity'], string> = { common: 'gray', uncommon: 'green', rare: 'cyan', epic: 'magenta', legendary: 'yellow' }
+export const RARITY_COLOR: Record<Bones['rarity'], string> = { common: 'gray', uncommon: 'green', rare: 'cyan', epic: 'magenta', legendary: 'yellow' }
 const SHORT: Record<StatName, string> = { DEBUGGING: 'DBG', PATIENCE: 'PAT', CHAOS: 'CHA', WISDOM: 'WIS', SNARK: 'SNK' }
 const BUTTONS = ['pet', 'poke', 'talk', 'stats'] as const
 

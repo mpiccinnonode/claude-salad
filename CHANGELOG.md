@@ -1,5 +1,9 @@
 # Changelog
 
+## buddy 0.11.0 → 0.12.0
+
+- feat(buddy): in the `/buddy list` pane a click anywhere on a card picks the buddy, the actions sit right under the cards so they stay in view, and stats are drawn one per line as bars
+
 ## buddy 0.10.1 → 0.11.0
 
 - feat(buddy): `/buddy list` opens an interactive pane to browse buddies, filter them (status, rarity, species, ready to evolve, name) and edit name, species and personality; crew, lead, evolve, hatch, add and remove work from the pane, and a rename keeps the buddy's counted turns

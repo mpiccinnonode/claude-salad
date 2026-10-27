@@ -1,8 +1,9 @@
 import type { Register } from 'claude-code'
-import { runBuddy } from './commands.ts'
+import { LIST_PANE, runBuddy } from './commands.ts'
 import type { Ctx } from './crew.ts'
 import { reasonFor } from './lines.ts'
-import { beat, clearDialogue, countTurnTogether, crewNow, hatchInto, nextSpeaker, quipFromModel, react, tickNow } from './state.ts'
+import { drawList } from './list.tsx'
+import { beat, clearDialogue, countTurnTogether, crewNow, hatchInto, nextSpeaker, quipFromModel, react, shutList, tickNow } from './state.ts'
 import type { Live } from './state.ts'
 import { drawBand } from './view.tsx'
 import { HINT, WORDS } from './words.ts'
@@ -78,4 +79,10 @@ export const register: Register = (on, options) => {
   })
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => (await drawBand($, e, o, live)) ?? next(e))
+  on('ui.render', { component: 'Pane', requestId: LIST_PANE }, async ($, e) => drawList($, e, o))
+  // A shut pane stops reading the disk, and opens again on a fresh pick.
+  on('ui.close', { id: LIST_PANE }, async ($, e, next) => {
+    await shutList($)
+    return next(e)
+  }).catch(($, e, next) => next(e)) // clearing is housekeeping: the pane closes either way
 }

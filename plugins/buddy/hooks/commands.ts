@@ -1,9 +1,9 @@
 import type { EngineInterface } from 'claude-code'
-import { eggs, evolveNow, evolvesIn, forget, hatchCrew, hatchNew, openBook, outOfEgg, rosterOf, setCrew, titled, writeBook } from './crew.ts'
+import { eggs, evolveNow, evolvesIn, forget, hatchCrew, hatchNew, memberOf, outOfEgg, rosterOf, setCrew, titled, writeBook } from './crew.ts'
 import type { Ctx, Entry, Roster } from './crew.ts'
 import type { Lang } from './lines.ts'
-import { findFriend, keyOf, parseAdd, without } from './friends.ts'
-import { crewNow, crewOr, hatchInto, membersNow, say, setHidden, speak, toggleHidden } from './state.ts'
+import { findFriend, parseAdd, without } from './friends.ts'
+import { crewNow, crewOr, hatchInto, membersNow, relist, say, setHidden, speak, toggleHidden } from './state.ts'
 import { WORDS } from './words.ts'
 
 // /buddy <verb> <words>: each verb answers with the text to show.
@@ -41,7 +41,7 @@ async function toggle($: EngineInterface, o: Ctx) {
   let failed: string | undefined
   if ((await eggs($, o.perEgg)).left <= 0) {
     const hatched = await hatchNew($, o, { name: '' }, await rosterOf($, o))
-    if ('name' in hatched) return welcome($, o, hatched.name)
+    if ('name' in hatched) return welcome($, o, hatched.name, hatched.key)
     failed = hatched.failed
   }
   const [lead] = await crewNow($)
@@ -50,22 +50,33 @@ async function toggle($: EngineInterface, o: Ctx) {
 }
 
 // A newborn joins while there is room, leading or last; a full crew stays as it is and it waits on the bench.
-async function place($: EngineInterface, o: Ctx, name: string, isLead: boolean) {
-  const key = keyOf(name)
+export async function place($: EngineInterface, o: Ctx, key: string, isLead: boolean) {
   const keys = (await keysOut($, o)).filter(k => k !== key)
   if (keys.length >= o.crewSize) return false
   await recrew($, o, isLead ? [key, ...keys] : [...keys, key])
   return true
 }
 
-async function welcome($: EngineInterface, o: Ctx, name: string) {
+async function welcome($: EngineInterface, o: Ctx, name: string, key: string) {
   const w = WORDS[o.lang]
-  const [hasRoom] = await Promise.all([place($, o, name, true), setHidden($, false)])
+  const [hasRoom] = await Promise.all([place($, o, key, true), setHidden($, false)])
   await say($, w.born(name))
   return [w.born(name), ...(hasRoom ? [] : [w.bench(name)])].join('\n')
 }
 
+// Opens the list pane; where no pane can be drawn (headless, or the person's terminal refuses), the plain list.
 async function list($: EngineInterface, o: Ctx) {
+  const w = WORDS[o.lang]
+  await relist($, o)
+  const opened = await $.ui.open({ id: LIST_PANE, title: w.paneTitle, focus: true, closeOnEscape: true, rows: ALL_ROOM, columns: ALL_ROOM }).catch(() => ({ isPlaced: false }))
+  return opened.isPlaced ? w.paneOpened : listText($, o)
+}
+
+export const LIST_PANE = 'buddy-list'
+// As much room as the surface gives: the dock caps it at 45% of the columns, inline at what the layout spares.
+const ALL_ROOM = 1000
+
+async function listText($: EngineInterface, o: Ctx) {
   const w = WORDS[o.lang]
   const [{ roster, born, book }, { done }, crew] = await Promise.all([rosterOf($, o), eggs($, o.perEgg), crewNow($)])
   // ▸ the lead, ● the rest of the crew, blank the bench, 🥚 still an egg.
@@ -75,7 +86,7 @@ async function list($: EngineInterface, o: Ctx) {
 }
 
 // A name swaps the lead and keeps the rest of the crew; a bare `/buddy use` goes back to the `active` option.
-async function use($: EngineInterface, o: Ctx, wanted: string) {
+export async function use($: EngineInterface, o: Ctx, wanted: string) {
   const w = WORDS[o.lang]
   const r = await rosterOf($, o)
   const e = wanted ? findFriend(r.roster, wanted) : undefined
@@ -88,7 +99,7 @@ async function use($: EngineInterface, o: Ctx, wanted: string) {
   return w.hello(out.name)
 }
 
-async function join($: EngineInterface, o: Ctx, wanted: string) {
+export async function join($: EngineInterface, o: Ctx, wanted: string) {
   const w = WORDS[o.lang]
   const r = await rosterOf($, o)
   const e = findFriend(r.roster, wanted)
@@ -102,7 +113,7 @@ async function join($: EngineInterface, o: Ctx, wanted: string) {
   return w.joined(e.name)
 }
 
-async function leave($: EngineInterface, o: Ctx, wanted: string) {
+export async function leave($: EngineInterface, o: Ctx, wanted: string) {
   const w = WORDS[o.lang]
   const r = await rosterOf($, o)
   const e = findFriend(r.roster, wanted)
@@ -115,7 +126,7 @@ async function leave($: EngineInterface, o: Ctx, wanted: string) {
 }
 
 // A bare `/buddy add` lets Haiku name it too.
-async function add($: EngineInterface, o: Ctx, words: string[]) {
+export async function add($: EngineInterface, o: Ctx, words: string[]) {
   const w = WORDS[o.lang]
   const friend = parseAdd(words) ?? { name: '' }
   const r = await rosterOf($, o)
@@ -125,15 +136,15 @@ async function add($: EngineInterface, o: Ctx, words: string[]) {
   if (left > 0) return w.locked(left)
   const hatched = await hatchNew($, o, friend, r)
   if ('failed' in hatched) return hatched.failed
-  const hasRoom = await place($, o, hatched.name, false)
+  const hasRoom = await place($, o, hatched.key, false)
   return [w.added(hatched.name), hasRoom ? w.joined(hatched.name) : w.bench(hatched.name)].join('\n')
 }
 
-// A name picks who; without one, the first that is ready, else the lead, to say how long is left.
-async function evolveOne($: EngineInterface, o: Ctx, wanted: string) {
+// A name picks who, out or on the bench; without one, the first out that is ready, else the lead, to say how long is left.
+export async function evolveOne($: EngineInterface, o: Ctx, wanted: string) {
   const w = WORDS[o.lang]
   const crew = crewOr((await membersNow($)) ?? (await hatchInto($, o)))
-  const named = wanted ? findFriend(crew, wanted) : undefined
+  const named = wanted ? (findFriend(crew, wanted) ?? (await benched($, o, wanted))) : undefined
   if (wanted && !named) return missing(w, wanted)
   const leftOf = await evolvesIn($, o.perEvolve)
   const target = named ?? crew.find(m => leftOf(m.key) <= 0) ?? crew[0]!
@@ -142,18 +153,27 @@ async function evolveOne($: EngineInterface, o: Ctx, wanted: string) {
   const failed = await evolveNow($, o, target)
   if (failed) return failed
   const out = await hatchInto($, o)
-  const at = Math.max(0, out.findIndex(m => m.key === target.key))
-  const said = w.evolved(titled(out[at]!))
-  await speak($, at, said)
+  const at = out.findIndex(m => m.key === target.key)
+  // One evolved on the bench is announced by the lead.
+  const said = w.evolved(titled(out[at] ?? (await benched($, o, target.name)) ?? target))
+  await speak($, Math.max(0, at), said)
   return said
 }
 
-async function rm($: EngineInterface, o: Ctx, wanted: string) {
+export // A hatched buddy on the bench, as it would be out.
+async function benched($: EngineInterface, o: Ctx, wanted: string) {
+  const { roster, born } = await rosterOf($, o)
+  const e = findFriend(roster, wanted)
+  return e && born[e.key] ? memberOf(o, e, born) : undefined
+}
+
+export async function rm($: EngineInterface, o: Ctx, wanted: string) {
   const w = WORDS[o.lang]
-  const book = await openBook($, o)
+  const { roster, book } = await rosterOf($, o)
   if (book.error) return w.badFile(book.error)
-  if (!wanted || !findFriend(book.friends, wanted)) return missing(w, wanted)
-  await Promise.all([writeBook($, book, without(book.raw, wanted)), forget($, keyOf(wanted))])
+  const e = wanted ? findFriend(roster, wanted) : undefined
+  if (!e) return missing(w, wanted)
+  await Promise.all([writeBook($, book, without(book.raw, wanted)), forget($, e.key)])
   await hatchInto($, o)
   return w.removed(wanted)
 }

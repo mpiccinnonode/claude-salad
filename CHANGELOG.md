@@ -1,5 +1,9 @@
 # Changelog
 
+## buddy 0.10.1 → 0.11.0
+
+- feat(buddy): `/buddy list` opens an interactive pane to browse buddies, filter them (status, rarity, species, ready to evolve, name) and edit name, species and personality; crew, lead, evolve, hatch, add and remove work from the pane, and a rename keeps the buddy's counted turns
+
 ## buddy 0.10.0 → 0.10.1
 
 - fix(buddy): the egg counter fills again for stores upgraded from 0.9 (it stayed at 0 turns because its starting point was never saved)

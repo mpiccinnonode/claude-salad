@@ -24,6 +24,7 @@ const rowsFor = (text: string, width: number) => text.split('\n').reduce((n, lin
 
 const isReady = (c: Card) => c.left !== undefined && c.left <= 0
 const inFilter = (c: Card, f: Filter) => f === 'all' || (f === 'ready' ? isReady(c) : f === 'crew' ? c.status === 'crew' || c.status === 'lead' : c.status === f)
+const bar = (n: number) => '█'.repeat(Math.round(n / 10)).padEnd(10, '░')
 const stars = (c: Card) => (c.bones ? '★'.repeat(RARITIES.indexOf(c.bones.rarity) + 1) : '')
 
 // What the filters leave, in file order.
@@ -52,14 +53,8 @@ export async function drawList($: EngineInterface, e: RenderInput<'Pane'>, o: Ct
   const at = c ? shown.indexOf(c) : -1
   const step = (by: number) => () => shown.length && pick($, shown[(at + by + shown.length) % shown.length]!.key)
 
-  const sprite = (x: Card, big = false) => {
-    const rows = x.bones ? drawBuddy(x.species, 3, { isWorking: false, eye: x.bones.eye, hat: x.bones.hat, rarity: x.bones.rarity }, RARITY_COLOR[x.bones.rarity]) : EGG.map(t => [[t, 'gray']] as const)
-    return (
-      <Box key={`sprite-${x.key}${big ? '-big' : ''}`} flexDirection="column" flexShrink={0}>
-        {rows.map((row, r) => <Text key={`r${r}`} mono>{row.map(([t, color], j) => <Text key={`s${j}`} color={color}>{t}</Text>)}</Text>)}
-      </Box>
-    )
-  }
+  const rowsOf = (x: Card) => x.bones ? drawBuddy(x.species, 3, { isWorking: false, eye: x.bones.eye, hat: x.bones.hat, rarity: x.bones.rarity }, RARITY_COLOR[x.bones.rarity]) : EGG.map(t => [[t, 'gray']] as const)
+  const spriteRows = (x: Card, end = '') => rowsOf(x).map((row, r) => <Text key={`r${r}`} mono>{row.map(([t, color], j) => <Text key={`s${j}`} color={color}>{t}</Text>)}{end}</Text>)
 
   const header = (
     <Box key="head" flexDirection="row" gap={2}>
@@ -92,9 +87,12 @@ export async function drawList($: EngineInterface, e: RenderInput<'Pane'>, o: Ct
     <Box key="cards" flexDirection="row" gap={1}>
       {shown.slice(start, start + perPage).map(x => (
         <Box key={`card-${x.key}`} flexDirection="column" borderStyle="round" borderColor={x === c ? 'blue' : 'gray'} paddingX={1} width={CARD} flexShrink={0}>
-          {sprite(x)}
-          <Button key={`pick-${x.key}`} plain label={`${MARK[x.status]} ${x.name}`} onPress={() => pick($, x.key)} />
-          <Text color={x.bones ? RARITY_COLOR[x.bones.rarity] : 'gray'}>{stars(x) || w.eggWord}{isReady(x) ? <Text color="yellow"> ✦</Text> : ''}</Text>
+          {/* The whole card is one Button: a Button takes only Text children, so its lines end in a newline. */}
+          <Button key={`pick-${x.key}`} plain label={`${MARK[x.status]} ${x.name}`} onPress={() => pick($, x.key)}>
+            {spriteRows(x, '\n')}
+            <Text key="name">{`${MARK[x.status]} ${x.name}\n`}</Text>
+            <Text key="stars" color={x.bones ? RARITY_COLOR[x.bones.rarity] : 'gray'}>{stars(x) || w.eggWord}{isReady(x) ? <Text color="yellow"> ✦</Text> : ''}</Text>
+          </Button>
         </Box>
       ))}
       {shown.length > perPage && <Text key="more" dimColor>{`${at + 1}/${shown.length}`}</Text>}
@@ -144,10 +142,10 @@ export async function drawList($: EngineInterface, e: RenderInput<'Pane'>, o: Ct
   const textWidth = Math.max(10, e.props.bodyColumns - (isSide ? META + 2 : 0) - 4)
   const meta = (
     <Box key="meta" flexDirection="column" flexShrink={0} width={isSide ? META : undefined}>
-      {sprite(card, true)}
+      <Box key="sprite" flexDirection="column" flexShrink={0}>{spriteRows(card)}</Box>
       <Text bold>{titled({ ...card, personality: '', bones: b! })}</Text>
       <Text>{b ? <Text color={RARITY_COLOR[b.rarity]}>{stars(card)} {w.rarity[b.rarity]}</Text> : <Text dimColor>{w.inEgg}</Text>}<Text dimColor> · {w.status[card.status]}</Text></Text>
-      {b && <Box key="stats" flexDirection="row" flexWrap="wrap" columnGap={1}>{STAT_NAMES.map(s => <Text key={s} dimColor={s !== b.peak} color={s === b.peak ? 'green' : undefined}>{`${w.short[s]} ${b.stats[s]}`}</Text>)}</Box>}
+      {b && <Box key="stats" flexDirection="column">{STAT_NAMES.map(s => <Text key={s} mono><Text dimColor>{`${w.short[s]} `}</Text><Text color={s === b.peak ? 'green' : RARITY_COLOR[b.rarity]}>{bar(b.stats[s])}</Text>{` ${String(b.stats[s]).padStart(3)}`}</Text>)}</Box>}
       <Text>{b ? (isReady(card) ? <Text color="yellow">{w.readyNow}</Text> : w.evolvesIn(card.left!)) : l.egg.left > 0 ? w.eggIn(l.egg.left) : <Text color="yellow">{w.eggReady}</Text>}</Text>
     </Box>
   )
@@ -221,9 +219,10 @@ export async function drawList($: EngineInterface, e: RenderInput<'Pane'>, o: Ct
   return (
     <Box key="list" flexDirection="column" gap={1}>
       {header}{banner}{filters}{cards}
-      <Box key="detail" flexDirection={isSide ? 'row' : 'column'} gap={2}>{meta}{fields}</Box>
-      {p.note && <Text key="note" color={p.isBusy ? 'yellow' : undefined}>{p.isBusy ? `⠹ ${p.note}` : p.note}</Text>}
+      {/* Above the detail: below the fields they scrolled out of the dock. */}
       {asked}
+      {p.note && <Text key="note" color={p.isBusy ? 'yellow' : undefined}>{p.isBusy ? `⠹ ${p.note}` : p.note}</Text>}
+      <Box key="detail" flexDirection={isSide ? 'row' : 'column'} gap={2}>{meta}{fields}</Box>
     </Box>
   )
 }

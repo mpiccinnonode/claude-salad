@@ -721,7 +721,7 @@ test('list: a full crew asks who makes way; removal asks first', { options: { la
   expect(await ui.find({ type: 'Text', text: /crew is full \(2\): who makes way for Pip/ })).toBeDefined()
   await ui.press({ key: 'swap-ada' })
   expect(await run('list')).toBe('Buddy list opened.')
-  expect(await ui.find({ type: 'Button', key: 'pick-pip' })).toMatchObject({ text: '● Pip' })
+  expect(await ui.find({ type: 'Button', key: 'pick-pip' })).toMatchObject({ props: { label: '● Pip' } })
 
   await ui.press({ key: 'remove' })
   expect(await ui.find({ type: 'Text', text: /Remove Pip from the buddies file/ })).toBeDefined()

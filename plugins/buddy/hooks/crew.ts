@@ -1,5 +1,5 @@
 import type { EngineInterface } from 'claude-code'
-import type { Bones, Member } from '../types'
+import type { Bones, Card, Listing, Member } from '../types'
 import { ALL_SPECIES, evolve, RARITIES, roll } from './bones.ts'
 import { dreamOn, dreamUp } from './dream.ts'
 import { asPersonality, describe, findFriend, keyOf, parseBook, upsert } from './friends.ts'
@@ -152,11 +152,36 @@ export async function writeBook($: EngineInterface, book: Book, raw: unknown[]) 
   await $.fs.write(book.path, `${JSON.stringify(raw, null, 2)}\n`)
 }
 
+// A renamed buddy keeps the key it was born under: `aka` maps its new name's key to it, so the turns other sessions are counting still land.
+type Aka = Record<string, string>
+const keyIn = (aka: Aka, name: string) => aka[keyOf(name)] ?? keyOf(name)
+
 export async function rosterOf($: EngineInterface, o: Ctx) {
-  const { born, book } = await withOriginal($, o, await openBook($, o).catch((): Book => ({ path: '', raw: [], friends: [] })))
-  const roster: Entry[] = book.friends.map(f => ({ ...f, key: keyOf(f.name) }))
+  const [{ born, book }, aka] = await Promise.all([
+    withOriginal($, o, await openBook($, o).catch((): Book => ({ path: '', raw: [], friends: [] }))),
+    $.store.get('aka').then(a => (a ?? {}) as Aka),
+  ])
+  const roster: Entry[] = book.friends.map(f => ({ ...f, key: keyIn(aka, f.name) }))
   await recordSpecies($, book, roster, born)
-  return { roster, born, book }
+  return { roster, born, book, aka }
+}
+
+// A key someone else holds in the store: a name that maps to it would wear their body.
+export const isHeld = ({ born, aka }: Pick<Roster, 'born' | 'aka'>, key: string, self?: string) => key !== self && (key in born || Object.values(aka).includes(key))
+
+// Renames in the buddies file; the store's key stays. The line to show when it cannot.
+export async function rename($: EngineInterface, o: Ctx, e: { key: string; name: string }, wanted: string): Promise<string | undefined> {
+  const w = WORDS[o.lang]
+  const name = wanted.trim()
+  if (!name) return w.emptyName
+  const r = await rosterOf($, o)
+  if (r.book.error) return w.badFile(r.book.error)
+  const other = findFriend(r.roster, name)
+  if ((other && other.key !== e.key) || (!other && isHeld(r, keyOf(name), e.key))) return w.taken(name)
+  const { [keyOf(e.name)]: _, ...aka } = r.aka
+  await writeBook($, r.book, upsert(r.book.raw, e.name, { name }))
+  await $.store.set('aka', keyOf(name) === e.key ? aka : { ...aka, [keyOf(name)]: e.key })
+  return undefined
 }
 // A buddy born without a personality (Haiku failed at hatch) gets one dreamt at the next session start; a failure changes nothing and retries then.
 export async function soulUp($: EngineInterface, o: Ctx) {
@@ -194,7 +219,7 @@ export async function setCrew($: EngineInterface, keys: string[] | null) {
   await Promise.all([$.store.set('crew', keys), $.store.set('active', null)])
 }
 
-function memberOf(o: Ctx, e: Entry, born: Births): Member {
+export function memberOf(o: Ctx, e: Entry, born: Births): Member {
   const b = born[e.key]!
   return { key: e.key, name: e.name, title: b.title?.[o.lang], personality: describe(e.personality ?? SOUL.personality), bones: { ...b.bones, species: e.species ?? b.bones.species } }
 }
@@ -203,7 +228,7 @@ function memberOf(o: Ctx, e: Entry, born: Births): Member {
 export async function hatchCrew($: EngineInterface, o: Ctx, r?: Roster): Promise<Member[]> {
   const { roster, born } = r ?? (await rosterOf($, o))
   const keys = await crewKeys($, o, { roster, born })
-  const out = [...new Set(keys.map(k => findFriend(roster, k)))].filter((e): e is Entry => !!e && !!born[e.key]).slice(0, o.crewSize)
+  const out = [...new Set(keys.map(k => roster.find(e => e.key === k) ?? findFriend(roster, k)))].filter((e): e is Entry => !!e && !!born[e.key]).slice(0, o.crewSize)
   const first = roster.find(e => born[e.key])
   return (out.length ? out : first ? [first] : []).map(e => memberOf(o, e, born))
 }
@@ -232,7 +257,7 @@ function rollNew(have: Set<string | undefined>, fresh: boolean): Bones {
 }
 
 // Spends an egg, only on success: random bones, a name and soul dreamt up when missing, written back into buddies.json.
-export async function hatchNew($: EngineInterface, o: Ctx, friend: Friend, { roster, book, born: owned }: Roster): Promise<{ name: string } | { failed: string }> {
+export async function hatchNew($: EngineInterface, o: Ctx, friend: Friend, { roster, book, born: owned, aka }: Roster): Promise<{ name: string; key: string } | { failed: string }> {
   const w = WORDS[o.lang]
   if (book.error) return { failed: w.badFile(book.error) }
   const rolled = rollNew(new Set(roster.map(e => e.species ?? owned[e.key]?.bones.species)), !friend.species)
@@ -240,14 +265,16 @@ export async function hatchNew($: EngineInterface, o: Ctx, friend: Friend, { ros
   const name = friend.name || dreamt?.name
   if (!name) return { failed: w.noName }
   if (!friend.name && findFriend(roster, name)) return { failed: w.taken(name) }
+  const key = keyIn(aka, name)
+  if (!findFriend(roster, name) && isHeld({ born: owned, aka }, key)) return { failed: w.taken(name) }
   // A file entry gets only what was dreamt up and its rolled species when it had none; the rest stays as written. A new one is written whole.
   const isNew = !findFriend(book.friends, name)
   const soul = friend.personality ? undefined : dreamt?.soul
   const species = friend.species ?? rolled.species
   if (isNew || soul || !friend.species) await writeBook($, book, upsert(book.raw, name, isNew ? { name, species, personality: friend.personality ?? soul } : { species, personality: soul }))
   const [born, hatched, { base }] = await Promise.all([bornOf($), $.store.get('hatched'), eggs($, o.perEgg)])
-  await Promise.all([$.store.set('born', { ...born, [keyOf(name)]: { bones: rolled } }), $.store.set('hatched', Number(hatched ?? 0) + 1), $.store.set('eggAt', base + o.perEgg)])
-  return { name }
+  await Promise.all([$.store.set('born', { ...born, [key]: { bones: rolled } }), $.store.set('hatched', Number(hatched ?? 0) + 1), $.store.set('eggAt', base + o.perEgg)])
+  return { name, key }
 }
 
 // A buddy still in its egg hatches when an egg is ready; the line to show when it cannot.
@@ -286,8 +313,25 @@ export async function evolveNow($: EngineInterface, o: Ctx, m: Member): Promise<
 }
 
 export async function forget($: EngineInterface, key: string) {
-  const [born, together, zero] = await Promise.all([bornOf($), togetherOf($), ($.store.get('zero') as Promise<Record<string, number> | undefined>).then(z => z ?? {})])
+  const [born, together, zero, aka] = await Promise.all([bornOf($), togetherOf($), ($.store.get('zero') as Promise<Record<string, number> | undefined>).then(z => z ?? {}), $.store.get('aka').then(a => (a ?? {}) as Aka)])
   delete born[key]
+  const kept = Object.fromEntries(Object.entries(aka).filter(([, k]) => k !== key))
   // `together` is already net of the old zero, so the new one adds to it.
-  await Promise.all([$.store.set('born', born), $.store.set('zero', { ...zero, [key]: (zero[key] ?? 0) + (together[key] ?? 0) })])
+  await Promise.all([$.store.set('born', born), $.store.set('zero', { ...zero, [key]: (zero[key] ?? 0) + (together[key] ?? 0) }), $.store.set('aka', kept)])
+}
+
+// Every buddy in the file as the list pane shows it: where it stands, its body once hatched, turns left to evolve.
+export async function listingOf($: EngineInterface, o: Ctx): Promise<Listing> {
+  const r = await rosterOf($, o)
+  const [out, egg, leftOf] = await Promise.all([hatchCrew($, o, r), eggs($, o.perEgg), evolvesIn($, o.perEvolve)])
+  const keys = out.map(m => m.key)
+  const cards = r.roster.map((e): Card => {
+    const b = r.born[e.key]
+    const card: Card = { key: e.key, name: e.name, species: e.species ?? b?.bones.species ?? '', status: !b ? 'egg' : e.key === keys[0] ? 'lead' : keys.includes(e.key) ? 'crew' : 'bench' }
+    if (e.personality !== undefined) card.personality = e.personality
+    if (!b) return card
+    const title = b.title?.[o.lang]
+    return { ...card, bones: { ...b.bones, species: card.species }, left: leftOf(e.key), ...(title ? { title } : {}) }
+  })
+  return { cards, crewSize: o.crewSize, egg: { done: egg.done, per: o.perEgg, left: egg.left }, ...(r.book.error ? { error: r.book.error } : {}) }
 }

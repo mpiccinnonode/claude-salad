@@ -28,7 +28,7 @@ The `/buddy` companion Claude Code shipped in April 2026 and removed in 2.1.97, 
 | Action | What happens |
 | --- | --- |
 | `/buddy` | Shows or hides the buddy (remembered across sessions). When an egg is ready, it hatches a surprise instead: a new buddy, named by Haiku, comes straight out. |
-| `/buddy list` | Lists your buddies; `▸` marks the lead, `●` the rest of the crew, `🥚` one still in its egg. Shows the progress to the next egg. |
+| `/buddy list` | Opens the Buddy pane: every buddy as a card with its sprite, filtered by crew, bench, eggs, ready to evolve, rarity, species or name. Pick one to see its stats and turns left to evolve, and to edit its name, species and personality (each field saved with Enter, written into the buddies file). Keys while the pane has focus: `n`/`p` next and previous, `s` into the crew or onto the bench (a full crew asks who makes way), `u` lead, `e` evolve, `h` hatch an egg, `t` personality as one sentence or as fields, `a` add, `x` remove (asks first), `0` clear the filters; Tab walks the fields, Esc closes. Rarity, sprite and stats are rolled and stay as they are. Where no pane can be drawn it prints the list as before: `▸` the lead, `●` the rest of the crew, `🥚` one still in its egg. |
 | `/buddy use <name>` | Makes another buddy the lead of the crew (remembered across sessions). If it is still an egg, this hatches it, when you have an egg to spend. A bare `/buddy use` goes back to the default crew (the `active` option, or everyone hatched). |
 | `/buddy join <name>` | Brings one more buddy out, up to `crewSize`; hatches it like `use` if it is still an egg. |
 | `/buddy leave <name>` | Sends a buddy back to the bench; the last one out stays. |

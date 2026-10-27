@@ -4,8 +4,9 @@ export type Soul = { tone?: string; traits?: string[]; quirks?: string[]; backst
 export type Personality = string | Soul
 export type Friend = { name: string; species?: string; personality?: Personality }
 
-const TEXT_KEYS = ['tone', 'backstory', 'speech', 'catchphrase'] as const
-const LIST_KEYS = ['traits', 'quirks', 'likes', 'dislikes'] as const
+export const TEXT_KEYS = ['tone', 'backstory', 'speech', 'catchphrase'] as const
+export const LIST_KEYS = ['traits', 'quirks', 'likes', 'dislikes'] as const
+export type SoulField = (typeof TEXT_KEYS)[number] | (typeof LIST_KEYS)[number]
 
 const isSpecies = (s: unknown): s is string => ALL_SPECIES.includes(String(s))
 export const keyOf = (name: string) => name.trim().toLowerCase()
@@ -40,6 +41,22 @@ export function upsert(raw: unknown[], name: string, patch: Partial<Friend>): un
   const defined = Object.fromEntries(Object.entries(patch).filter(([, v]) => v !== undefined))
   const i = raw.findIndex(entry => isNamed(entry, name))
   return i < 0 ? [...raw, { name, ...defined }] : raw.map((entry, j) => (j === i ? { ...(entry as object), ...defined } : entry))
+}
+
+// One personality field set from the text typed for it (a list field, one item per line); empty drops it. Fields this module does not know stay.
+export function withSoulField(raw: unknown[], name: string, field: SoulField, text: string): unknown[] {
+  const entry = raw.find(e => isNamed(e, name)) as { personality?: unknown } | undefined
+  const was = entry?.personality && typeof entry.personality === 'object' && !Array.isArray(entry.personality) ? (entry.personality as Record<string, unknown>) : {}
+  const lines = text.split('\n').map(l => l.trim()).filter(Boolean)
+  const value = (LIST_KEYS as readonly string[]).includes(field) ? lines : lines.join(' ')
+  const { [field]: _, ...rest } = was
+  return upsert(raw, name, { personality: (value.length ? { ...rest, [field]: value } : rest) as Soul })
+}
+
+// A sentence becomes the tone of a structured personality; a structured one becomes one sentence, its fields in order.
+export function flipped(p: Personality): Personality | undefined {
+  if (typeof p === 'string') return { tone: p }
+  return [...TEXT_KEYS, ...LIST_KEYS].flatMap(k => texts(p[k])).join('. ') || undefined
 }
 
 export const without = (raw: unknown[], name: string) => raw.filter(entry => !isNamed(entry, name))

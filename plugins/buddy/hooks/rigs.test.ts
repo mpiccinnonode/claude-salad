@@ -56,3 +56,7 @@ test('a stage covers its rarity and up until the next one; below every stage, th
     delete RIGS['mock:legendary']
   }
 })
+
+test('every species has a legendary stage of its own', async () => {
+  for (const species of ALL_SPECIES) expect(`${species}:${RIGS[`${species}:legendary`] !== undefined}`).toBe(`${species}:true`)
+})

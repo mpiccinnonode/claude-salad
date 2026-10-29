@@ -79,3 +79,12 @@ test('other species: blink, look, spin, and their own moods', async () => {
   expect(text('capybara', 3, { action: { kind: 'pet', age: 1 } })[1]).toContain('u.--.u')
   expect(text('cactus', 3, { action: { kind: 'pet', age: 1 } })[3]).toContain('| ww |')
 })
+
+test('a legendary catches the light: a white band sweeps its body, then rests; other rarities never shine', async () => {
+  const lit = (rarity: 'epic' | 'legendary', tick: number) =>
+    drawBuddy('duck', tick, { isWorking: false, eye: 'O', hat: 'none', rarity }, 'yellow').flat().some(([t, c]) => c === 'white' && t.trim())
+  const ticks = Array.from({ length: 20 }, (_, t) => t)
+  expect(ticks.some(t => lit('legendary', t))).toBe(true)
+  expect(ticks.some(t => !lit('legendary', t))).toBe(true)
+  expect(ticks.some(t => lit('epic', t))).toBe(false)
+})

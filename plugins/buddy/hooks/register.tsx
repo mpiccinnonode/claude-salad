@@ -1,9 +1,10 @@
 import type { Register } from 'claude-code'
 import { LIST_PANE, runBuddy } from './commands.ts'
+import { driftOne, relateUp } from './crew.ts'
 import type { Ctx } from './crew.ts'
 import { reasonFor } from './lines.ts'
 import { drawList } from './list.tsx'
-import { beat, clearDialogue, countTurnTogether, crewNow, hatchInto, nextSpeaker, quipFromModel, react, shutList, tickNow } from './state.ts'
+import { beat, clearDialogue, countTurnTogether, crewNow, hatchInto, nextSpeaker, quipFromModel, react, refresh, shutList, tickNow } from './state.ts'
 import type { Live } from './state.ts'
 import { drawBand } from './view.tsx'
 import { HINT, WORDS } from './words.ts'
@@ -32,6 +33,8 @@ export const register: Register = (on, options) => {
     // ponytail: band redraws ~3x/s forever; pause the ticker while hidden if that ever shows up in profiles
     live.lastActiveAt = await tickNow($)
     $.clock.every(300, () => beat($, o, live))
+    // Once per session, not at every crew change, and after the band is up: it may ask Haiku; the next refresh shows what it wrote.
+    await relateUp($, o)
     return next(e)
   })
 
@@ -67,6 +70,7 @@ export const register: Register = (on, options) => {
     live.lastActiveAt = await tickNow($)
     live.lastAnswer = e.answer.slice(-1500)
     await countTurnTogether($, o, live)
+    if (await driftOne($, o, await crewNow($))) await refresh($, o)
     if (++live.turns % o.every !== 0) return result
 
     // The floor passes on each time; now and then the next one answers back, once, never a chain.

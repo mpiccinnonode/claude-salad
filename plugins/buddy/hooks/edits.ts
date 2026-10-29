@@ -1,9 +1,9 @@
 import type { EngineInterface } from 'claude-code'
 import type { Card, Draft, PaneUi } from '../types'
 import { evolveOne, join, leave, place, rm, use } from './commands.ts'
-import { eggs, hatchCrew, hatchNew, isHeld, openBook, outOfEgg, rename, rosterOf, setCrew, writeBook } from './crew.ts'
+import { crewSizeOf, eggs, hatchCrew, hatchNew, isHeld, openBook, outOfEgg, rename, rosterOf, setCrew, setCrewSize, writeBook } from './crew.ts'
 import type { Ctx } from './crew.ts'
-import { findFriend, flipped, keyOf, upsert, withSoulField } from './friends.ts'
+import { findFriend, flipped, keyOf, relationPairs, upsert, withSoulField } from './friends.ts'
 import type { Personality, SoulField } from './friends.ts'
 import { hatchInto, refresh, setPane } from './state.ts'
 import { WORDS } from './words.ts'
@@ -48,6 +48,11 @@ export async function setSentence($: EngineInterface, o: Ctx, c: Card, text: str
   return patchEntry($, o, raw => upsert(raw, c.name, { personality: text.trim() }))
 }
 
+// One `Name: relation` per line; an empty field keeps an empty list, so relateUp does not dream them again.
+export async function setRelations($: EngineInterface, o: Ctx, c: Card, text: string) {
+  return patchEntry($, o, raw => upsert(raw, c.name, { relations: relationPairs(text).pairs.map(([n, r]) => ({ [n]: r })) } as never))
+}
+
 export async function flipSoul($: EngineInterface, o: Ctx, c: Card) {
   if (c.personality === undefined) return
   return patchEntry($, o, raw => upsert(raw, c.name, { personality: flipped(c.personality as Personality) }))
@@ -56,7 +61,7 @@ export async function flipSoul($: EngineInterface, o: Ctx, c: Card) {
 // In the crew it steps back; on the bench it joins while there is room, else the pane asks who makes way.
 export async function toggleCrew($: EngineInterface, o: Ctx, c: Card, crew: number) {
   if (c.status === 'lead' || c.status === 'crew') return settle($, o, await leave($, o, c.name))
-  if (crew >= o.crewSize) return setPane($, { mode: 'swap', note: '' })
+  if (crew >= (await crewSizeOf($, o))) return setPane($, { mode: 'swap', note: '' })
   return settle($, o, await join($, o, c.name))
 }
 
@@ -71,6 +76,13 @@ export async function swapIn($: EngineInterface, o: Ctx, c: Card, out: string) {
   await setCrew($, keys.map(k => (k === out ? e.key : k)))
   await hatchInto($, o)
   return settle($, o, WORDS[o.lang].joined(c.name))
+}
+
+// Room for one more or one less in the crew; a smaller crew keeps its first ones.
+export async function resize($: EngineInterface, o: Ctx, size: number) {
+  await setCrewSize($, size)
+  await hatchInto($, o)
+  return settle($, o, WORDS[o.lang].crewSized(size))
 }
 
 export async function lead($: EngineInterface, o: Ctx, c: Card) {

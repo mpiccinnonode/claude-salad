@@ -23,7 +23,8 @@ function rig($: Engine, on: On, files: Record<string, string> = {}, store?: Reco
   const reads: string[] = []
   const writes: string[] = []
   const toasts: string[] = []
-  mock.store(on, store)
+  // Relations were already generated, unless a test says otherwise.
+  mock.store(on, { related: true, ...store })
   mock.env(on, env)
   on('fs.read', ($, e) => {
     reads.push(e.path)
@@ -396,13 +397,13 @@ test('evolution: a box when ready, nothing until /buddy evolve, then a rarity up
   expect(await shows(/Pebble, Sarcasmo Alato/)).toBe(true)
   expect(await shows(/^★★$/)).toBe(true)
   expect(await card()).toContain('PAT 93')
-  expect(await run('evolve')).toContain('altri 4 turni')
+  expect(await run('evolve')).toContain('altri 3 turni')
 
   const ui = await mount()
   await ui.press({ key: 'talk' })
   await ui.unmount()
   expect(systems.at(-1)).toContain('You are Pebble, Sarcasmo Alato, a tiny terminal companion. Tone: feroce. Traits: strano.')
-  await turns(3)
+  await turns(2)
   expect(await shows(/\/buddy evolve/, WIDE)).toBe(false)
   await turns(1)
   expect(await shows(/Pebble · \/buddy evolve/, WIDE)).toBe(true)
@@ -713,6 +714,18 @@ test('list: species and personality are written into the file, other fields kept
   await ui.unmount()
 })
 
+test('list: relations show under the mate name and are edited one per line', { options: { language: 'en' } }, async ($, on) => {
+  const roster = [{ name: 'Zed', personality: 'Calm.', relations: [{ ada: 'old rival' }] }, ...ROSTER.slice(1)]
+  const { open, book } = paneRig($, on, { [FILE]: JSON.stringify(roster) }, settledStore())
+  const ui = await open()
+  expect(await ui.find({ type: 'Input', key: 'rel-zed' })).toMatchObject({ props: { value: 'Ada: old rival' } })
+  await ui.input({ key: 'rel-zed', text: 'Ada: secret lover\nPip - little brother' })
+  expect(book()[0]!.relations).toEqual([{ Ada: 'secret lover' }, { Pip: 'little brother' }])
+  await ui.input({ key: 'rel-zed', text: '' })
+  expect(book()[0]!.relations).toEqual([])
+  await ui.unmount()
+})
+
 test('list: a full crew asks who makes way; removal asks first', { options: { language: 'en', crewSize: 2 } }, async ($, on) => {
   const { open, book, run } = paneRig($, on, { [FILE]: JSON.stringify(ROSTER) }, settledStore())
   const ui = await open()
@@ -771,6 +784,196 @@ test('list: a buddy ready on the bench evolves from the pane, announced by the l
   await ui.press({ key: 'evolve' })
   expect(await ui.find({ type: 'Text', text: /Zed, the Odd has evolved!/ })).toBeDefined()
   expect(book()[0]!.personality).toEqual({ tone: 'odd' })
-  expect(await ui.find({ type: 'Text', text: /evolves in 4 turns/ })).toBeDefined()
+  expect(await ui.find({ type: 'Text', text: /evolves in 3 turns/ })).toBeDefined()
   await ui.unmount()
+})
+
+test('band: the fifth button opens the list pane', { options: { language: 'en' } }, async ($, on) => {
+  const opened: string[] = []
+  const { start, mount } = rig($, on, { [FILE]: JSON.stringify(ROSTER) }, settledStore())
+  on('ui.open', ($, e) => { opened.push(e.id); return { value: { isPlaced: true } } as never })
+  await start()
+  const ui = await mount()
+  expect(await ui.find({ type: 'Button', key: 'list' })).toMatchObject({ props: { hotkey: '5', label: 'list' } })
+  await ui.press({ key: 'list' })
+  await ui.unmount()
+  expect(opened).toEqual(['buddy-list'])
+})
+
+test('list: − and + set the crew\'s room, kept in the store; a smaller crew keeps its first ones', { options: { language: 'en' } }, async ($, on) => {
+  const { open, run } = paneRig($, on, { [FILE]: JSON.stringify(ROSTER) }, settledStore())
+  const ui = await open()
+  await ui.press({ key: 'room-less' })
+  expect(await ui.find({ type: 'Text', text: /crew 2\/2/ })).toBeDefined()
+  await ui.press({ key: 'room-less' })
+  expect(await ui.find({ type: 'Text', text: /room for 1/ })).toBeDefined()
+  expect(await ui.find({ type: 'Button', key: 'pick-zed' })).toMatchObject({ props: { label: '▸ Zed' } })
+  expect(await ui.find({ type: 'Button', key: 'pick-ada' })).toMatchObject({ props: { label: '  Ada' } })
+  // Stuck at one: the store, read by /buddy join too, holds the room.
+  await ui.press({ key: 'room-less' })
+  expect(await run('join Pip')).toContain('crew is full (1)')
+  await ui.press({ key: 'room-more' })
+  // Ada was still listed in the crew, so she comes back with the room.
+  expect(await ui.find({ type: 'Button', key: 'pick-ada' })).toMatchObject({ props: { label: '● Ada' } })
+  for (let i = 0; i < 4; i++) await ui.press({ key: 'room-more' })
+  // Never more room than buddies in the file.
+  expect(await ui.find({ type: 'Text', text: /crew 2\/4/ })).toBeDefined()
+  await ui.unmount()
+})
+
+test('relations: each buddy talks to its mates as what they are to it; a rename follows them and a removal drops them', { options: { language: 'en' } }, async ($, on) => {
+  const roster = [{ name: 'Zed', personality: 'Calm.', relations: [{ Ada: 'your rival', pip: 'your apprentice' }] }, { name: 'Ada', personality: 'Sharp.', relations: { ZED: 'an old flame' } }, ...ROSTER.slice(2)]
+  const systems: string[] = []
+  on('model.complete', ($, e) => { systems.push(e.system ?? ''); return answer('Hm.') })
+  const { open, book, mount } = paneRig($, on, { [FILE]: JSON.stringify(roster) }, settledStore())
+  const ui = await open()
+  const band = await mount()
+  await band.press({ key: 'talk' })
+  expect(systems.at(-1)).toContain('You share the terminal with Ada (to you: your rival).')
+  await band.press({ key: 'body-1-2' })
+  await band.press({ key: 'talk' })
+  expect(systems.at(-1)).toContain('You share the terminal with Zed (to you: an old flame).')
+  await band.unmount()
+
+  await ui.press({ key: 'pick-ada' })
+  await ui.input({ key: 'name-ada', text: 'Adele' })
+  expect(book()[0]!.relations).toEqual([{ Adele: 'your rival' }, { pip: 'your apprentice' }])
+  await ui.press({ key: 'pick-pip' })
+  await ui.press({ key: 'remove' })
+  await ui.press({ key: 'rm-yes' })
+  expect(book()[0]!.relations).toEqual([{ Adele: 'your rival' }])
+  expect(book()[1]).toMatchObject({ name: 'Adele', relations: [{ ZED: 'an old flame' }] })
+  await ui.unmount()
+})
+
+test('love: two buddies out who call each other lovers lay an egg of their own every half turnsPerHatch; a bare /buddy hatches their child', { options: { language: 'en', turnsPerHatch: 2 } }, async ($, on) => {
+  const roster = [{ name: 'Zed', personality: 'Calm.', relations: [{ Ada: 'lover' }] }, { name: 'Ada', personality: 'Sharp.', relations: { zed: 'secret lover' } }, ...ROSTER.slice(2)]
+  const prompts: string[] = []
+  on('model.complete', ($, e) => { prompts.push(e.prompt ?? ''); return answer(e.system?.includes('invent personalities') ? JSON.stringify({ name: 'Bimbo', tone: 'tiny' }) : 'Hm.') })
+  const { start, run, turns, shows, book } = rig($, on, { [FILE]: JSON.stringify(roster) }, settledStore({ eggAt: 0 }))
+  await start()
+  expect(await shows(/♥/, WIDE)).toBe(false)
+  await turns(1)
+  expect(await shows(/♥ Zed\+Ada · \/buddy/, WIDE)).toBe(true)
+  expect(await run('')).toContain('Crack! Bimbo is born, child of Zed and Ada.')
+  expect(prompts.at(-1)).toContain('Its parents are Zed (Calm.) and Ada (Sharp.)')
+  const [zed, ada, , , bimbo] = book()
+  expect(bimbo).toMatchObject({ name: 'Bimbo', personality: { tone: 'tiny' }, relations: [{ Zed: 'your parent' }, { Ada: 'your parent' }] })
+  expect([zed!.species, ada!.species]).toContain(bimbo!.species)
+  expect(zed!.relations).toEqual([{ Ada: 'lover' }, { Bimbo: 'your child' }])
+  expect(ada!.relations).toEqual([{ zed: 'secret lover' }, { Bimbo: 'your child' }])
+  // The normal egg was not spent, and the couple starts over.
+  expect(await shows(/♥/, WIDE)).toBe(false)
+  expect(await shows(/Egg ready/, WIDE)).toBe(false)
+  await turns(1)
+  expect(await shows(/♥ Zed\+Ada/, WIDE)).toBe(true)
+})
+
+test('love: one-sided love lays no egg', { options: { language: 'en', turnsPerHatch: 2 } }, async ($, on) => {
+  const roster = [{ name: 'Zed', personality: 'Calm.', relations: [{ Ada: 'lover' }] }, { name: 'Ada', personality: 'Sharp.', relations: { zed: 'ex-lover' } }, ...ROSTER.slice(2)]
+  const { start, turns, shows } = rig($, on, { [FILE]: JSON.stringify(roster) }, settledStore({ eggAt: 0 }))
+  await start()
+  await turns(3)
+  expect(await shows(/♥/, WIDE)).toBe(false)
+})
+
+test('evolution: what the mates out are to it shifts with its new self, written into the file by name', { options: { language: 'en', turnsPerEvolve: 1 } }, async ($, on) => {
+  const roster = [{ name: 'Zed', personality: 'Calm.', relations: [{ Ada: 'rival' }, { Nino: 'old friend' }] }, ...ROSTER.slice(1)]
+  const prompts: string[] = []
+  on('model.complete', ($, e) => { prompts.push(e.prompt ?? ''); return answer(e.system?.includes('You evolve') ? JSON.stringify({ title_en: 'the Odd', title_it: 'lo Strano', tone: 'odd', relations: { ada: 'lover', Ghost: 'x' } }) : 'Hm.') })
+  const { start, run, turns, book } = rig($, on, { [FILE]: JSON.stringify(roster) }, settledStore({ born: commonZed() }))
+  await start()
+  await turns(1)
+  expect(await run('evolve Zed')).toContain('Zed, the Odd has evolved!')
+  expect(prompts.at(-1)).toContain('Ada (rival)')
+  expect(book()[0]!.relations).toEqual([{ Nino: 'old friend' }, { Ada: 'lover' }])
+})
+
+test('relations drift without an evolution: every fifth of turnsPerEvolve, one buddy out per turn; a love starts only in a turn, once every turnsPerEvolve, and is answered at the next step', { options: { language: 'en', turnsPerEvolve: 1, turnsPerHatch: 2 } }, async ($, on) => {
+  const roster = [{ name: 'Zed', personality: 'Calm.', relations: [{ Ada: 'rival' }] }, { name: 'Ada', personality: 'Sharp.' }, ...ROSTER.slice(2)]
+  const drifts: string[] = []
+  on('model.complete', ($, e) => {
+    if (!e.system?.includes('as days go by')) return answer('Hm.')
+    drifts.push(e.prompt ?? '')
+    return answer(JSON.stringify(e.prompt?.startsWith('Zed') ? { ada: 'lover', Ghost: 'x' } : { Zed: 'my lover' }))
+  })
+  const { start, turns, shows, book } = rig($, on, { [FILE]: JSON.stringify(roster) }, settledStore({ eggAt: 0 }))
+  await start()
+  // Turns 1-4 are small steps, Zed and Ada in turn: no love starts.
+  await turns(4)
+  expect(drifts).toHaveLength(4)
+  expect(drifts[0]).toContain('Ada: to Zed rival; Zed to them nothing yet.')
+  expect(book()[0]!.relations).toEqual([{ Ada: 'rival' }])
+  expect(book()[1]!.relations).toBeUndefined()
+  // Turn 5 is Zed's turn: it falls in love; at turn 6 Ada answers.
+  await turns(1)
+  expect(book()[0]!.relations).toEqual([{ Ada: 'lover' }])
+  await turns(1)
+  expect(drifts[5]).toContain('Zed: to Ada nothing yet; Ada to them lover.')
+  expect(book()[1]!.relations).toEqual([{ Zed: 'my lover' }])
+  await turns(1)
+  expect(await shows(/♥ Zed\+Ada · \/buddy/, WIDE)).toBe(true)
+})
+
+test('relations drift: a small step starts no love unless answering one, and ends none', { options: { language: 'en', turnsPerEvolve: 5 } }, async ($, on) => {
+  const roster = [{ name: 'Zed', personality: 'Calm.', relations: [{ Ada: 'rival' }, { Nino: 'my lover' }] }, { name: 'Ada', personality: 'Sharp.' }, ...ROSTER.slice(2)]
+  on('model.complete', ($, e) => answer(e.system?.includes('as days go by') ? JSON.stringify({ Ada: 'lover', Nino: 'old friend now' }) : 'Hm.'))
+  const { start, turns, book } = rig($, on, { [FILE]: JSON.stringify(roster) }, settledStore({ crew: ['zed', 'ada', 'nino'] }))
+  await start()
+  await turns(1)
+  expect(book()[0]!.relations).toEqual([{ Ada: 'rival' }, { Nino: 'my lover' }])
+})
+
+test('relations drift: a mate renamed while Haiku answers gets no orphan relation under its old name', { options: { language: 'en', turnsPerEvolve: 5 } }, async ($, on) => {
+  const roster = [{ name: 'Zed', personality: 'Calm.', relations: [{ Ada: 'rival' }] }, { name: 'Ada', personality: 'Sharp.' }, ...ROSTER.slice(2)]
+  const files = { [FILE]: JSON.stringify(roster) }
+  on('model.complete', ($, e) => {
+    if (!e.system?.includes('as days go by')) return answer('Hm.')
+    files[FILE] = files[FILE]!.replace(/"Ada"/g, '"Bea"')
+    return answer(JSON.stringify({ Ada: 'grudging respect' }))
+  })
+  const { start, turns, book } = rig($, on, files, settledStore())
+  await start()
+  await turns(1)
+  expect(book()[0]!.relations).toEqual([{ Bea: 'rival' }])
+})
+
+test('love: a buddy can love more than one; benching one pauses that couple without resetting it, and only removal clears it', { options: { language: 'en', turnsPerHatch: 4 } }, async ($, on) => {
+  const roster = [{ name: 'Zed', personality: 'Calm.', relations: [{ Ada: 'lover' }, { Pip: 'soulmate' }] }, { name: 'Ada', personality: 'Sharp.', relations: [{ Zed: 'lover' }] }, { name: 'Pip', personality: 'Calm.', relations: [{ Zed: 'husband' }] }, ROSTER[3]!]
+  const { start, run, turns, shows, book } = rig($, on, { [FILE]: JSON.stringify(roster) }, settledStore({ eggAt: 0, crew: ['zed', 'ada', 'pip'] }))
+  await start()
+  await turns(1)
+  expect(await run('leave Pip')).toContain('Pip')
+  await turns(1)
+  expect(await shows(/♥ Zed\+Ada/, WIDE)).toBe(true)
+  expect(await shows(/♥ Zed\+Pip/, WIDE)).toBe(false)
+  // Back out, Pip's couple goes on from 1 turn, not from 0.
+  await run('join Pip')
+  await turns(1)
+  expect(await shows(/♥ Zed\+Pip/, WIDE)).toBe(true)
+  expect(book()[0]!.relations).toEqual([{ Ada: 'lover' }, { Pip: 'soulmate' }])
+  await run('rm Pip')
+  expect(book()[0]!.relations).toEqual([{ Ada: 'lover' }])
+})
+
+test('upgrade: relations in an old shape are put in shape at session start, and buddies without any get them from Haiku once', { options: { language: 'en' } }, async ($, on) => {
+  const roster = [{ name: 'Zed', personality: 'Calm.', relation: 'Ada: rival' }, { name: 'Ada', personality: 'Sharp.' }, { name: 'Pip', personality: 'Calm.', relations: [] }]
+  let calls = 0
+  let ok = false
+  on('model.complete', ($, e) => {
+    if (!e.system?.includes('You weave')) return answer('Hm.')
+    calls += 1
+    return answer(ok ? JSON.stringify({ ada: { Zed: 'grudging admirer', pip: 'lover', Ghost: 'x' } }) : 'not json')
+  })
+  const { start, book } = rig($, on, { [FILE]: JSON.stringify(roster) }, settledStore({ related: false }))
+  await start()
+  expect(book()[0]).toMatchObject({ name: 'Zed', relations: [{ Ada: 'rival' }] })
+  expect(book()[0]).not.toHaveProperty('relation')
+  expect(book()[1]).not.toHaveProperty('relations')
+  ok = true
+  await start()
+  expect(book()[1]!.relations).toEqual([{ Zed: 'grudging admirer' }, { Pip: 'lover' }])
+  expect(book()[2]!.relations).toEqual([])
+  await start()
+  expect(calls).toBe(2)
 })

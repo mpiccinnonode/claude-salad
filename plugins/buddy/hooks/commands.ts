@@ -1,8 +1,8 @@
 import type { EngineInterface } from 'claude-code'
-import { eggs, evolveNow, evolvesIn, forget, hatchCrew, hatchNew, memberOf, outOfEgg, rosterOf, setCrew, titled, writeBook } from './crew.ts'
+import { crewSizeOf, eggs, evolveNow, evolvesIn, forget, hatchCrew, hatchLove, hatchNew, memberOf, nestsReady, outOfEgg, rosterOf, setCrew, titled, writeBook } from './crew.ts'
 import type { Ctx, Entry, Roster } from './crew.ts'
 import type { Lang } from './lines.ts'
-import { findFriend, parseAdd, without } from './friends.ts'
+import { findFriend, parseAdd, relink, without } from './friends.ts'
 import { crewNow, crewOr, hatchInto, membersNow, relist, say, setHidden, speak, toggleHidden } from './state.ts'
 import { WORDS } from './words.ts'
 
@@ -35,11 +35,17 @@ async function recrew($: EngineInterface, o: Ctx, keys: string[] | null) {
   return hatchInto($, o)
 }
 
-// With an egg ready, a bare /buddy hatches a surprise: Haiku picks the name. Otherwise it shows or hides.
+// With an egg ready, a bare /buddy hatches a surprise: Haiku picks the name; a couple's egg goes first. Otherwise it shows or hides.
 async function toggle($: EngineInterface, o: Ctx) {
   const w = WORDS[o.lang]
   let failed: string | undefined
-  if ((await eggs($, o.perEgg)).left <= 0) {
+  const [love] = await nestsReady($, o, await crewNow($))
+  if (love) {
+    const hatched = await hatchLove($, o, love)
+    if ('name' in hatched) return welcome($, o, hatched.name, hatched.key, w.bornOf(hatched.name, love[0].name, love[1].name))
+    failed = hatched.failed
+  }
+  if (!failed && (await eggs($, o.perEgg)).left <= 0) {
     const hatched = await hatchNew($, o, { name: '' }, await rosterOf($, o))
     if ('name' in hatched) return welcome($, o, hatched.name, hatched.key)
     failed = hatched.failed
@@ -51,21 +57,22 @@ async function toggle($: EngineInterface, o: Ctx) {
 
 // A newborn joins while there is room, leading or last; a full crew stays as it is and it waits on the bench.
 export async function place($: EngineInterface, o: Ctx, key: string, isLead: boolean) {
-  const keys = (await keysOut($, o)).filter(k => k !== key)
-  if (keys.length >= o.crewSize) return false
+  const [out, size] = await Promise.all([keysOut($, o), crewSizeOf($, o)])
+  const keys = out.filter(k => k !== key)
+  if (keys.length >= size) return false
   await recrew($, o, isLead ? [key, ...keys] : [...keys, key])
   return true
 }
 
-async function welcome($: EngineInterface, o: Ctx, name: string, key: string) {
+async function welcome($: EngineInterface, o: Ctx, name: string, key: string, said = WORDS[o.lang].born(name)) {
   const w = WORDS[o.lang]
   const [hasRoom] = await Promise.all([place($, o, key, true), setHidden($, false)])
-  await say($, w.born(name))
-  return [w.born(name), ...(hasRoom ? [] : [w.bench(name)])].join('\n')
+  await say($, said)
+  return [said, ...(hasRoom ? [] : [w.bench(name)])].join('\n')
 }
 
 // Opens the list pane; where no pane can be drawn (headless, or the person's terminal refuses), the plain list.
-async function list($: EngineInterface, o: Ctx) {
+export async function list($: EngineInterface, o: Ctx) {
   const w = WORDS[o.lang]
   await relist($, o)
   const opened = await $.ui.open({ id: LIST_PANE, title: w.paneTitle, focus: true, closeOnEscape: true, rows: ALL_ROOM, columns: ALL_ROOM }).catch(() => ({ isPlaced: false }))
@@ -104,9 +111,9 @@ export async function join($: EngineInterface, o: Ctx, wanted: string) {
   const r = await rosterOf($, o)
   const e = findFriend(r.roster, wanted)
   if (!e) return missing(w, wanted)
-  const keys = await keysOut($, o, r)
+  const [keys, size] = await Promise.all([keysOut($, o, r), crewSizeOf($, o)])
   if (keys.includes(e.key)) return w.already(e.name)
-  if (keys.length >= o.crewSize) return w.full(o.crewSize)
+  if (keys.length >= size) return w.full(size)
   const failed = await outOfEgg($, o, e, r)
   if (failed) return failed
   await recrew($, o, [...keys, e.key])
@@ -173,7 +180,7 @@ export async function rm($: EngineInterface, o: Ctx, wanted: string) {
   if (book.error) return w.badFile(book.error)
   const e = wanted ? findFriend(roster, wanted) : undefined
   if (!e) return missing(w, wanted)
-  await Promise.all([writeBook($, book, without(book.raw, wanted)), forget($, e.key)])
+  await Promise.all([writeBook($, book, relink(without(book.raw, wanted), wanted)), forget($, e.key)])
   await hatchInto($, o)
   return w.removed(wanted)
 }

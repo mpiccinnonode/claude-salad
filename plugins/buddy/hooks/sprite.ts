@@ -64,7 +64,26 @@ export function drawBuddy(species: string, tick: number, { isWorking, eye, hat, 
   if (isTopFree) rows[0] = top ?? (hat === 'none' ? rows[0] ?? [] : hatRow)
   const lifted = beat.isLifted && isTopFree ? [...rows.slice(1), [['    ~ ~     ', color]] as Row] : rows
   const shift = isWorking && !beat.isLifted && tick % 2 ? 1 : 0
-  return lifted.map(row => [[' '.repeat(shift), color], ...row, [' '.repeat(1 - shift), color]])
+  const out = lifted.map(row => [[' '.repeat(shift), color], ...row, [' '.repeat(1 - shift), color]] as Row)
+  return rarity === 'legendary' ? sheen(out, tick, color) : out
+}
+
+// A band of light sweeps a legendary's body diagonally, two cells a tick, then rests; parts keep their own colours.
+function sheen(rows: Row[], tick: number, color: string): Row[] {
+  const at = 2 * (tick % 20)
+  return rows.map((row, y) => {
+    let x = 0
+    const out: [string, string][] = []
+    for (const [text, c] of row)
+      for (const ch of text) {
+        const d = x++ + y - at
+        const tint = c === color && (d === 0 || d === 1) ? 'white' : c
+        const last = out[out.length - 1]
+        if (last && last[1] === tint) last[0] += ch
+        else out.push([ch, tint])
+      }
+    return out
+  })
 }
 
 export const ACTION_TICKS = { pet: 6, poke: 5 } as const

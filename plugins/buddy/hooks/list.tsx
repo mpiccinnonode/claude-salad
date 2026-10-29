@@ -3,7 +3,7 @@ import type { Card, Filter, Listing, PaneUi } from '../types'
 import { ALL_SPECIES, RARITIES, STAT_NAMES } from './bones.ts'
 import { titled } from './crew.ts'
 import type { Ctx } from './crew.ts'
-import { addNew, evolveIt, filterBy, flipSoul, hatchIt, lead, pick, remove, renameTo, setSentence, setSoulField, setSpecies, swapIn, toggleCrew } from './edits.ts'
+import { addNew, evolveIt, filterBy, flipSoul, hatchIt, lead, pick, remove, renameTo, resize, setRelations, setSentence, setSoulField, setSpecies, swapIn, toggleCrew } from './edits.ts'
 import { LIST_KEYS, TEXT_KEYS, texts } from './friends.ts'
 import { SPRITE } from './band.ts'
 import { drawBuddy } from './sprite.ts'
@@ -60,6 +60,13 @@ export async function drawList($: EngineInterface, e: RenderInput<'Pane'>, o: Ct
     <Box key="head" flexDirection="row" gap={2}>
       <Text bold>Buddy</Text>
       <Text dimColor>{w.paneHead(shown.length, l.cards.length, crew.length, l.crewSize, l.egg.done, l.egg.per)}</Text>
+      {/* The crew's room, from one to everyone in the file. */}
+      {canEdit && !p.isBusy && (
+        <Box key="room" flexDirection="row" gap={1}>
+          <Button key="room-less" plain dimColor={l.crewSize <= 1} label="−" onPress={() => l.crewSize > 1 && resize($, o, l.crewSize - 1)} />
+          <Button key="room-more" plain dimColor={l.crewSize >= l.cards.length} label="+" onPress={() => l.crewSize < l.cards.length && resize($, o, l.crewSize + 1)} />
+        </Box>
+      )}
     </Box>
   )
   const banner = l.error && (
@@ -137,13 +144,15 @@ export async function drawList($: EngineInterface, e: RenderInput<'Pane'>, o: Ct
   const card = c!
   const b = card.bones
   const soul = card.personality
+  const rels = card.relations ?? []
+  const relText = rels.map(([n, r]) => `${n}: ${r}`).join('\n')
   const isLocked = !!l.error || p.isBusy || !canEdit
   // The field's text width: the body, less the sprite column beside it and the field's own frame.
   const textWidth = Math.max(10, e.props.bodyColumns - (isSide ? META + 2 : 0) - 4)
   const meta = (
     <Box key="meta" flexDirection="column" flexShrink={0} width={isSide ? META : undefined}>
       <Box key="sprite" flexDirection="column" flexShrink={0}>{spriteRows(card)}</Box>
-      <Text bold>{titled({ ...card, personality: '', bones: b! })}</Text>
+      <Text bold>{titled({ ...card, personality: '', bones: b!, relations: undefined })}</Text>
       <Text>{b ? <Text color={RARITY_COLOR[b.rarity]}>{stars(card)} {w.rarity[b.rarity]}</Text> : <Text dimColor>{w.inEgg}</Text>}<Text dimColor> · {w.status[card.status]}</Text></Text>
       {b && <Box key="stats" flexDirection="column">{STAT_NAMES.map(s => <Text key={s} mono><Text dimColor>{`${w.short[s]} `}</Text><Text color={s === b.peak ? 'green' : RARITY_COLOR[b.rarity]}>{bar(b.stats[s])}</Text>{` ${String(b.stats[s]).padStart(3)}`}</Text>)}</Box>}
       <Text>{b ? (isReady(card) ? <Text color="yellow">{w.readyNow}</Text> : w.evolvesIn(card.left!)) : l.egg.left > 0 ? w.eggIn(l.egg.left) : <Text color="yellow">{w.eggReady}</Text>}</Text>
@@ -152,11 +161,16 @@ export async function drawList($: EngineInterface, e: RenderInput<'Pane'>, o: Ct
   const fields = isLocked ? (
     <Box key="fields" flexDirection="column">
       <Text dimColor>{texts(typeof soul === 'string' ? soul : Object.values(soul ?? {}).flat()).join(' · ') || w.noSoul}</Text>
+      {rels.map(([n, r]) => <Text key={`rel-${n}`}><Text bold color="magenta">{n}</Text><Text dimColor>: {r}</Text></Text>)}
     </Box>
   ) : (
     <Box key="fields" flexDirection="column" flexGrow={1} gap={1}>
       <Input key={`name-${card.key}`} label={w.nameLabel} value={card.name} submitLabel={w.save} onSubmit={v => renameTo($, o, card, v)} />
       <Select key={`species-${card.key}`} label={w.speciesLabel} value={card.species} options={ALL_SPECIES.map(s => ({ value: s }))} onSelect={v => setSpecies($, o, card, v)} />
+      <Box key="relations" flexDirection="column">
+        <Text bold color="magenta">{w.relationsLabel}</Text>
+        <Input key={`rel-${card.key}`} rows={rowsFor(relText, textWidth)} value={relText} placeholder={w.relationsHint} submitLabel={w.save} onSubmit={t => setRelations($, o, card, t)} />
+      </Box>
       <Text dimColor>{typeof soul === 'string' ? w.soulSentence : soul ? w.soulFields : w.soulEmpty}</Text>
       {typeof soul === 'string' ? (
         <Box key="soul" flexDirection="column">

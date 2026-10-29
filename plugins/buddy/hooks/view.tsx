@@ -2,6 +2,7 @@ import type { EngineInterface, RenderInput } from 'claude-code'
 import type { Bones, StatName } from '../types'
 import { layoutFor, NOTICE, SPRITE, windowOf } from './band.ts'
 import { RARITIES, STAT_NAMES } from './bones.ts'
+import { list } from './commands.ts'
 import { titled } from './crew.ts'
 import type { Ctx } from './crew.ts'
 import { ACTION_TICKS, drawBuddy } from './sprite.ts'
@@ -11,7 +12,7 @@ import { WORDS } from './words.ts'
 
 export const RARITY_COLOR: Record<Bones['rarity'], string> = { common: 'gray', uncommon: 'green', rare: 'cyan', epic: 'magenta', legendary: 'yellow' }
 const SHORT: Record<StatName, string> = { DEBUGGING: 'DBG', PATIENCE: 'PAT', CHAOS: 'CHA', WISDOM: 'WIS', SNARK: 'SNK' }
-const BUTTONS = ['pet', 'poke', 'talk', 'stats'] as const
+const BUTTONS = ['pet', 'poke', 'talk', 'stats', 'list'] as const
 
 // The band above the prompt; undefined when it yields, to a survey or because the buddy is hidden.
 export async function drawBand($: EngineInterface, e: RenderInput<'AbovePrompt'>, o: Ctx, live: Live) {
@@ -27,7 +28,7 @@ export async function drawBand($: EngineInterface, e: RenderInput<'AbovePrompt'>
   // ponytail: ~30s with nothing happening and it dozes off
   const isAsleep = frame - Math.max(live.lastActiveAt, p?.at ?? 0) > 100
   const age = p ? frame - p.at : 0
-  const notes = [...(due.egg ? [w.eggBox] : []), ...due.glow.map(w.glowBox)]
+  const notes = [...(due.nests ?? []).map(([a, b]) => w.nestBox(a, b)), ...(due.egg ? [w.eggBox] : []), ...due.glow.map(w.glowBox)]
   const layout = layoutFor(e.props.bodyColumns, e.props.maxRows, crew.length, notes.length > 0)
   const shown = windowOf(crew.length, layout.count, at)
   const { Box, Button, Text } = $.ui.resolve(e)
@@ -68,6 +69,7 @@ export async function drawBand($: EngineInterface, e: RenderInput<'AbovePrompt'>
     poke: () => press($, o, 'poke', crew, at),
     talk: () => quipFromModel($, o, crew, at, live.lastAnswer ? `${w.chatAnswer}\n\n${live.lastAnswer}` : w.chatEmpty, true),
     stats: () => toggleStats($),
+    list: () => list($, o),
   }
   const bubble = (
     <Box key="bubble" flexDirection="column" borderStyle="round" paddingX={1}>
@@ -87,7 +89,8 @@ export async function drawBand($: EngineInterface, e: RenderInput<'AbovePrompt'>
       ) : (
         <Text dimColor={said === null}>{said ?? '...'}</Text>
       )}
-      <Box flexDirection="row" gap={1}>
+      {/* Wraps where the band is tight: the fifth button costs a row there, never a buddy or the side layout. */}
+      <Box flexDirection="row" flexWrap="wrap" columnGap={1}>
         {BUTTONS.map((key, i) => <Button key={key} plain dimColor hotkey={String(i + 1)} label={w.labels[key]} onPress={actions[key]} />)}
       </Box>
     </Box>

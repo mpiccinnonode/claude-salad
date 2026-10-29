@@ -1,8 +1,9 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface } from 'claude-code'
 import type { Bones, Listing, Member, PaneUi, Pressed, Quip, Ready } from '../types'
-import { eggs, evolvesIn, hatchCrew, listingOf, soulUp, SOUL, titled, writeTally } from './crew.ts'
+import { eggs, evolvesIn, hatchCrew, listingOf, loversIn, nestsReady, pairOf, soulUp, SOUL, titled, writeTally } from './crew.ts'
 import type { Ctx, Tally } from './crew.ts'
+import { keyOf } from './friends.ts'
 import { line } from './lines.ts'
 import type { Reason } from './lines.ts'
 import { WORDS } from './words.ts'
@@ -17,7 +18,7 @@ const isStats = atom({ plugin: 'buddy', key: 'isStats' } as const, false)
 // Index into `members` of the one whose bubble shows; wrapped, so a crew that shrank still points at someone.
 const speaker = atom({ plugin: 'buddy', key: 'speaker' } as const, 0)
 // What is ready to spend, drawn in its own box beside the bubble so it never covers what a buddy says.
-const ready = atom({ plugin: 'buddy', key: 'ready' } as const, { egg: false, glow: [] } as Ready)
+const ready = atom({ plugin: 'buddy', key: 'ready' } as const, { egg: false, glow: [], nests: [] } as Ready)
 // The list pane: what it shows, read from disk (null while it is shut), and what the person picked in it.
 const listing = atom({ plugin: 'buddy', key: 'listing' } as const, null as Listing | null)
 export const PANE_START: PaneUi = { sel: '', filter: 'all', rarity: 'all', species: 'all', query: '', mode: 'view', note: '', isBusy: false, draft: { name: '', species: '', soul: '' } }
@@ -56,10 +57,10 @@ export async function tickNow($: EngineInterface) {
   return read($, tick)
 }
 
-// An egg is ready, and the buddies out that can evolve.
+// An egg is ready, the buddies out that can evolve, and the couples out with an egg of their own.
 async function readinessOf($: EngineInterface, o: Ctx, crew: Member[]): Promise<Ready> {
-  const [{ left }, leftOf] = await Promise.all([eggs($, o.perEgg), evolvesIn($, o.perEvolve)])
-  return { egg: left <= 0, glow: crew.filter(m => m.key && leftOf(m.key) <= 0).map(m => m.name) }
+  const [{ left }, leftOf, nests] = await Promise.all([eggs($, o.perEgg), evolvesIn($, o.perEvolve), nestsReady($, o, crew)])
+  return { egg: left <= 0, glow: crew.filter(m => m.key && leftOf(m.key) <= 0).map(m => m.name), nests: nests.map(([a, b]) => [a.name, b.name]) }
 }
 
 // Reads again what another session or an edit of the buddies file may have changed, so the band follows without a reload. The dialogue, the speaker and the hidden flag stay as they are.
@@ -161,7 +162,8 @@ export async function quipFromModel($: EngineInterface, o: Ctx, crew: Member[], 
   const w = WORDS[o.lang]
   const m = crew[i]!
   if (isAsked) await Promise.all([speak($, i, w.thinks), update($, isStats, () => false)])
-  const mates = crew.filter(c => c !== m).map(c => c.name).join(', ')
+  // What the speaker is to each mate, from its own `relations`, colours how it talks to them.
+  const mates = crew.filter(c => c !== m).map(c => (m.relations?.[keyOf(c.name)] ? w.related(c.name, m.relations[keyOf(c.name)]!) : c.name)).join(', ')
   const r = await $.model.complete({
     model: 'haiku',
     system: `You are ${titled(m)}, a tiny terminal companion. ${m.personality}${mates ? ` ${w.mates(mates)}` : ''} Reply with ONE short in-character quip (max 15 words). ${w.reply} No quotes, no emoji.`,
@@ -178,7 +180,8 @@ export async function quipFromModel($: EngineInterface, o: Ctx, crew: Member[], 
 export async function countTurnTogether($: EngineInterface, o: Ctx, live: Live) {
   live.tally.all += 1
   // The stand-in ('') never counts.
-  for (const m of await crewNow($)) if (m.key) live.tally.by[m.key] = (live.tally.by[m.key] ?? 0) + 1
+  const crew = await crewNow($)
+  for (const k of [...crew.map(m => m.key).filter(Boolean), ...loversIn(crew).map(([a, b]) => pairOf(a.key, b.key))]) live.tally.by[k] = (live.tally.by[k] ?? 0) + 1
   await writeTally($, live.id, live.tally)
   await refresh($, o)
 }

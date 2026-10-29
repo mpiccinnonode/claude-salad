@@ -1,8 +1,8 @@
 import type { EngineInterface } from 'claude-code'
 import type { Bones, Card, Listing, Member } from '../types'
 import { ALL_SPECIES, evolve, RARITIES, roll } from './bones.ts'
-import { dreamOn, dreamUp } from './dream.ts'
-import { asPersonality, describe, findFriend, keyOf, parseBook, upsert } from './friends.ts'
+import { dreamDrift, dreamOn, dreamTies, dreamUp } from './dream.ts'
+import { asPersonality, describe, findFriend, inShape, isLove, keyOf, parseBook, relink, upsert, withRelations } from './friends.ts'
 import type { Friend, Personality } from './friends.ts'
 import type { Lang } from './lines.ts'
 import { WORDS } from './words.ts'
@@ -179,7 +179,7 @@ export async function rename($: EngineInterface, o: Ctx, e: { key: string; name:
   const other = findFriend(r.roster, name)
   if ((other && other.key !== e.key) || (!other && isHeld(r, keyOf(name), e.key))) return w.taken(name)
   const { [keyOf(e.name)]: _, ...aka } = r.aka
-  await writeBook($, r.book, upsert(r.book.raw, e.name, { name }))
+  await writeBook($, r.book, relink(upsert(r.book.raw, e.name, { name }), e.name, name))
   await $.store.set('aka', keyOf(name) === e.key ? aka : { ...aka, [keyOf(name)]: e.key })
   return undefined
 }
@@ -194,6 +194,32 @@ export async function soulUp($: EngineInterface, o: Ctx) {
   const fresh = await openBook($, o)
   if (fresh.error) return
   await writeBook($, fresh, souls.reduce((raw, { name, soul }) => (findFriend(fresh.friends, name)?.personality ? raw : upsert(raw, name, { personality: soul })), fresh.raw))
+}
+
+// After a Haiku call, only the relations to buddies still in the file: one renamed or removed meanwhile would come back as an orphan.
+const stillIn = (friends: Friend[], rels: Record<string, string>) => Object.fromEntries(Object.entries(rels).filter(([n]) => findFriend(friends, n)))
+
+// Relations, from 0.13: at every session start the file's relations are put in shape (`inShape`, content kept); once (`related`), buddies with no
+// relations field get them from Haiku.
+export async function relateUp($: EngineInterface, o: Ctx) {
+  const book = await openBook($, o)
+  if (book.error || !book.path) return
+  const raw = inShape(book.raw)
+  if (JSON.stringify(raw) !== JSON.stringify(book.raw)) await writeBook($, book, raw)
+  if ((await $.store.get('related')) === true) return
+  const has = (name: string) => raw.some(e => keyOf(String((e as Friend | null)?.name ?? '')) === keyOf(name) && 'relations' in (e as object))
+  const bare = book.friends.filter(f => !has(f.name)).map(f => f.name)
+  // A lone buddy, or none yet (a first run moves the original in later), has nobody to relate to: it waits for a second one.
+  if (book.friends.length < 2) return
+  const { ties, isWhole } = bare.length ? await dreamTies($, book.friends, bare, o.lang) : { ties: {}, isWhole: true }
+  // Fresh read after Haiku: an edit made meanwhile is kept, and an entry given relations meanwhile is left alone.
+  const fresh = await openBook($, o)
+  if (fresh.error) return
+  const still = (name: string) => fresh.raw.some(e => keyOf(String((e as Friend | null)?.name ?? '')) === keyOf(name) && !('relations' in (e as object)))
+  const written = Object.entries(ties).filter(([name]) => still(name)).reduce((r, [name, rels]) => withRelations(r, name, stillIn(fresh.friends, rels)), fresh.raw)
+  if (written !== fresh.raw) await writeBook($, fresh, written)
+  // What worked is written either way; a failed batch is asked again at the next start, for those names only.
+  if (isWhole) await $.store.set('related', true)
 }
 
 // A buddy hatched before species lived in the file gets its rolled one written once, so the file can override it.
@@ -214,6 +240,16 @@ async function crewKeys($: EngineInterface, o: Ctx, { roster, born }: Pick<Roste
   return typeof legacy === 'string' ? [legacy, ...base] : base
 }
 
+// The room the list pane set, else the `crewSize` option.
+export async function crewSizeOf($: EngineInterface, o: Ctx) {
+  const n = Math.floor(Number(await $.store.get('crewSize')))
+  return n >= 1 ? n : o.crewSize
+}
+
+export async function setCrewSize($: EngineInterface, n: number) {
+  await $.store.set('crewSize', n)
+}
+
 // null goes back to the option; the 0.4 `active` is cleared so it never shadows the option again.
 export async function setCrew($: EngineInterface, keys: string[] | null) {
   await Promise.all([$.store.set('crew', keys), $.store.set('active', null)])
@@ -221,14 +257,14 @@ export async function setCrew($: EngineInterface, keys: string[] | null) {
 
 export function memberOf(o: Ctx, e: Entry, born: Births): Member {
   const b = born[e.key]!
-  return { key: e.key, name: e.name, title: b.title?.[o.lang], personality: describe(e.personality ?? SOUL.personality), bones: { ...b.bones, species: e.species ?? b.bones.species } }
+  return { key: e.key, name: e.name, title: b.title?.[o.lang], personality: describe(e.personality ?? SOUL.personality), bones: { ...b.bones, species: e.species ?? b.bones.species }, ...(e.relations ? { relations: e.relations } : {}) }
 }
 
 // Unknown names, eggs and repeats are skipped; with nobody left, the first one hatched comes out alone, and with nobody hatched, no one.
 export async function hatchCrew($: EngineInterface, o: Ctx, r?: Roster): Promise<Member[]> {
   const { roster, born } = r ?? (await rosterOf($, o))
-  const keys = await crewKeys($, o, { roster, born })
-  const out = [...new Set(keys.map(k => roster.find(e => e.key === k) ?? findFriend(roster, k)))].filter((e): e is Entry => !!e && !!born[e.key]).slice(0, o.crewSize)
+  const [keys, size] = await Promise.all([crewKeys($, o, { roster, born }), crewSizeOf($, o)])
+  const out = [...new Set(keys.map(k => roster.find(e => e.key === k) ?? findFriend(roster, k)))].filter((e): e is Entry => !!e && !!born[e.key]).slice(0, size)
   const first = roster.find(e => born[e.key])
   return (out.length ? out : first ? [first] : []).map(e => memberOf(o, e, born))
 }
@@ -286,14 +322,14 @@ export async function outOfEgg($: EngineInterface, o: Ctx, e: Entry, r: Roster):
   return 'failed' in hatched ? hatched.failed : undefined
 }
 
-// Each evolution costs `per` turns times the rarity step (common 1×, legendary 5×), counted from the last one. Turns left, by key.
+// Each evolution costs `per` turns times the rarity step (common 1×, +½ a step, legendary 3×), counted from the last one. Turns left, by key.
 export async function evolvesIn($: EngineInterface, per: number) {
   const [together, born] = await Promise.all([togetherOf($), bornOf($)])
   return (key: string) => {
     const b = born[key]
     // `at` is 0.9's, in sessions; before it existed, estimate the last evolution as stage × per. The rarity gap still applies.
     const since = b?.ats ?? (b?.at === undefined ? (b?.stage ?? 0) * per : b.at * TURNS_PER_SESSION)
-    return since + per * (RARITIES.indexOf(b?.bones.rarity ?? 'common') + 1) - Number(together[key] ?? 0)
+    return since + Math.ceil(per * (1 + RARITIES.indexOf(b?.bones.rarity ?? 'common') / 2)) - Number(together[key] ?? 0)
   }
 }
 
@@ -305,33 +341,126 @@ export async function evolveNow($: EngineInterface, o: Ctx, m: Member): Promise<
   const [born, together] = await Promise.all([bornOf($), togetherOf($)])
   const was = born[m.key]!
   const grown = evolve(was.bones)
-  const dreamt = await dreamOn($, m.name, m.personality, { ...grown, species: m.bones.species }, m.title, o.lang)
+  const mates = (await hatchCrew($, o)).filter(c => c.key !== m.key).map(c => ({ name: c.name, relation: m.relations?.[keyOf(c.name)] }))
+  const dreamt = await dreamOn($, m.name, m.personality, { ...grown, species: m.bones.species }, m.title, o.lang, mates)
   if (!dreamt) return w.noEvolve
-  await writeBook($, book, upsert(book.raw, m.name, { personality: dreamt.soul }))
-  await $.store.set('born', { ...born, [m.key]: { ...was, bones: grown, stage: (was.stage ?? 0) + 1, ats: Number(together[m.key] ?? 0), title: dreamt.title } })
+  // Fresh read after Haiku, so an edit made meanwhile is kept.
+  const now = await openBook($, o)
+  if (now.error) return w.badFile(now.error)
+  const souled = upsert(now.raw, m.name, { personality: dreamt.soul })
+  const rels = stillIn(now.friends, dreamt.relations)
+  await writeBook($, now, Object.keys(rels).length ? withRelations(souled, m.name, rels) : souled)
+  await Promise.all([$.store.set('born', { ...born, [m.key]: { ...was, bones: grown, stage: (was.stage ?? 0) + 1, ats: Number(together[m.key] ?? 0), title: dreamt.title } }), driftedAt($, m.key, Number(together[m.key] ?? 0))])
   return undefined
 }
 
+// The turns together of each buddy when its relations last shifted (`drifts`); an evolution counts as one.
+async function driftsOf($: EngineInterface) {
+  return ((await $.store.get('drifts')) ?? {}) as Record<string, number>
+}
+async function driftedAt($: EngineInterface, key: string, at: number) {
+  await $.store.set('drifts', { ...(await driftsOf($)), [key]: at })
+}
+
+// Relations shift without waiting for an evolution: every fifth of `perEvolve` turns a buddy spends out with others, its view of them takes a step.
+// One buddy per turn, the longest due, so after an upgrade they catch up one by one. The clock moves before Haiku: a failure waits for the next step.
+export async function driftOne($: EngineInterface, o: Ctx, crew: Member[]) {
+  const out = crew.filter(m => m.key)
+  if (out.length < 2) return false
+  const [together, drifts] = await Promise.all([togetherOf($), driftsOf($)])
+  const step = Math.ceil(o.perEvolve / 5)
+  const overdue = (m: Member) => (together[m.key] ?? 0) - (drifts[m.key] ?? 0) - step
+  const [m] = out.filter(x => overdue(x) >= 0).sort((a, b) => overdue(b) - overdue(a))
+  if (!m) return false
+  const at = together[m.key] ?? 0
+  await driftedAt($, m.key, at)
+  const mates = out.filter(c => c.key !== m.key).map(c => ({ name: c.name, relation: m.relations?.[keyOf(c.name)], back: c.relations?.[keyOf(m.name)] }))
+  // Once every `perEvolve` of its turns (one step in five) something may change for real, a new love among them; the other steps stay close to what was.
+  const rels = await dreamDrift($, m.name, m.personality, o.lang, mates, Math.floor(at / step) % 5 === 0)
+  if (!rels) return false
+  // Fresh read after Haiku, so an edit made meanwhile is kept.
+  const now = await openBook($, o)
+  const kept = now.error || !findFriend(now.friends, m.name) ? {} : stillIn(now.friends, rels)
+  if (!Object.keys(kept).length) return false
+  await writeBook($, now, withRelations(now.raw, m.name, kept))
+  return true
+}
+
 export async function forget($: EngineInterface, key: string) {
-  const [born, together, zero, aka] = await Promise.all([bornOf($), togetherOf($), ($.store.get('zero') as Promise<Record<string, number> | undefined>).then(z => z ?? {}), $.store.get('aka').then(a => (a ?? {}) as Aka)])
+  const [born, together, zero, aka, nests, drifts] = await Promise.all([bornOf($), togetherOf($), ($.store.get('zero') as Promise<Record<string, number> | undefined>).then(z => z ?? {}), $.store.get('aka').then(a => (a ?? {}) as Aka), nestsOf($), driftsOf($)])
+  delete drifts[key]
   delete born[key]
   const kept = Object.fromEntries(Object.entries(aka).filter(([, k]) => k !== key))
+  // Its couples go too, so one added again under its name starts over with them as well.
+  const gone = [key, ...Object.keys(together).filter(k => inPair(k, key))]
   // `together` is already net of the old zero, so the new one adds to it.
-  await Promise.all([$.store.set('born', born), $.store.set('zero', { ...zero, [key]: (zero[key] ?? 0) + (together[key] ?? 0) }), $.store.set('aka', kept)])
+  const zeroed = { ...zero, ...Object.fromEntries(gone.map(k => [k, (zero[k] ?? 0) + (together[k] ?? 0)])) }
+  await Promise.all([$.store.set('born', born), $.store.set('zero', zeroed), $.store.set('aka', kept), $.store.set('nests', Object.fromEntries(Object.entries(nests).filter(([k]) => !gone.includes(k)))), $.store.set('drifts', drifts)])
+}
+
+// Two buddies out who each call the other their love; their turns together count under `pairOf` in the tallies.
+export const pairOf = (a: string, b: string) => JSON.stringify([a, b].sort())
+const inPair = (k: string, key: string) => {
+  try {
+    const p: unknown = k.startsWith('[') ? JSON.parse(k) : undefined
+    return Array.isArray(p) && p.includes(key)
+  } catch {
+    return false
+  }
+}
+export function loversIn(crew: Member[]) {
+  const loves = (a: Member, b: Member) => isLove(a.relations?.[keyOf(b.name)])
+  return crew.flatMap((a, i) => crew.slice(i + 1).filter(b => a.key && b.key && loves(a, b) && loves(b, a)).map(b => [a, b] as const))
+}
+
+// The turns together of each couple when it last laid an egg.
+async function nestsOf($: EngineInterface) {
+  return ((await $.store.get('nests')) ?? {}) as Record<string, number>
+}
+
+// Lovers out together lay an egg of their own every half `per` turns they spend together, besides the usual ones: the couples whose egg is ready.
+export async function nestsReady($: EngineInterface, o: Ctx, crew: Member[]) {
+  const [together, nests] = await Promise.all([togetherOf($), nestsOf($)])
+  return loversIn(crew).filter(([a, b]) => (together[pairOf(a.key, b.key)] ?? 0) - (nests[pairOf(a.key, b.key)] ?? 0) >= Math.ceil(o.perEgg / 2))
+}
+
+// Spends a couple's egg, only on success: one parent's species and the rest rolled, a name and soul dreamt from both, and the relations written both ways.
+export async function hatchLove($: EngineInterface, o: Ctx, [a, b]: readonly [Member, Member]): Promise<{ name: string; key: string } | { failed: string }> {
+  const w = WORDS[o.lang]
+  const r = await rosterOf($, o)
+  if (r.book.error) return { failed: w.badFile(r.book.error) }
+  const bones = { ...roll(String(Math.random())), species: (Math.random() < 0.5 ? a : b).bones.species }
+  const dreamt = await dreamUp($, undefined, bones, o.lang, [a, b])
+  if (!dreamt) return { failed: w.noChild }
+  const { name, soul } = dreamt
+  // Fresh read after Haiku: an edit made meanwhile is kept, and parents renamed or removed meanwhile lay nothing.
+  const fresh = await rosterOf($, o)
+  if (fresh.book.error) return { failed: w.badFile(fresh.book.error) }
+  if (!findFriend(fresh.book.friends, a.name) || !findFriend(fresh.book.friends, b.name)) return { failed: w.noChild }
+  const key = keyIn(fresh.aka, name)
+  if (findFriend(fresh.roster, name) || isHeld(fresh, key)) return { failed: w.taken(name) }
+  const child = upsert(fresh.book.raw, name, { name, species: bones.species, personality: soul, relations: [{ [a.name]: w.parentRel }, { [b.name]: w.parentRel }] } as never)
+  await writeBook($, fresh.book, [a, b].reduce((raw, p) => withRelations(raw, p.name, { [name]: w.childRel }), child))
+  const [born, together, nests] = await Promise.all([bornOf($), togetherOf($), nestsOf($)])
+  const pair = pairOf(a.key, b.key)
+  await Promise.all([$.store.set('born', { ...born, [key]: { bones } }), $.store.set('nests', { ...nests, [pair]: together[pair] ?? 0 })])
+  return { name, key }
 }
 
 // Every buddy in the file as the list pane shows it: where it stands, its body once hatched, turns left to evolve.
 export async function listingOf($: EngineInterface, o: Ctx): Promise<Listing> {
   const r = await rosterOf($, o)
-  const [out, egg, leftOf] = await Promise.all([hatchCrew($, o, r), eggs($, o.perEgg), evolvesIn($, o.perEvolve)])
+  const [out, egg, leftOf, crewSize] = await Promise.all([hatchCrew($, o, r), eggs($, o.perEgg), evolvesIn($, o.perEvolve), crewSizeOf($, o)])
   const keys = out.map(m => m.key)
   const cards = r.roster.map((e): Card => {
     const b = r.born[e.key]
     const card: Card = { key: e.key, name: e.name, species: e.species ?? b?.bones.species ?? '', status: !b ? 'egg' : e.key === keys[0] ? 'lead' : keys.includes(e.key) ? 'crew' : 'bench' }
     if (e.personality !== undefined) card.personality = e.personality
+    // Shown under the mate's current name; a relation to someone gone keeps the key it was written under.
+    if (e.relations) card.relations = Object.entries(e.relations).map(([k, rel]) => [r.roster.find(x => keyOf(x.name) === k)?.name ?? k, rel])
     if (!b) return card
     const title = b.title?.[o.lang]
     return { ...card, bones: { ...b.bones, species: card.species }, left: leftOf(e.key), ...(title ? { title } : {}) }
   })
-  return { cards, crewSize: o.crewSize, egg: { done: egg.done, per: o.perEgg, left: egg.left }, ...(r.book.error ? { error: r.book.error } : {}) }
+  return { cards, crewSize, egg: { done: egg.done, per: o.perEgg, left: egg.left }, ...(r.book.error ? { error: r.book.error } : {}) }
 }

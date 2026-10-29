@@ -1,5 +1,10 @@
 # Changelog
 
+## buddy 0.12.0 → 0.13.0
+
+- feat(buddy): legendary stage for every species, with a sheen sweeping the body
+- feat(buddy): relations between buddies (read when they talk, migrated from any shape, generated once on upgrade, drifting over time), love eggs from mutual lovers, relations and crew size editable in the pane, a list button among the band's quick actions, lower evolution cost
+
 ## buddy 0.11.0 → 0.12.0
 
 - feat(buddy): in the `/buddy list` pane a click anywhere on a card picks the buddy, the actions sit right under the cards so they stay in view, and stats are drawn one per line as bars

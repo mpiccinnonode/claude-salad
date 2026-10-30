@@ -1,5 +1,9 @@
 # Changelog
 
+## buddy 0.13.0 → 0.14.0
+
+- feat(buddy): count one turn every three subagent turns
+
 ## buddy 0.12.0 → 0.13.0
 
 - feat(buddy): legendary stage for every species, with a sheen sweeping the body

@@ -25,7 +25,7 @@ export const PANE_START: PaneUi = { sel: '', filter: 'all', rarity: 'all', speci
 const pane = atom({ plugin: 'buddy', key: 'pane' } as const, PANE_START)
 
 // What the session remembers between events, outside the atoms.
-export type Live = { turns: number; lastAnswer: string; lastCannedAt: number; lastActiveAt: number; id: string; tally: Tally; isRefreshing: boolean }
+export type Live = { turns: number; lastAnswer: string; lastCannedAt: number; lastActiveAt: number; id: string; tally: Tally; isRefreshing: boolean; subTurns: number }
 
 // The band looks at the disk again every this many beats (~3s).
 const REFRESH_BEATS = 10

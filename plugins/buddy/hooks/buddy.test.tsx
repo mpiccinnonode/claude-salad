@@ -287,6 +287,20 @@ test('a new buddy hatches only every N turns together, and removing one frees no
   expect(await run('dance')).toContain('Usage')
 })
 
+test('subagent turns count one in three, and never quip', { options: { language: 'en', turnsPerHatch: 2, everyNTurns: 1 } }, async ($, on) => {
+  const { run, start } = rig($, on)
+  let calls = 0
+  on('model.complete', () => { calls += 1; return answer('not json') })
+
+  await start()
+  calls = 0
+  for (let i = 0; i < 5; i++) await $.turn.complete({ ...TURN, agentId: 'a1' })
+  expect(await run('list')).toContain('Next egg: 1/2')
+  expect(calls).toBe(0)
+  await $.turn.complete({ ...TURN, agentId: 'a1' })
+  expect(await run('add Zed robot')).toContain('Zed hatched')
+})
+
 test('the egg counter never goes negative when turns fall behind hatched eggs or the price changes', { options: { language: 'en', turnsPerHatch: 70 } }, async ($, on) => {
   const { run, start, turns } = rig($, on, {}, { sessions: 1, hatched: 3 })
   expect(await run('list')).toContain('Next egg: 0/70')

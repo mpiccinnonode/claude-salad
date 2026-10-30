@@ -52,7 +52,7 @@ The number keys work while the band has focus (`ctrl+x tab`, or click it). Click
 | `buddiesFile` | string | `~/.claude/buddy/buddies.json` | Where your buddies live (see below). |
 | `crewSize` | number | `3` | How many buddies can be out at once, until `−`/`+` in the Buddy pane set it. The band shows as many as the terminal has room for (beside the bubble, then above it), always including the one talking; the rest are named in its bubble. |
 | `active` | string | `""` | Which buddies are out, comma separated, up to `crewSize` (e.g. `Pip,Mox`); empty means every buddy already hatched, in file order. `/buddy use`, `join` and `leave` override it. Unknown names and buddies still in their egg are skipped. |
-| `turnsPerHatch` | number | `1400` | Finished turns together, across every session, for each egg. |
+| `turnsPerHatch` | number | `1400` | Finished turns together, across every session, for each egg. Three subagent turns count as one. |
 | `turnsPerEvolve` | number | `1000` | Finished turns with a buddy out before a common one can evolve; each rarity up multiplies it (see below). |
 | `position` | string | `left` | `left` or `right`: on the right the buddy sits against the right edge, its bubble to its left. |
 | `language` | string | `it` | `it` or `en`: canned lines, labels, Haiku quips and personalities all follow it, and so does the epithet an evolved buddy shows. |

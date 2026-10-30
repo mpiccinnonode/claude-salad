@@ -9,6 +9,8 @@ import type { Live } from './state.ts'
 import { drawBand } from './view.tsx'
 import { HINT, WORDS } from './words.ts'
 
+const SUBTURNS_PER_TURN = 3
+
 export const register: Register = (on, options) => {
   const o: Ctx = {
     // Still declared only because undeclared options never reach register: 0.8's overrides are carried into the buddies file once.
@@ -25,7 +27,7 @@ export const register: Register = (on, options) => {
   }
   const w = WORDS[o.lang]
   // ponytail: the id only has to differ from other sessions' (and from this one before a hot reload), so no uuid
-  const live: Live = { turns: 0, lastAnswer: '', lastCannedAt: -Infinity, lastActiveAt: 0, id: Math.random().toString(36).slice(2, 10), tally: { all: 0, by: {} }, isRefreshing: false }
+  const live: Live = { turns: 0, lastAnswer: '', lastCannedAt: -Infinity, lastActiveAt: 0, id: Math.random().toString(36).slice(2, 10), tally: { all: 0, by: {} }, isRefreshing: false, subTurns: 0 }
 
   on('session.start', async ($, e, next) => {
     const crew = await hatchInto($, o)
@@ -65,8 +67,12 @@ export const register: Register = (on, options) => {
 
   on('turn.complete', async ($, e, next) => {
     const result = await next(e)
-    // ponytail: main loop only, subagent turns would make it chatty
-    if (e.agentId || e.reason !== 'answer') return result
+    if (e.reason !== 'answer') return result
+    // Every third subagent turn counts as one; quips and drift stay on the main loop, or it gets chatty.
+    if (e.agentId) {
+      if (++live.subTurns % SUBTURNS_PER_TURN === 0) await countTurnTogether($, o, live)
+      return result
+    }
     live.lastActiveAt = await tickNow($)
     live.lastAnswer = e.answer.slice(-1500)
     await countTurnTogether($, o, live)

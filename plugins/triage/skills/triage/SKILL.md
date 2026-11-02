@@ -62,7 +62,7 @@ Returns `[{"slug", "path"}]`, empty when there is no `specs/`. Halt on non-zero.
 
 ## Phase 2 — Classify and derive the flow
 
-Classify the task, then derive the phase sequence from the work itself, scaled to its actual scope: creative and restructuring work needs intent and constraints settled before code; a bug needs the cause found before the patch; design work needs the visual direction settled before anything is built; a review request is just Review.
+Classify the task, then derive the phase sequence from the work itself, scaled to its actual scope: creative and restructuring work needs intent and constraints settled before code; a bug needs the cause found before the patch; design work needs the visual direction settled before anything is built; a review request is just Review. Feature and Refactor flows may end with an optional Debrief after Review, so the developer keeps up with what the agent built.
 
 `classification` is a schema enum — write one of `UI Feature`, `Logic Feature`, `Mixed Feature`, `Bug Fix`, `Refactor`, `Design`, `Review`, `Other` (see `references/triage-schema.md`). Two boundaries are genuinely counterintuitive and worth stating: exploring requirements for a feature is **not** `Design` — that value is for visual and design-system work only; and `Other` means stop and ask one clarifying question rather than force a fit.
 
@@ -100,6 +100,7 @@ For each phase, pick the best-matching candidate by the **intent** in its descri
 | **Fix** | code edit, applied fix, regression patch — often just "use the editing tools directly" |
 | **Design Work** | visual design, design tokens, component library authoring, mockups, UI from a design spec |
 | **Review** | code review, PR review, standards check, verification before completion |
+| **Debrief** | end-of-branch learning, explaining what was built, quizzing the developer — optional, after Review |
 
 Ties break on: project-local over user-global over plugin-installed; then the description that names the workflow more precisely. If still tied, record **both** — one as `skill`, one as `alternative` — so the output shows the choice instead of hiding it.
 

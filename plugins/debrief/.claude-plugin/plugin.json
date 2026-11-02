@@ -1,0 +1,9 @@
+{
+  "name": "debrief",
+  "version": "0.1.0",
+  "description": "End-of-branch learning session: explains the technologies, patterns, domain rules and decisions behind what the coding agent built, then quizzes the developer on them. Chat or interactive page.",
+  "author": { "name": "mpiccinnonode" },
+  "repository": "https://github.com/mpiccinnonode/claude-salad",
+  "license": "MIT",
+  "keywords": ["learning", "debrief", "quiz", "knowledge", "branch", "onboarding"]
+}

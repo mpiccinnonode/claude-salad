@@ -10,7 +10,7 @@
   "plugins": [
     {
       "name": "triage",
-      "version": "1.2.2",
+      "version": "1.2.3",
       "source": "./plugins/triage",
       "description": "Advisory task classifier that routes tasks to the best available skill, agent, or MCP server."
     },
@@ -43,6 +43,12 @@
       "version": "0.14.0",
       "source": "./plugins/buddy",
       "description": "Mod that brings back the /buddy companion: random buddies hatched from eggs you earn, each with its own species, rarity, stats and Haiku-written personality, animated above the prompt, reacting to your work, evolving with you over time. Needs Claude Code >= 2.1.299."
+    },
+    {
+      "name": "debrief",
+      "version": "0.1.0",
+      "source": "./plugins/debrief",
+      "description": "End-of-branch learning session: explains the technologies, patterns, domain rules and decisions behind the branch, then quizzes the developer. Chat or interactive page."
     }
   ]
 }

@@ -1,5 +1,13 @@
 # Changelog
 
+## debrief 0.1.0 (new)
+
+- feat(debrief): add end-of-branch learning plugin
+
+## triage 1.2.2 → 1.2.3
+
+- feat: optional Debrief phase after Review in Feature and Refactor flows
+
 ## buddy 0.13.0 → 0.14.0
 
 - feat(buddy): count one turn every three subagent turns

@@ -24,7 +24,9 @@ export async function drawBand($: EngineInterface, e: RenderInput<'AbovePrompt'>
   const at = floor % crew.length
   const m = crew[at]!
   const b = m.bones
-  if (e.props.isWorking || p?.at === frame) live.lastActiveAt = frame
+  // A listing that fails reads as no subagents: the buddy just dozes as before.
+  const hasAgents = (await $.agent.list().catch(() => [])).some(a => a.status === 'running' || a.status === 'waiting')
+  if (e.props.isWorking || hasAgents || p?.at === frame) live.lastActiveAt = frame
   // ponytail: ~30s with nothing happening and it dozes off
   const isAsleep = frame - Math.max(live.lastActiveAt, p?.at ?? 0) > 100
   const age = p ? frame - p.at : 0

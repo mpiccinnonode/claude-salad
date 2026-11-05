@@ -27,7 +27,7 @@ export const register: Register = (on, options) => {
   }
   const w = WORDS[o.lang]
   // ponytail: the id only has to differ from other sessions' (and from this one before a hot reload), so no uuid
-  const live: Live = { turns: 0, lastAnswer: '', lastCannedAt: -Infinity, lastActiveAt: 0, id: Math.random().toString(36).slice(2, 10), tally: { all: 0, by: {} }, isRefreshing: false, subTurns: 0 }
+  const live: Live = { turns: 0, lastAnswer: '', lastCannedAt: -Infinity, lastActiveAt: 0, id: Math.random().toString(36).slice(2, 10), tally: { all: 0, by: {} }, isRefreshing: false, subTurns: 0, finalStepOf: '' }
 
   on('session.start', async ($, e, next) => {
     const crew = await hatchInto($, o)
@@ -85,6 +85,14 @@ export const register: Register = (on, options) => {
     const said = await quipFromModel($, o, crew, i, `${w.turnDone}\n\n${live.lastAnswer}`)
     // ponytail: a turn costs 1 + banterChance Haiku calls on average; a reply already pending is not cancelled by the next turn
     if (said && crew.length > 1 && Math.random() < o.banterChance) $.clock.after(3000, () => quipFromModel($, o, crew, (i + 1) % crew.length, w.banter(crew[i]!.name, said)))
+    return result
+  })
+
+  // A step after a text-only one in the same turn is a Stop-hook continuation (a goal loop): it counts as a turn, which turn.complete alone would miss.
+  on('turn.step', async function* ($, e, next) {
+    if (!e.agentId && e.index > 0 && live.finalStepOf === e.turnId) await countTurnTogether($, o, live)
+    const result = yield* next(e)
+    if (!e.agentId) live.finalStepOf = result.toolUses.length === 0 ? e.turnId : ''
     return result
   })
 

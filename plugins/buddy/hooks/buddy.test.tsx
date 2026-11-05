@@ -301,6 +301,24 @@ test('subagent turns count one in three, and never quip', { options: { language:
   expect(await run('add Zed robot')).toContain('Zed hatched')
 })
 
+test('each Stop-hook continuation counts as a turn, a tool-loop step does not', { options: { language: 'en', turnsPerHatch: 4 } }, async ($, on) => {
+  const { run, start } = rig($, on)
+  let tools = true
+  on('turn.step', async function* ($, e) { return { turnId: e.turnId, index: e.index, answer: '', toolUses: tools ? [{}] : [], stopReason: 'end_turn', usage: null } as never })
+  const step = async (index: number, withTools: boolean) => {
+    tools = withTools
+    for await (const chunk of $.turn.step({ turnId: 't', index, model: 'm', messageCount: index } as never)) void chunk
+  }
+
+  await start()
+  await step(0, true)
+  await step(1, false)
+  expect(await run('list')).toContain('Next egg: 0/4')
+  await step(2, false)
+  await step(3, false)
+  expect(await run('list')).toContain('Next egg: 2/4')
+})
+
 test('the egg counter never goes negative when turns fall behind hatched eggs or the price changes', { options: { language: 'en', turnsPerHatch: 70 } }, async ($, on) => {
   const { run, start, turns } = rig($, on, {}, { sessions: 1, hatched: 3 })
   expect(await run('list')).toContain('Next egg: 0/70')

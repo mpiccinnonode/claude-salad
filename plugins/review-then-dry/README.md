@@ -1,6 +1,6 @@
 # review-then-dry
 
-Chained code review + reuse audit producing one unified findings spec: `/lifecycled-code-review`, `/dry`, the `/review-then-dry` orchestrator, and `/checklist-lifecycle`. Node-only, Windows-portable.
+Chained code review + reuse audit producing one unified findings spec: `/lifecycled-code-review`, `/dry`, `/perf-review`, the `/review-then-dry` orchestrator, and `/checklist-lifecycle`. Node-only, Windows-portable.
 
 ## Install
 
@@ -8,6 +8,14 @@ Chained code review + reuse audit producing one unified findings spec: `/lifecyc
 /plugin marketplace add mpiccinnonode/claude-salad
 /plugin install review-then-dry@mpiccinnonode
 ```
+
+## Performance review
+
+`/perf-review` is a read-only audit of what costs more as data or traffic grows: list endpoints that load nested collections for every row, duplicate requests on page or sort change, data loaded eagerly when it is not always needed, missing memoization on row actions, unbounded queries, render cost. It reports with `file:line`, who pays, and what the cost scales with. Run it alone, or add it as an optional third pass: `/review-then-dry --perf`.
+
+## Verifying findings
+
+`/lifecycled-code-review`, `/dry`, `/perf-review` and `/review-then-dry` verify by default: a second agent re-reads the code behind every finding before you see the report. Each finding gets a verdict — confirmed, downgraded (real but overstated, with what is actually true), or not found — in a table right after the unedited report. Not-found findings are flagged in triage with a recommendation to reject; nothing is rejected for you. Pass `--no-verify` to skip it. It costs one extra agent call per pass, and it checks that findings hold in the code, not that they are proven.
 
 ## Checklist whisper
 

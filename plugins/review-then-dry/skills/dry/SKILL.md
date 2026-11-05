@@ -11,7 +11,7 @@ allowed-tools:
   - mcp__serena__find_referencing_symbols
   - mcp__serena__search_for_pattern
   - mcp__serena__find_file
-argument-hint: "[file paths, folder, or glob]"
+argument-hint: "[file paths, folder, or glob] [--no-verify]"
 ---
 
 # /dry — Reusability & Extraction Audit
@@ -28,6 +28,8 @@ A thin, one-shot dispatcher around the `reusability-refactor-expert` agent. The 
 If the request is generic ("review this", "anything wrong?") prefer `/lifecycled-code-review`. If the request is about a bug, test failure, or visual/UX, do not fire.
 
 ## Determine Target Files
+
+Verification is on by default; if `$ARGUMENTS` contains `--no-verify`, skip the Verify step. Either way, remove `--no-verify` (and a stray `--verify`, now a no-op) from the arguments before the script below — they are not paths.
 
 Use the shared offload script (also used by `/lifecycled-code-review` — do not duplicate logic):
 
@@ -49,9 +51,13 @@ Standard instruction to include in the dispatch prompt:
 
 > "Use `mcp__serena__*` tools for code exploration (pre-activated, no setup needed). Check the project's shared and core directories for existing abstractions before recommending new ones. Files to audit: `<resolved list>`."
 
+## Verify (default; skipped with `--no-verify`)
+
+After the agent returns and before presenting, run `${CLAUDE_PLUGIN_ROOT}/references/verify-findings.md` on its report. Skip when `--no-verify` was passed.
+
 ## Present the Report
 
-The agent's report arrives as an Agent tool result, which is **never displayed to the user** — you must re-emit it in your own reply text or the user has seen nothing. Show the agent's report verbatim. Do not re-summarize, re-grade, or add a wrapper section. The agent's output format (Priority Findings → Secondary Suggestions → Well-Structured Patterns → Summary Table, with the 8-bucket taxonomy) is the deliverable.
+The agent's report arrives as an Agent tool result, which is **never displayed to the user** — you must re-emit it in your own reply text or the user has seen nothing. Show the agent's report verbatim. Do not re-summarize, re-grade, or add a wrapper section. Unless `--no-verify`, the verifier's `### Verification` table follows the report, also verbatim — the report itself stays unedited. The agent's output format (Priority Findings → Secondary Suggestions → Well-Structured Patterns → Summary Table, with the 8-bucket taxonomy) is the deliverable.
 
 After the report, end the turn. Do not propose fixes, do not write a spec, do not enter a triage loop — `/dry` is one-shot. If the user wants to act on findings, they can run `/lifecycled-code-review` for the full lifecycle or implement fixes manually.
 

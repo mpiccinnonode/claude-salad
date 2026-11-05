@@ -62,6 +62,7 @@ Each finding becomes a numbered section following this structure:
 **Status:** {Accepted | Skipped}
 **Severity:** {Critical | Major | Minor} | **{Check | Tag}:** {check-id (status)} or {organic}
 **File(s):** {file paths}
+**Verification:** {Confirmed | Downgraded — note}   <!-- only when verification ran; omit otherwise -->
 
 **Current:**
 

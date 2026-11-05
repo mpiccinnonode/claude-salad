@@ -1,12 +1,24 @@
 # review-then-dry plugin — dev notes
 
-Four-skill suite backported from personal `~/.claude` skills: `lifecycled-code-review`,
-`dry`, the `review-then-dry` orchestrator, and the standalone `checklist-lifecycle`.
+Five-skill suite: `lifecycled-code-review`, `dry`, the `review-then-dry` orchestrator and the
+standalone `checklist-lifecycle` (backported from personal `~/.claude` skills), plus `perf-review`
+(written here).
 
 - Agents: `agents/code-reviewer.md` (dispatched by `lifecycled-code-review`) and
-  `agents/reusability-refactor-expert.md` (dispatched by `dry`). These are the dispatch
+  `agents/reusability-refactor-expert.md` (dispatched by `dry`), and
+  `agents/performance-reviewer.md` (dispatched by `perf-review`). These are the dispatch
   targets the skills reference by `subagent_type`; they MUST ship with the plugin or the
-  skills fail to dispatch on a fresh install. Backported 1:1 from personal `~/.claude/agents`.
+  skills fail to dispatch on a fresh install. The first two are backported 1:1 from personal
+  `~/.claude/agents`; `performance-reviewer` is new.
+- `perf-review` mirrors `dry` (thin dispatcher, shared `get-review-targets.mjs`, verbatim report,
+  read-only). The orchestrator runs it only with `--perf`, as Step 2b after `dry`, and strips the
+  flag before passing arguments on. Findings carry `Source: perf-review` in the unified spec.
+  The relay gate needs no change: it matches any `review-then-dry:*` agent by prefix.
+- Verification (default on, `--no-verify` skips; every review skill and the orchestrator) dispatches
+  `agents/findings-verifier.md` on a pass's findings before they are presented; procedure in `references/verify-findings.md`.
+  Verdicts CONFIRMED / DOWNGRADED / NOT_FOUND are shown in a table after the unedited report and
+  steer triage (NOT_FOUND → recommend Reject, never auto-reject). The orchestrator verifies per
+  pass, not the merged report. `checklist-lifecycle` has no findings, so no flag there.
 - Skill bodies: `skills/*/SKILL.md`. In-plugin paths use quoted `"${CLAUDE_PLUGIN_ROOT}"`.
 - Helper scripts: Node only, no shell/jq/python/yq. Each has a fixed argv signature + stdout
   contract in its header, ported 1:1 from a POSIX `.sh` original.

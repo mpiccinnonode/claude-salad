@@ -1,5 +1,11 @@
 # Changelog
 
+## review-then-dry 1.3.0 → 1.4.0
+
+- feat(review-then-dry): add `/perf-review` skill and `performance-reviewer` agent (payload bloat, duplicate requests, eager loading, missing memoization, unbounded queries, render cost)
+- feat(review-then-dry): optional third pass in the orchestrator via `/review-then-dry --perf`
+- feat(review-then-dry): `findings-verifier` agent re-checks every finding against the code by default in all review skills; `--no-verify` skips it
+
 ## buddy 0.15.0 → 0.16.0
 
 - feat(buddy): count each Stop-hook continuation (goal loops) as a turn

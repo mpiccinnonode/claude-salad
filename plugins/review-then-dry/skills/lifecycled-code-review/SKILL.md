@@ -19,7 +19,7 @@ allowed-tools:
   - mcp__serena__find_referencing_symbols
   - mcp__serena__search_for_pattern
   - mcp__serena__find_file
-argument-hint: "[file paths, folder, or glob] [--seed] [--simplify-only]"
+argument-hint: "[file paths, folder, or glob] [--seed] [--simplify-only] [--no-verify]"
 ---
 
 # Code Review Skill
@@ -36,6 +36,7 @@ Parse `$ARGUMENTS` before doing anything else:
 
 - If `$ARGUMENTS` contains `--seed`: enter **Seed Mode** — skip to the [Seed Mode](#seed-mode) section below.
 - If `$ARGUMENTS` contains `--simplify-only`: skip Phase 1 entirely. Run Phase 0 → Phase 2 (with the Simplification lens only) → triage → Phase 3. Use when you want a leanness pass on already-reviewed or already-merged code.
+- Verification is on by default: after the review agents return, run the verification step of `${CLAUDE_PLUGIN_ROOT}/references/verify-findings.md`. If `$ARGUMENTS` contains `--no-verify`, skip it. Either way, remove `--no-verify` (and a stray `--verify`, now the default and a no-op) before the target-resolution script (they are not paths). It combines with the other flags.
 - Otherwise: proceed with the standard review flow (Phase 0 → Phase 1 → Phase 2 → Phase 3).
 
 ## Review Checklist
@@ -234,14 +235,16 @@ A prioritized table for quick reference:
 
 ## Post-Review Flow
 
-After both review agents return (and after any cross-check verification of their findings), run these steps in order. Do not implement any fixes in this session — fixes are resolved in a fresh session using the spec as the plan.
+After both review agents return (and, unless `--no-verify`, after the verification step of `${CLAUDE_PLUGIN_ROOT}/references/verify-findings.md`), run these steps in order. Do not implement any fixes in this session — fixes are resolved in a fresh session using the spec as the plan.
 
-1. **Present the unified report** — emit the full report (structure defined in Output Format above) as message text in your reply. The agents' findings exist only in tool results at this point, and the user has seen none of them; this step is what puts the review on screen. It is a real step, not a formality — skipping it and going straight to triage is the single most common failure of this skill.
+1. **Present the unified report** — emit the full report (structure defined in Output Format above) as message text in your reply. The agents' findings exist only in tool results at this point, and the user has seen none of them; this step is what puts the review on screen. It is a real step, not a formality — skipping it and going straight to triage is the single most common failure of this skill. Unless `--no-verify`, the verifier's `### Verification` table goes directly after the report, verbatim.
 
 2. **Triage findings** — ask the user to act on each finding:
    - **Accept** — will be fixed (counts as a hit for checklist tracking)
    - **Reject** — false positive (candidate for new suppression)
    - **Skip** — defer for later (neutral — no hit, no miss)
+
+   Unless `--no-verify`, mark findings the verifier returned as NOT_FOUND ("verifier: not found", recommend Reject) and show the verifier's note on DOWNGRADED ones; never auto-reject.
 
    Triage starts only after step 1 is complete. If you are about to ask a triage question (AskUserQuestion or inline) and the full report has not yet appeared in your own reply, stop and do step 1 first — the user cannot make accept/reject calls from the compact labels of a triage question; they need the Impact/Fix/Rationale context that only the full report carries.
 

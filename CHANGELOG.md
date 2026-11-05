@@ -1,5 +1,9 @@
 # Changelog
 
+## buddy 0.15.0 → 0.16.0
+
+- feat(buddy): count each Stop-hook continuation (goal loops) as a turn
+
 ## buddy 0.14.0 → 0.15.0
 
 - feat(buddy): keep buddies awake while subagents are running

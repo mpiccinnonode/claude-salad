@@ -2,6 +2,7 @@ import type { EngineInterface } from 'claude-code'
 import type { Bones, Member } from '../types'
 import { STAT_NAMES } from './bones.ts'
 import { asPersonality, describe, isLove, texts } from './friends.ts'
+import type { Care } from './crew.ts'
 import type { Friend, Soul } from './friends.ts'
 import type { Lang } from './lines.ts'
 import { WORDS } from './words.ts'
@@ -47,11 +48,13 @@ export async function dreamUp($: EngineInterface, name: string | undefined, b: B
 
 // One Haiku call per evolution: the same soul pushed stranger along its stats, plus an epithet in both languages.
 // `mates`: the buddies out beside it and what each is to it now; the answer says what they become, by name.
-export async function dreamOn($: EngineInterface, name: string, was: string, b: Bones, title: string | undefined, lang: Lang, mates: { name: string; relation?: string }[] = []): Promise<{ soul: Soul; title: Record<Lang, string>; relations: Record<string, string> } | undefined> {
+export async function dreamOn($: EngineInterface, name: string, was: string, b: Bones, title: string | undefined, lang: Lang, mates: { name: string; relation?: string }[] = [], care: Care = { pet: 0, poke: 0 }): Promise<{ soul: Soul; title: Record<Lang, string>; relations: Record<string, string> } | undefined> {
   const ties = mates.map(m => `${m.name} (${m.relation ?? 'nothing yet'})`).join(', ')
+  // The programmer's hand in its growth: petting warms it, poking sharpens it; a nudge, never a rewrite.
+  const touched = care.pet + care.poke > 0 ? ` Since it last changed the programmer petted it ${care.pet} times and poked it ${care.poke} times: petting warms it and lets it trust, poking makes it sharper and bolder; let the larger side lean the growth, gently, and never mention counts.` : ''
   const data = await askJson($,
     `You evolve tiny terminal companions who watch a programmer work. Keep who it is, but push everything further and stranger: sharper contradictions, odder quirks, a voice even less like anyone else's. Its stats steer the growth: the higher a stat, the more that side takes over (DEBUGGING: obsessive precision, PATIENCE: unsettling calm, CHAOS: entropy, WISDOM: cryptic insight, SNARK: venom). Never mention stats or numbers. Also give it an epithet that follows its name, drawn from its new self and its strongest stat, in English (like "the Winged Sarcasm") and in Italian (like "Sarcasmo Alato"); never repeat the name in it. ${WORDS[lang].dream} The two epithets excepted. Answer with one JSON object and nothing else: {"title_en": string, "title_it": string, ${SOUL_SHAPE}${ties ? ', "relations": an object from each name it shares the terminal with to a few words of what that one is to it now' : ''}}`,
-    `Name: ${name}. Species: ${b.species}. Rarity now: ${b.rarity}. ${statsOf(b)}${title ? ` Its old epithet, to outgrow: ${title}.` : ''} Who it was: ${was}${ties ? ` What the others are to it, free to shift with its new self (a love it keeps says lover, or amante in Italian): ${ties}.` : ''}`)
+    `Name: ${name}. Species: ${b.species}. Rarity now: ${b.rarity}. ${statsOf(b)}${title ? ` Its old epithet, to outgrow: ${title}.` : ''} Who it was: ${was}${touched}${ties ? ` What the others are to it, free to shift with its new self (a love it keeps says lover, or amante in Italian): ${ties}.` : ''}`)
   const soul = soulIn(data)
   const [en, it] = [texts(data?.title_en)[0], texts(data?.title_it)[0]]
   const said = data?.relations && typeof data.relations === 'object' ? (data.relations as Record<string, unknown>) : {}

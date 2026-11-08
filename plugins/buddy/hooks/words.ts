@@ -1,6 +1,6 @@
 import type { Lang } from './lines.ts'
 
-export const HINT = 'list | use <name> | join <name> | leave <name> | add [name] [species] [personality] | rm <name> | evolve [name]'
+export const HINT = 'list | use <name> | join <name> | leave <name> | add [name] [species] [personality] | rm <name> | evolve [name] | sky day|night|auto'
 
 const turns = (n: number) => `${n} more turn${n === 1 ? '' : 's'}`
 const turni = (n: number) => (n === 1 ? 'manca un turno' : `mancano ${n} turni`)
@@ -50,6 +50,11 @@ const en = {
   turnDone: 'The coding assistant just finished a turn. Its final message:',
   reply: 'Always reply in English, whatever language the text below is in.',
   labels: { pet: 'pet', poke: 'poke', talk: 'talk', stats: 'stats', list: 'list' },
+  garden: 'garden',
+  skyButton: (s: string) => `sky: ${s}`,
+  skySet: (s: string) => (s === 'auto' ? 'The garden follows the clock again.' : `The garden stays ${s} for this session.`),
+  toList: 'list',
+  gardenNarrow: (n: number) => `The garden needs ${n} columns: widen the pane.`,
   paneTitle: 'Buddy',
   paneOpened: 'Buddy list opened.',
   loading: 'Reading your buddies…',
@@ -160,6 +165,11 @@ const it: typeof en = {
   turnDone: 'L\'assistente di codice ha appena finito un turno. Il suo messaggio finale:',
   reply: 'Rispondi sempre in italiano, qualunque sia la lingua del testo qui sotto.',
   labels: { pet: 'coccola', poke: 'pungola', talk: 'parla', stats: 'stat', list: 'lista' },
+  garden: 'giardino',
+  skyButton: (s) => `cielo: ${s === 'day' ? 'giorno' : s === 'night' ? 'notte' : 'auto'}`,
+  skySet: (s) => (s === 'auto' ? 'Il giardino torna a seguire l\'orologio.' : `Il giardino resta ${s === 'day' ? 'di giorno' : 'di notte'} per questa sessione.`),
+  toList: 'lista',
+  gardenNarrow: (n) => `Il giardino vuole ${n} colonne: allarga il pannello.`,
   paneTitle: 'Buddy',
   paneOpened: 'Pannello Buddy aperto.',
   loading: 'Leggo i tuoi buddy…',

@@ -3,9 +3,11 @@ import type { Card, Filter, Listing, PaneUi } from '../types'
 import { ALL_SPECIES, RARITIES, STAT_NAMES } from './bones.ts'
 import { titled } from './crew.ts'
 import type { Ctx } from './crew.ts'
+import type { Live } from './state.ts'
 import { addNew, evolveIt, filterBy, flipSoul, hatchIt, lead, pick, remove, renameTo, resize, setRelations, setSentence, setSoulField, setSpecies, swapIn, toggleCrew } from './edits.ts'
 import { LIST_KEYS, TEXT_KEYS, texts } from './friends.ts'
 import { SPRITE } from './band.ts'
+import { drawGarden } from './garden.tsx'
 import { drawBuddy } from './sprite.ts'
 import { listNow, setPane } from './state.ts'
 import { RARITY_COLOR } from './view.tsx'
@@ -37,7 +39,7 @@ export function visible(l: Listing, p: PaneUi) {
 const isFiltered = (p: PaneUi) => p.filter !== 'all' || p.rarity !== 'all' || p.species !== 'all' || p.query.trim() !== ''
 
 // The list pane: filters, the buddies as cards, the one picked with everything that can be seen or changed about it.
-export async function drawList($: EngineInterface, e: RenderInput<'Pane'>, o: Ctx) {
+export async function drawList($: EngineInterface, e: RenderInput<'Pane'>, o: Ctx, live: Live) {
   const w = WORDS[o.lang]
   const els = $.ui.resolve(e)
   // Mobile draws no fields yet: there the pane only shows.
@@ -60,6 +62,7 @@ export async function drawList($: EngineInterface, e: RenderInput<'Pane'>, o: Ct
     <Box key="head" flexDirection="row" gap={2}>
       <Text bold>Buddy</Text>
       <Text dimColor>{w.paneHead(shown.length, l.cards.length, crew.length, l.crewSize, l.egg.done, l.egg.per)}</Text>
+      <Button key="view" plain hotkey="g" label={p.view === 'garden' ? w.toList : w.garden} onPress={() => setPane($, { view: p.view === 'garden' ? 'list' : 'garden', note: '' })} />
       {/* The crew's room, from one to everyone in the file. */}
       {canEdit && !p.isBusy && (
         <Box key="room" flexDirection="row" gap={1}>
@@ -76,6 +79,7 @@ export async function drawList($: EngineInterface, e: RenderInput<'Pane'>, o: Ct
       <Text dimColor>{w.readOnly}</Text>
     </Box>
   )
+  if (p.view === 'garden') return <Box key="garden" flexDirection="column" gap={1}>{header}{banner}{await drawGarden($, e, o, live)}</Box>
   const filters = (
     <Box key="filters" flexDirection="row" flexWrap="wrap" columnGap={1}>
       {FILTERS.map(f => (

@@ -3,7 +3,7 @@ import { crewSizeOf, eggs, evolveNow, evolvesIn, forget, hatchCrew, hatchLove, h
 import type { Ctx, Entry, Roster } from './crew.ts'
 import type { Lang } from './lines.ts'
 import { findFriend, parseAdd, relink, without } from './friends.ts'
-import { crewNow, crewOr, hatchInto, membersNow, relist, say, setHidden, speak, toggleHidden } from './state.ts'
+import { crewNow, crewOr, hatchInto, membersNow, relist, say, setHidden, setSky, speak, toggleHidden } from './state.ts'
 import { WORDS } from './words.ts'
 
 // /buddy <verb> <words>: each verb answers with the text to show.
@@ -19,8 +19,16 @@ export async function runBuddy($: EngineInterface, o: Ctx, args: string): Promis
     case 'add': return add($, o, words)
     case 'evolve': return evolveOne($, o, wanted)
     case 'rm': return rm($, o, wanted)
+    case 'sky': return sky($, o, wanted)
     default: return WORDS[o.lang].usage
   }
+}
+
+// Forces the garden's sky for this session, or gives it back to the clock.
+async function sky($: EngineInterface, o: Ctx, wanted: string) {
+  if (wanted !== 'day' && wanted !== 'night' && wanted !== 'auto') return WORDS[o.lang].usage
+  await setSky($, wanted)
+  return WORDS[o.lang].skySet(wanted)
 }
 
 // A name nobody has, or no name where one is needed.

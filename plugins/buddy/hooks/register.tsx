@@ -97,7 +97,7 @@ export const register: Register = (on, options) => {
   })
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => (await drawBand($, e, o, live)) ?? next(e))
-  on('ui.render', { component: 'Pane', requestId: LIST_PANE }, async ($, e) => drawList($, e, o))
+  on('ui.render', { component: 'Pane', requestId: LIST_PANE }, async ($, e) => drawList($, e, o, live))
   // A shut pane stops reading the disk, and opens again on a fresh pick.
   on('ui.close', { id: LIST_PANE }, async ($, e, next) => {
     await shutList($)

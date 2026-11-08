@@ -1024,3 +1024,34 @@ test('upgrade: relations in an old shape are put in shape at session start, and 
   await start()
   expect(calls).toBe(2)
 })
+
+test('garden: the pane switches to the lawn and back, and a poke there counts as care like the band\'s', { options: { language: 'en', turnsPerEvolve: 3, active: 'Zed' } }, async ($, on) => {
+  const { open, run, turns } = paneRig($, on, { [FILE]: JSON.stringify([ZED]) }, { migrated: true, moved: true, born: commonZed() })
+  const asked: string[] = []
+  on('model.complete', ($, e) => { asked.push(`${e.system}\n${e.prompt}`); return answer(JSON.stringify({ title_en: 'the Unbothered', title_it: 'l\'Imperturbabile', tone: 'eerily calm' })) })
+
+  const ui = await open()
+  await turns(2)
+  expect(await ui.find({ type: 'Button', key: 'pick-zed' })).toBeDefined()
+  await ui.press({ key: 'view' })
+  expect(await ui.find({ type: 'Button', key: 'pick-zed' })).toBeUndefined()
+  expect(await ui.find({ type: 'Button', key: 'sky' })).toMatchObject({ props: { label: 'sky: auto' } })
+  await ui.press({ key: 'poke-0' })
+  for (const sky of ['day', 'night', 'auto']) {
+    await ui.press({ key: 'sky' })
+    expect(await ui.find({ type: 'Button', key: 'sky' })).toMatchObject({ props: { label: `sky: ${sky}` } })
+  }
+  await ui.press({ key: 'view' })
+  expect(await ui.find({ type: 'Button', key: 'pick-zed' })).toBeDefined()
+  expect(await run('evolve')).toContain('has evolved!')
+  expect(asked.at(-1)).toContain('petted it 0 times and poked it 1 times')
+  await ui.unmount()
+})
+
+test('sky: /buddy sky forces the garden day or night, or gives it back to the clock; anything else shows the usage', { options: { language: 'en' } }, async ($, on) => {
+  const { run, start } = rig($, on, { [FILE]: JSON.stringify([ZED]) }, { migrated: true, moved: true, born: commonZed() })
+  await start()
+  expect(await run('sky night')).toContain('stays night')
+  expect(await run('sky auto')).toContain('follows the clock')
+  expect(await run('sky dusk')).toContain('Usage')
+})

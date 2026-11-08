@@ -1,6 +1,6 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface } from 'claude-code'
-import type { Bones, Listing, Member, PaneUi, Pressed, Quip, Ready } from '../types'
+import type { Bones, Listing, Member, PaneUi, Pressed, Quip, Ready, Sky } from '../types'
 import { eggs, evolvesIn, hatchCrew, listingOf, loversIn, nestsReady, pairOf, soulUp, SOUL, titled, writeTally } from './crew.ts'
 import type { Ctx, Tally } from './crew.ts'
 import { keyOf } from './friends.ts'
@@ -21,8 +21,10 @@ const speaker = atom({ plugin: 'buddy', key: 'speaker' } as const, 0)
 const ready = atom({ plugin: 'buddy', key: 'ready' } as const, { egg: false, glow: [], nests: [] } as Ready)
 // The list pane: what it shows, read from disk (null while it is shut), and what the person picked in it.
 const listing = atom({ plugin: 'buddy', key: 'listing' } as const, null as Listing | null)
-export const PANE_START: PaneUi = { sel: '', filter: 'all', rarity: 'all', species: 'all', query: '', mode: 'view', note: '', isBusy: false, draft: { name: '', species: '', soul: '' } }
+export const PANE_START: PaneUi = { view: 'list', sel: '', filter: 'all', rarity: 'all', species: 'all', query: '', mode: 'view', note: '', isBusy: false, draft: { name: '', species: '', soul: '' } }
 const pane = atom({ plugin: 'buddy', key: 'pane' } as const, PANE_START)
+// The garden's sky: the clock's, or forced by /buddy sky.
+const sky = atom({ plugin: 'buddy', key: 'sky' } as const, 'auto' as Sky)
 
 // What the session remembers between events, outside the atoms.
 export type Live = { turns: number; lastAnswer: string; lastCannedAt: number; lastActiveAt: number; id: string; tally: Tally; isRefreshing: boolean; subTurns: number; finalStepOf: string; lastCareAt: Record<string, number> }
@@ -84,6 +86,16 @@ export async function shutList($: EngineInterface) {
 
 export async function listNow($: EngineInterface) {
   return Promise.all([read($, listing), read($, pane)])
+}
+
+// What the garden redraws from on every beat: only the garden reads the tick, so the list stays still.
+export async function gardenNow($: EngineInterface) {
+  const [frame, out, p, forced] = await Promise.all([read($, tick), read($, members), read($, pressed), read($, sky)])
+  return { frame, crew: crewOr(out), p, sky: forced }
+}
+
+export async function setSky($: EngineInterface, to: Sky) {
+  await update($, sky, () => to)
 }
 
 export async function setPane($: EngineInterface, patch: Partial<PaneUi>) {

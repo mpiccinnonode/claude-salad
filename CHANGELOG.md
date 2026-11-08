@@ -1,5 +1,9 @@
 # Changelog
 
+## buddy 0.16.0 → 0.17.0
+
+- feat(buddy): pet and poke speed up evolution and shape the soul: each one (30-beat cooldown per buddy) takes 5 turns off the wait, up to 7% of that evolution's cost so the bonus scales with rarity and renews after every evolution; at evolution, Haiku is told how many times the buddy was petted and poked since the last one
+
 ## review-then-dry 1.3.0 → 1.4.0
 
 - feat(review-then-dry): add `/perf-review` skill and `performance-reviewer` agent (payload bloat, duplicate requests, eager loading, missing memoization, unbounded queries, render cost)

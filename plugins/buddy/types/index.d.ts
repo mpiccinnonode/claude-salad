@@ -22,11 +22,12 @@ export type Status = 'lead' | 'crew' | 'bench' | 'egg'
 export type Card = { key: string; name: string; species: string; status: Status; personality?: string | Record<string, string | string[]>; bones?: Bones; title?: string; left?: number; relations?: [string, string][] }
 export type Listing = { cards: Card[]; crewSize: number; egg: { done: number; per: number; left: number }; error?: string }
 export type Filter = 'all' | Status | 'ready'
+export type Sky = 'auto' | 'day' | 'night'
 export type Draft = { name: string; species: string; soul: string }
-export type PaneUi = { sel: string; filter: Filter; rarity: string; species: string; query: string; mode: 'view' | 'add' | 'swap' | 'rm'; note: string; isBusy: boolean; draft: Draft }
+export type PaneUi = { view: 'list' | 'garden'; sel: string; filter: Filter; rarity: string; species: string; query: string; mode: 'view' | 'add' | 'swap' | 'rm'; note: string; isBusy: boolean; draft: Draft }
 
 declare module 'claude-code' {
   interface PluginState {
-    buddy: { quip: Quip; isHidden: boolean; tick: number; members: Member[] | null; pressed: Pressed; isStats: boolean; speaker: number; ready: Ready; listing: Listing | null; pane: PaneUi }
+    buddy: { quip: Quip; isHidden: boolean; tick: number; members: Member[] | null; pressed: Pressed; isStats: boolean; speaker: number; ready: Ready; listing: Listing | null; pane: PaneUi; sky: Sky }
   }
 }

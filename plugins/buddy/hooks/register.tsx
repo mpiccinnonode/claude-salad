@@ -27,7 +27,7 @@ export const register: Register = (on, options) => {
   }
   const w = WORDS[o.lang]
   // ponytail: the id only has to differ from other sessions' (and from this one before a hot reload), so no uuid
-  const live: Live = { turns: 0, lastAnswer: '', lastCannedAt: -Infinity, lastActiveAt: 0, id: Math.random().toString(36).slice(2, 10), tally: { all: 0, by: {} }, isRefreshing: false, subTurns: 0, finalStepOf: '' }
+  const live: Live = { turns: 0, lastAnswer: '', lastCannedAt: -Infinity, lastActiveAt: 0, id: Math.random().toString(36).slice(2, 10), tally: { all: 0, by: {} }, isRefreshing: false, subTurns: 0, finalStepOf: '', lastCareAt: {} }
 
   on('session.start', async ($, e, next) => {
     const crew = await hatchInto($, o)

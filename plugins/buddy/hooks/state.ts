@@ -25,7 +25,7 @@ export const PANE_START: PaneUi = { sel: '', filter: 'all', rarity: 'all', speci
 const pane = atom({ plugin: 'buddy', key: 'pane' } as const, PANE_START)
 
 // What the session remembers between events, outside the atoms.
-export type Live = { turns: number; lastAnswer: string; lastCannedAt: number; lastActiveAt: number; id: string; tally: Tally; isRefreshing: boolean; subTurns: number; finalStepOf: string }
+export type Live = { turns: number; lastAnswer: string; lastCannedAt: number; lastActiveAt: number; id: string; tally: Tally; isRefreshing: boolean; subTurns: number; finalStepOf: string; lastCareAt: Record<string, number> }
 
 // The band looks at the disk again every this many beats (~3s).
 const REFRESH_BEATS = 10
@@ -151,9 +151,20 @@ export async function react($: EngineInterface, o: Ctx, reason: Reason, crew: Me
   await speak($, i, line(reason, m.bones.peak, m.bones.species, await read($, tick), o.lang))
 }
 
-export async function press($: EngineInterface, o: Ctx, kind: 'pet' | 'poke', crew: Member[], i: number) {
+// A pet or poke that counts for growth: not within CARE_GAP beats of the last one on that buddy, so clicking is no grind. How much it is worth is capped per evolution (`evolvesIn`).
+const CARE_GAP = 30
+
+export async function press($: EngineInterface, o: Ctx, live: Live, kind: 'pet' | 'poke', crew: Member[], i: number) {
   const now = await read($, tick)
   const m = crew[i]!
+  const care = live.tally.care?.[m.key] ?? { pet: 0, poke: 0 }
+  // The stand-in ('') never counts.
+  if (m.key && now - (live.lastCareAt[m.key] ?? -Infinity) >= CARE_GAP) {
+    live.lastCareAt[m.key] = now
+    live.tally.care = { ...live.tally.care, [m.key]: { ...care, [kind]: care[kind] + 1 } }
+    await writeTally($, live.id, live.tally)
+    await refresh($, o)
+  }
   await Promise.all([update($, pressed, () => ({ kind, at: now, who: m.key })), update($, isStats, () => false), speak($, i, line(kind, m.bones.peak, m.bones.species, now, o.lang))])
 }
 

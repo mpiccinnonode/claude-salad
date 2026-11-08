@@ -465,6 +465,21 @@ test('evolution: if Haiku fails nothing changes; a file buddy gets its new soul 
   expect(book()).toEqual([{ name: 'Zed', species: expect.any(String), personality: { tone: 'eerily calm' } }])
 })
 
+test('care: a pet counts as a turn toward evolving (not again right away), and Haiku hears of it at the evolution', { options: { language: 'en', turnsPerEvolve: 3, active: 'Zed' } }, async ($, on) => {
+  const { run, start, turns, mount } = rig($, on, { [FILE]: JSON.stringify([ZED]) }, { born: commonZed() })
+  const asked: string[] = []
+  on('model.complete', ($, e) => { asked.push(`${e.system}\n${e.prompt}`); return answer(JSON.stringify({ title_en: 'the Unbothered', title_it: 'l\'Imperturbabile', tone: 'eerily calm' })) })
+
+  await start()
+  const ui = await mount()
+  await turns(2)
+  expect(await run('evolve')).not.toContain('has evolved')
+  await ui.press({ key: 'pet' })
+  await ui.press({ key: 'pet' })
+  expect(await run('evolve')).toContain('has evolved!')
+  expect(asked.at(-1)).toContain('petted it 1 times and poked it 0 times')
+})
+
 test('crew: the 0.4 `active` in the store still picks the buddy until /buddy use; the option is a comma list that skips unknown names and eggs', { options: { language: 'en', active: 'Ghost, Nino, Ada' } }, async ($, on) => {
   const friends = [ZED, { name: 'Nino' }, { name: 'Ada', personality: 'Sharp.' }]
   const { run, start, shows } = rig($, on, { [FILE]: JSON.stringify(friends) }, { active: 'Zed', born: born() })

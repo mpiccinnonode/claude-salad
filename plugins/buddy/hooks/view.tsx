@@ -54,7 +54,7 @@ export async function drawBand($: EngineInterface, e: RenderInput<'AbovePrompt'>
           return (
             <Box key={`buddy-${i}`} flexDirection="column" width={SPRITE.columns} flexShrink={0}>
               {drawBuddy(c.bones.species, frame + i * 7, look, RARITY_COLOR[c.bones.rarity]).map((row, r) => (
-                <Button key={`body-${i}-${r}`} plain onPress={() => press($, o, 'pet', crew, i)}>
+                <Button key={`body-${i}-${r}`} plain onPress={() => press($, o, live, 'pet', crew, i)}>
                   {row.map(([text, color], j) => <Text key={`p${i}-${r}-${j}`} color={color} mono>{text}</Text>)}
                 </Button>
               ))}
@@ -67,8 +67,8 @@ export async function drawBand($: EngineInterface, e: RenderInput<'AbovePrompt'>
   )
   const others = crew.filter((_, i) => !shown.includes(i)).map(c => ` · ${c.name}`).join('')
   const actions = {
-    pet: () => press($, o, 'pet', crew, at),
-    poke: () => press($, o, 'poke', crew, at),
+    pet: () => press($, o, live, 'pet', crew, at),
+    poke: () => press($, o, live, 'poke', crew, at),
     talk: () => quipFromModel($, o, crew, at, live.lastAnswer ? `${w.chatAnswer}\n\n${live.lastAnswer}` : w.chatEmpty, true),
     stats: () => toggleStats($),
     list: () => list($, o),

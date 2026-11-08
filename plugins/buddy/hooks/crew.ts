@@ -13,7 +13,7 @@ export type Ctx = { old: { name: string; personality: string; species?: string }
 export const SOUL = { name: 'Buddy', personality: 'A small, curious terminal companion who comments on your work.' }
 
 // `stage` counts evolutions, `ats` the turns together when the last one was spent (`at`: the same in sessions, before turns counted); `title` is the epithet, in both languages.
-type Born = { bones: Bones; stage?: number; at?: number; ats?: number; title?: Record<Lang, string> }
+type Born = { cared?: Care; bones: Bones; stage?: number; at?: number; ats?: number; title?: Record<Lang, string> }
 type Births = Record<string, Born>
 // Until 0.9 the original kept its name and soul in the store, under ''.
 type Kept = Born & { name?: string; personality?: Personality }
@@ -30,10 +30,15 @@ async function legacyTogether($: EngineInterface) {
 }
 
 // What a session counts: every turn, and the turns of each buddy that was out for it.
-export type Tally = { all: number; by: Record<string, number> }
+// Pets and pokes a buddy got; they shorten the wait for its evolution (`evolvesIn`) and shape the soul it evolves into (`dreamOn`).
+export type Care = { pet: number; poke: number }
+export type Tally = { all: number; by: Record<string, number>; care?: Record<string, Care> }
 const TALLY = 'tally:'
 // A session's sessions were worth about this many turns when 0.9's counts are carried over.
 const TURNS_PER_SESSION = 20
+// A pet or poke is worth this many turns toward the next evolution, and a cycle gets at most CARE_SHARE of its cost from them: care helps at every stage of a buddy's life without ever replacing the time together.
+const CARE_TURNS = 5
+const CARE_SHARE = 0.07
 
 // The store has no compare-and-set, so no counter is read-modify-written by two sessions: each session writes only its own `tally:<id>` and a total is the sum of them all.
 // ponytail: tallies are never folded together, ~60 bytes a session against the store's 4 MiB; fold them under one idempotent key if that ever shows.
@@ -49,6 +54,13 @@ async function tallies($: EngineInterface) {
 async function turnsTogether($: EngineInterface) {
   const [sessions, all] = await Promise.all([$.store.get('sessions'), tallies($)])
   return Number(sessions ?? 0) * TURNS_PER_SESSION + all.reduce((n, t) => n + t.all, 0)
+}
+
+// Pets and pokes per buddy, summed over every session's tally.
+async function careOf($: EngineInterface) {
+  const total: Record<string, Care> = {}
+  for (const t of await tallies($)) for (const [k, c] of Object.entries(t.care ?? {})) total[k] = { pet: (total[k]?.pet ?? 0) + c.pet, poke: (total[k]?.poke ?? 0) + c.poke }
+  return total
 }
 
 // Turns per buddy; `zero` is what each one had when it was removed, so a buddy added again under the same name starts over.
@@ -324,12 +336,15 @@ export async function outOfEgg($: EngineInterface, o: Ctx, e: Entry, r: Roster):
 
 // Each evolution costs `per` turns times the rarity step (common 1×, +½ a step, legendary 3×), counted from the last one. Turns left, by key.
 export async function evolvesIn($: EngineInterface, per: number) {
-  const [together, born] = await Promise.all([togetherOf($), bornOf($)])
+  const [together, born, cares] = await Promise.all([togetherOf($), bornOf($), careOf($)])
   return (key: string) => {
     const b = born[key]
     // `at` is 0.9's, in sessions; before it existed, estimate the last evolution as stage × per. The rarity gap still applies.
     const since = b?.ats ?? (b?.at === undefined ? (b?.stage ?? 0) * per : b.at * TURNS_PER_SESSION)
-    return since + Math.ceil(per * (1 + RARITIES.indexOf(b?.bones.rarity ?? 'common') / 2)) - Number(together[key] ?? 0)
+    const cost = Math.ceil(per * (1 + RARITIES.indexOf(b?.bones.rarity ?? 'common') / 2))
+    // Only the care since the last evolution counts, up to its share of this cycle's cost.
+    const cared = (cares[key]?.pet ?? 0) + (cares[key]?.poke ?? 0) - (b?.cared ? b.cared.pet + b.cared.poke : 0)
+    return since + cost - Number(together[key] ?? 0) - Math.min(Math.ceil(cost * CARE_SHARE), Math.max(0, cared) * CARE_TURNS)
   }
 }
 
@@ -338,11 +353,14 @@ export async function evolveNow($: EngineInterface, o: Ctx, m: Member): Promise<
   const w = WORDS[o.lang]
   const book = await openBook($, o)
   if (book.error) return w.badFile(book.error)
-  const [born, together] = await Promise.all([bornOf($), togetherOf($)])
+  const [born, together, cares] = await Promise.all([bornOf($), togetherOf($), careOf($)])
   const was = born[m.key]!
+  const cared = cares[m.key] ?? { pet: 0, poke: 0 }
+  // Only what came after the last evolution weighs on this one.
+  const since = { pet: cared.pet - (was.cared?.pet ?? 0), poke: cared.poke - (was.cared?.poke ?? 0) }
   const grown = evolve(was.bones)
   const mates = (await hatchCrew($, o)).filter(c => c.key !== m.key).map(c => ({ name: c.name, relation: m.relations?.[keyOf(c.name)] }))
-  const dreamt = await dreamOn($, m.name, m.personality, { ...grown, species: m.bones.species }, m.title, o.lang, mates)
+  const dreamt = await dreamOn($, m.name, m.personality, { ...grown, species: m.bones.species }, m.title, o.lang, mates, since)
   if (!dreamt) return w.noEvolve
   // Fresh read after Haiku, so an edit made meanwhile is kept.
   const now = await openBook($, o)
@@ -350,7 +368,7 @@ export async function evolveNow($: EngineInterface, o: Ctx, m: Member): Promise<
   const souled = upsert(now.raw, m.name, { personality: dreamt.soul })
   const rels = stillIn(now.friends, dreamt.relations)
   await writeBook($, now, Object.keys(rels).length ? withRelations(souled, m.name, rels) : souled)
-  await Promise.all([$.store.set('born', { ...born, [m.key]: { ...was, bones: grown, stage: (was.stage ?? 0) + 1, ats: Number(together[m.key] ?? 0), title: dreamt.title } }), driftedAt($, m.key, Number(together[m.key] ?? 0))])
+  await Promise.all([$.store.set('born', { ...born, [m.key]: { ...was, bones: grown, cared, stage: (was.stage ?? 0) + 1, ats: Number(together[m.key] ?? 0), title: dreamt.title } }), driftedAt($, m.key, Number(together[m.key] ?? 0))])
   return undefined
 }
 

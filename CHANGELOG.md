@@ -1,5 +1,9 @@
 # Changelog
 
+## buddy 0.17.0 → 0.18.0
+
+- feat(buddy): garden view in the list pane (`g`): the crew walks a coloured ASCII lawn that fills the pane in width and height, as many at once as the lawn fits and taking turns beyond that; a click pets and the `pungola` buttons poke through the same care as the band (same gap and cap), meetings between buddies are scenery only; day or night follows the clock, or is forced with `/buddy sky day|night|auto` or the garden's sky button
+
 ## buddy 0.16.0 → 0.17.0
 
 - feat(buddy): pet and poke speed up evolution and shape the soul: each one (30-beat cooldown per buddy) takes 5 turns off the wait, up to 7% of that evolution's cost so the bonus scales with rarity and renews after every evolution; at evolution, Haiku is told how many times the buddy was petted and poked since the last one

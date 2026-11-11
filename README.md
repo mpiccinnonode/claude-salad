@@ -10,9 +10,10 @@ Claude Code plugins by mpiccinnonode -- task triage, code review, and more.
 | [review-then-dry](plugins/review-then-dry/) | 1.4.0 | Chained code-review + reuse audit producing one unified findings spec. Node-only, Windows-portable |
 | [context-diet](plugins/context-diet/) | 0.2.0 | Mod that trims session-start context: hides chosen skills from the listing and, by default, strips the superpowers gatekeeper. Needs Claude Code >= 2.1.287 |
 | [done-gate](plugins/done-gate/) | 0.2.0 | Mod that flags (or blocks) a coding turn that edited sources without running the project's checks afterwards. Needs Claude Code >= 2.1.287 |
-| [capabilities](plugins/capabilities/) | 1.0.0 | Answers "have we already built this?" by reading every CAPABILITIES.md in the GitHub org. Needs `gh` logged in |
 | [buddy](plugins/buddy/) | 0.18.0 | Mod that brings back the /buddy companion: random buddies hatched from eggs you earn, each with its own species, rarity, stats and Haiku-written personality, animated above the prompt, reacting to your work, evolving with you over time. Needs Claude Code >= 2.1.299 |
 | [debrief](plugins/debrief/) | 0.1.0 | End-of-branch learning session: explains the technologies, patterns, domain rules and decisions behind the branch, then quizzes the developer. Chat or interactive page |
+
+`capabilities` moved to the Node team's private marketplace (`nodesoccoop/node-cc-plugins`).
 
 ## Installation
 
@@ -44,10 +45,6 @@ claude
 
 ```bash
 /plugin install done-gate
-```
-
-```bash
-/plugin install capabilities
 ```
 
 ```bash

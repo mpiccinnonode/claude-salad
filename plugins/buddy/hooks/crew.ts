@@ -436,10 +436,10 @@ async function nestsOf($: EngineInterface) {
   return ((await $.store.get('nests')) ?? {}) as Record<string, number>
 }
 
-// Lovers out together lay an egg of their own every half `per` turns they spend together, besides the usual ones: the couples whose egg is ready.
+// Lovers out together lay an egg of their own every sixth of `per` turns they spend together, besides the usual ones: the couples whose egg is ready.
 export async function nestsReady($: EngineInterface, o: Ctx, crew: Member[]) {
   const [together, nests] = await Promise.all([togetherOf($), nestsOf($)])
-  return loversIn(crew).filter(([a, b]) => (together[pairOf(a.key, b.key)] ?? 0) - (nests[pairOf(a.key, b.key)] ?? 0) >= Math.ceil(o.perEgg / 2))
+  return loversIn(crew).filter(([a, b]) => (together[pairOf(a.key, b.key)] ?? 0) - (nests[pairOf(a.key, b.key)] ?? 0) >= Math.ceil(o.perEgg / 6))
 }
 
 // Spends a couple's egg, only on success: one parent's species and the rest rolled, a name and soul dreamt from both, and the relations written both ways.

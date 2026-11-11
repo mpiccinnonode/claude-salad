@@ -893,12 +893,13 @@ test('relations: each buddy talks to its mates as what they are to it; a rename 
   await ui.unmount()
 })
 
-test('love: two buddies out who call each other lovers lay an egg of their own every half turnsPerHatch; a bare /buddy hatches their child', { options: { language: 'en', turnsPerHatch: 2 } }, async ($, on) => {
+test('love: two buddies out who call each other lovers lay an egg of their own every sixth of turnsPerHatch; a bare /buddy hatches their child', { options: { language: 'en', turnsPerHatch: 12 } }, async ($, on) => {
   const roster = [{ name: 'Zed', personality: 'Calm.', relations: [{ Ada: 'lover' }] }, { name: 'Ada', personality: 'Sharp.', relations: { zed: 'secret lover' } }, ...ROSTER.slice(2)]
   const prompts: string[] = []
   on('model.complete', ($, e) => { prompts.push(e.prompt ?? ''); return answer(e.system?.includes('invent personalities') ? JSON.stringify({ name: 'Bimbo', tone: 'tiny' }) : 'Hm.') })
   const { start, run, turns, shows, book } = rig($, on, { [FILE]: JSON.stringify(roster) }, settledStore({ eggAt: 0 }))
   await start()
+  await turns(1)
   expect(await shows(/♥/, WIDE)).toBe(false)
   await turns(1)
   expect(await shows(/♥ Zed\+Ada · \/buddy/, WIDE)).toBe(true)
@@ -912,7 +913,7 @@ test('love: two buddies out who call each other lovers lay an egg of their own e
   // The normal egg was not spent, and the couple starts over.
   expect(await shows(/♥/, WIDE)).toBe(false)
   expect(await shows(/Egg ready/, WIDE)).toBe(false)
-  await turns(1)
+  await turns(2)
   expect(await shows(/♥ Zed\+Ada/, WIDE)).toBe(true)
 })
 

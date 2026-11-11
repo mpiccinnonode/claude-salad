@@ -33,14 +33,8 @@
       "description": "Mod that flags (or blocks) a coding turn that edited sources without running the project's checks afterwards. Needs Claude Code >= 2.1.287."
     },
     {
-      "name": "capabilities",
-      "version": "1.0.0",
-      "source": "./plugins/capabilities",
-      "description": "Answers \"have we already built this?\" by reading every CAPABILITIES.md in the GitHub org. For technical and non-technical colleagues."
-    },
-    {
       "name": "buddy",
-      "version": "0.18.0",
+      "version": "0.19.0",
       "source": "./plugins/buddy",
       "description": "Mod that brings back the /buddy companion: random buddies hatched from eggs you earn, each with its own species, rarity, stats and Haiku-written personality, animated above the prompt, reacting to your work, evolving with you over time. Needs Claude Code >= 2.1.299."
     },

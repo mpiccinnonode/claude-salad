@@ -1,5 +1,13 @@
 # Changelog
 
+## buddy 0.18.0 → 0.19.0
+
+- feat(buddy): a couple lays its own egg every sixth of `turnsPerHatch` turns together (234 by default) instead of every half (700)
+
+## General fixes
+
+- chore(capabilities): the plugin moved to nodesoccoop/node-cc-plugins and is removed from this marketplace
+
 ## buddy 0.17.0 → 0.18.0
 
 - feat(buddy): garden view in the list pane (`g`): the crew walks a coloured ASCII lawn that fills the pane in width and height, as many at once as the lawn fits and taking turns beyond that; a click pets and the `pungola` buttons poke through the same care as the band (same gap and cap), meetings between buddies are scenery only; day or night follows the clock, or is forced with `/buddy sky day|night|auto` or the garden's sky button

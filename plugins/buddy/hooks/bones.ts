@@ -4,6 +4,12 @@ import type { Bones, Rarity, StatName } from '../types'
 export const SPECIES = ['duck', 'goose', 'blob', 'cat', 'dragon', 'octopus', 'owl', 'penguin', 'turtle', 'snail', 'ghost', 'axolotl', 'capybara', 'cactus', 'robot', 'rabbit', 'mushroom', 'chonk'] as const
 // Species added after the original roll: eggs can hatch them, `roll` never picks them, so existing rolls stay put.
 export const ALL_SPECIES: readonly string[] = [...SPECIES, 'imp', 'bat', 'skeleton']
+// A couple's child of two species wears both, `cat+duck` (sorted); never rolled, only born. A hybrid parent passes on one of its two.
+export const hybridOf = (a: string, b: string, rng = Math.random) => {
+  const [x, y] = [a, b].map(s => { const p = s.split('+'); return p[Math.floor(rng() * p.length)] ?? s })
+  return x === y ? x! : [x, y].sort().join('+')
+}
+export const isSpeciesName = (s: string) => { const p = s.split('+'); return p.length <= 2 && new Set(p).size === p.length && p.every(x => ALL_SPECIES.includes(x)) }
 export const RARITIES: readonly Rarity[] = ['common', 'uncommon', 'rare', 'epic', 'legendary']
 export const STAT_NAMES: readonly StatName[] = ['DEBUGGING', 'PATIENCE', 'CHAOS', 'WISDOM', 'SNARK']
 export const EYES = ['·', '✦', '×', '◉', '@', '°'] as const

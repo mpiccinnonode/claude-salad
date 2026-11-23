@@ -170,7 +170,7 @@ export async function drawList($: EngineInterface, e: RenderInput<'Pane'>, o: Ct
   ) : (
     <Box key="fields" flexDirection="column" flexGrow={1} gap={1}>
       <Input key={`name-${card.key}`} label={w.nameLabel} value={card.name} submitLabel={w.save} onSubmit={v => renameTo($, o, card, v)} />
-      <Select key={`species-${card.key}`} label={w.speciesLabel} value={card.species} options={ALL_SPECIES.map(s => ({ value: s }))} onSelect={v => setSpecies($, o, card, v)} />
+      <Select key={`species-${card.key}`} label={w.speciesLabel} value={card.species} options={[...new Set([...ALL_SPECIES, card.species])].map(s => ({ value: s }))} onSelect={v => setSpecies($, o, card, v)} />
       <Box key="relations" flexDirection="column">
         <Text bold color="magenta">{w.relationsLabel}</Text>
         <Input key={`rel-${card.key}`} rows={rowsFor(relText, textWidth)} value={relText} placeholder={w.relationsHint} submitLabel={w.save} onSubmit={t => setRelations($, o, card, t)} />

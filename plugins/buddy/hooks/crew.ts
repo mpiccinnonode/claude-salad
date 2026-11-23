@@ -238,14 +238,15 @@ export async function relateUp($: EngineInterface, o: Ctx) {
 const PARENT = /^(tuo |your )?(genitore|parent)\b/i
 export async function hybridsUp($: EngineInterface, o: Ctx) {
   if ((await $.store.get('hybrids')) === true) return
-  const r = await rosterOf($, o)
+  const [r, nests] = await Promise.all([rosterOf($, o), nestsOf($)])
   if (r.book.error || !r.book.path) return
   const found: Births = {}
   for (const e of r.roster) {
     const b = r.born[e.key]
     if (!b || b.parents) continue
     const ps = Object.entries(e.relations ?? {}).filter(([, rel]) => PARENT.test(rel.trim())).flatMap(([k]) => r.roster.filter(x => keyOf(x.name) === k && r.born[x.key]))
-    if (ps.length !== 2) continue
+    // Relations drift, so a child calling its own parents "genitore" counts only if they are a couple that nested.
+    if (ps.length !== 2 || !(pairOf(ps[0]!.key, ps[1]!.key) in nests)) continue
     const species = hybridOf(...(ps.map(p => p.species ?? r.born[p.key]!.bones.species) as [string, string]))
     found[e.key] = { ...b, bones: { ...b.bones, species }, parents: ps.map(p => p.key) }
   }

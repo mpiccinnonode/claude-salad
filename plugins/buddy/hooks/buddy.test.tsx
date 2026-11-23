@@ -925,12 +925,14 @@ test('love: two buddies out who call each other lovers lay an egg of their own e
 })
 
 test('hybrids: a child born before them takes its parents\' hybrid once at session start; a plain buddy is untouched', { options: { language: 'it' } }, async ($, on) => {
-  const roster = [...ROSTER.slice(0, 3), { name: 'Bimbo', species: 'duck', relations: [{ Zed: 'Genitore insonne' }, { Ada: 'tuo genitore' }] }]
-  const { start, book } = rig($, on, { [FILE]: JSON.stringify(roster) }, settledStore({ born: { ...born(), bimbo: { bones: roll('b') } } }))
+  // Ada's relations drifted to call her child and Pip "genitore": not a nested couple, so she stays herself.
+  const roster = [ROSTER[0], { ...ROSTER[1], relations: [{ Bimbo: 'Genitore smarrito' }, { Pip: 'genitore' }] }, ROSTER[2], { name: 'Bimbo', species: 'duck', relations: [{ Zed: 'Genitore insonne' }, { Ada: 'tuo genitore' }] }]
+  const { start, book } = rig($, on, { [FILE]: JSON.stringify(roster) }, settledStore({ born: { ...born(), bimbo: { bones: roll('b') } }, nests: { '["ada","zed"]': 1 } }))
   await start()
   const [zed, ada, pip, bimbo] = book()
   expect(bimbo!.species).toBe([zed!.species, ada!.species].sort().join('+'))
   expect(pip!.species).toBe(roll('p').species)
+  expect(ada!.species).toBe(roll('a').species)
 })
 
 test('love: one-sided love lays no egg', { options: { language: 'en', turnsPerHatch: 2 } }, async ($, on) => {

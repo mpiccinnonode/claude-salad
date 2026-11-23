@@ -16,6 +16,8 @@ const TWISTS = [
 ]
 
 const SOUL_SHAPE = '"tone": string, "traits": 3-5 strings, "quirks": 2-3 strings, "backstory": 2 sentences, "speech": how it talks, "catchphrase": string, "likes": 2-3 strings, "dislikes": 2-3 strings'
+// Haiku's stock settings (a lighthouse above all) spread through parents and evolutions; keep them out.
+const NO_STOCK = 'No stock settings or images: no lighthouses, sea, harbours, keepers or burrows; pick a place and past nobody would guess.'
 const statsOf = (b: Bones) => `Stats out of 100: ${STAT_NAMES.map(s => `${s} ${b.stats[s]}`).join(', ')}.`
 const soulIn = (data: unknown) => {
   const soul = asPersonality(data)
@@ -39,8 +41,8 @@ export async function dreamUp($: EngineInterface, name: string | undefined, b: B
   const first = Math.floor(Math.random() * TWISTS.length)
   const twists = [TWISTS[first], TWISTS[(first + 1 + Math.floor(Math.random() * (TWISTS.length - 1))) % TWISTS.length]]
   const data = await askJson($,
-    `You invent personalities for tiny terminal companions who watch a programmer work. Make each one layered, specific and odd: contradictions, concrete small details, a voice nobody else has. No generic cute-pet clichés. Keep it tight: one sentence for tone and speech, two for the backstory, a few words per list item. Never mention stats or numbers. ${WORDS[lang].dream} Answer with one JSON object and nothing else: {"name": string, ${SOUL_SHAPE}}`,
-    `${name ? `Name: ${name}.` : 'It has no name yet: invent a short, unusual one.'} Species: ${b.species}. Rarity: ${b.rarity}. ${statsOf(b)} Weave in ${twists.join(' and ')}.${parents ? ` Its parents are ${parents.map(p => `${p.name} (${p.personality})`).join(' and ')}: someone new, with a trace of each.` : ''}`)
+    `You invent personalities for tiny terminal companions who watch a programmer work. Make each one layered, specific and odd: contradictions, concrete small details, a voice nobody else has. No generic cute-pet clichés. ${NO_STOCK} Keep it tight: one sentence for tone and speech, two for the backstory, a few words per list item. Never mention stats or numbers. ${WORDS[lang].dream} Answer with one JSON object and nothing else: {"name": string, ${SOUL_SHAPE}}`,
+    `${name ? `Name: ${name}.` : 'It has no name yet: invent a short, unusual one.'} Species: ${b.species}. Rarity: ${b.rarity}. ${statsOf(b)} Weave in ${twists.join(' and ')}.${parents ? ` Its parents are ${parents.map(p => `${p.name} (${p.personality})`).join(' and ')}: someone new, with a trace of each in temperament, but a past and a setting of its own, unlike theirs.` : ''}`)
   if (!data) return undefined
   const named = name || texts(data.name)[0]
   return named ? { name: named, soul: soulIn(data) } : undefined
@@ -53,7 +55,7 @@ export async function dreamOn($: EngineInterface, name: string, was: string, b: 
   // The programmer's hand in its growth: petting warms it, poking sharpens it; a nudge, never a rewrite.
   const touched = care.pet + care.poke > 0 ? ` Since it last changed the programmer petted it ${care.pet} times and poked it ${care.poke} times: petting warms it and lets it trust, poking makes it sharper and bolder; let the larger side lean the growth, gently, and never mention counts.` : ''
   const data = await askJson($,
-    `You evolve tiny terminal companions who watch a programmer work. Keep who it is, but push everything further and stranger: sharper contradictions, odder quirks, a voice even less like anyone else's. Its stats steer the growth: the higher a stat, the more that side takes over (DEBUGGING: obsessive precision, PATIENCE: unsettling calm, CHAOS: entropy, WISDOM: cryptic insight, SNARK: venom). Never mention stats or numbers. Also give it an epithet that follows its name, drawn from its new self and its strongest stat, in English (like "the Winged Sarcasm") and in Italian (like "Sarcasmo Alato"); never repeat the name in it. ${WORDS[lang].dream} The two epithets excepted. Answer with one JSON object and nothing else: {"title_en": string, "title_it": string, ${SOUL_SHAPE}${ties ? ', "relations": an object from each name it shares the terminal with to a few words of what that one is to it now' : ''}}`,
+    `You evolve tiny terminal companions who watch a programmer work. Keep who it is, but push everything further and stranger: sharper contradictions, odder quirks, a voice even less like anyone else's. Grow its inner life, not the scenery of its backstory; ${NO_STOCK} Its stats steer the growth: the higher a stat, the more that side takes over (DEBUGGING: obsessive precision, PATIENCE: unsettling calm, CHAOS: entropy, WISDOM: cryptic insight, SNARK: venom). Never mention stats or numbers. Also give it an epithet that follows its name, drawn from its new self and its strongest stat, in English (like "the Winged Sarcasm") and in Italian (like "Sarcasmo Alato"); never repeat the name in it. ${WORDS[lang].dream} The two epithets excepted. Answer with one JSON object and nothing else: {"title_en": string, "title_it": string, ${SOUL_SHAPE}${ties ? ', "relations": an object from each name it shares the terminal with to a few words of what that one is to it now' : ''}}`,
     `Name: ${name}. Species: ${b.species}. Rarity now: ${b.rarity}. ${statsOf(b)}${title ? ` Its old epithet, to outgrow: ${title}.` : ''} Who it was: ${was}${touched}${ties ? ` What the others are to it, free to shift with its new self (a love it keeps says lover, or amante in Italian): ${ties}.` : ''}`)
   const soul = soulIn(data)
   const [en, it] = [texts(data?.title_en)[0], texts(data?.title_it)[0]]

@@ -1,5 +1,9 @@
 # Changelog
 
+## buddy 0.20.0 → 0.20.1
+
+- fix(buddy): keep stock settings like lighthouses out of dreamt personalities; children take their parents' temperament but a past of their own, evolutions grow the inner life, not the backstory scenery
+
 ## buddy 0.19.0 → 0.20.0
 
 - feat(buddy): children of a mixed-species couple hatch as hybrids (`goose+rabbit`), with 210 hand-drawn hybrid sprites; children already born convert once at session start

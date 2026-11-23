@@ -1,5 +1,11 @@
 # Changelog
 
+## buddy 0.19.0 → 0.20.0
+
+- feat(buddy): children of a mixed-species couple hatch as hybrids (`goose+rabbit`), with 210 hand-drawn hybrid sprites; children already born convert once at session start
+- feat(buddy): a couple's first two kids come at the usual pace, later ones ten times slower
+- fix(buddy): retro hybrids only trust parent relations that point at a couple that nested
+
 ## buddy 0.18.0 → 0.19.0
 
 - feat(buddy): a couple lays its own egg every sixth of `turnsPerHatch` turns together (234 by default) instead of every half (700)

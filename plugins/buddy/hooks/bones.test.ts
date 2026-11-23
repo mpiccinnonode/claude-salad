@@ -1,5 +1,5 @@
 import { expect, test } from 'claude-code/testing'
-import { evolve, roll, wyhash } from './bones.ts'
+import { evolve, hybridOf, isSpeciesName, roll, wyhash } from './bones.ts'
 
 // Computed by the reference implementation (coding-buddy core/engine.ts) with the 18 original species.
 const REF_EMPTY = 290873116282709081n
@@ -25,4 +25,12 @@ test('evolve: a rarity up, a hat, stats up with the peak most, capped at 100; le
   expect(grown).toEqual({ ...b, rarity: 'uncommon', hat: 'crown', stats: { DEBUGGING: 6, PATIENCE: 93, CHAOS: 27, WISDOM: 24, SNARK: 16 } })
   const top = evolve({ ...grown, rarity: 'legendary', stats: { ...grown.stats, PATIENCE: 95 } })
   expect([top.rarity, top.hat, top.stats.PATIENCE]).toEqual(['legendary', 'crown', 100])
+})
+
+test('hybridOf: sorted and joined, one species stays itself, a hybrid parent passes on one of its two', () => {
+  expect(hybridOf('rabbit', 'goose')).toBe('goose+rabbit')
+  expect(hybridOf('cat', 'cat')).toBe('cat')
+  expect(hybridOf('goose+rabbit', 'cat', () => 0)).toBe('cat+goose')
+  expect(hybridOf('goose+rabbit', 'rabbit', () => 0.9)).toBe('rabbit')
+  expect([isSpeciesName('goose+rabbit'), isSpeciesName('goose+goose'), isSpeciesName('a+b+c'), isSpeciesName('cat')]).toEqual([true, false, false, true])
 })

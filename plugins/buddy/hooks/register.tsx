@@ -1,6 +1,6 @@
 import type { Register } from 'claude-code'
 import { LIST_PANE, runBuddy } from './commands.ts'
-import { driftOne, relateUp } from './crew.ts'
+import { driftOne, hybridsUp, relateUp } from './crew.ts'
 import type { Ctx } from './crew.ts'
 import { reasonFor } from './lines.ts'
 import { drawList } from './list.tsx'
@@ -37,6 +37,7 @@ export const register: Register = (on, options) => {
     $.clock.every(300, () => beat($, o, live))
     // Once per session, not at every crew change, and after the band is up: it may ask Haiku; the next refresh shows what it wrote.
     await relateUp($, o)
+    await hybridsUp($, o)
     return next(e)
   })
 

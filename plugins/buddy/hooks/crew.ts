@@ -1,6 +1,6 @@
 import type { EngineInterface } from 'claude-code'
 import type { Bones, Card, Listing, Member } from '../types'
-import { ALL_SPECIES, evolve, RARITIES, roll } from './bones.ts'
+import { ALL_SPECIES, evolve, hybridOf, RARITIES, roll } from './bones.ts'
 import { dreamDrift, dreamOn, dreamTies, dreamUp } from './dream.ts'
 import { asPersonality, describe, findFriend, inShape, isLove, keyOf, parseBook, relink, upsert, withRelations } from './friends.ts'
 import type { Friend, Personality } from './friends.ts'
@@ -12,8 +12,8 @@ export type Ctx = { old: { name: string; personality: string; species?: string }
 
 export const SOUL = { name: 'Buddy', personality: 'A small, curious terminal companion who comments on your work.' }
 
-// `stage` counts evolutions, `ats` the turns together when the last one was spent (`at`: the same in sessions, before turns counted); `title` is the epithet, in both languages.
-type Born = { cared?: Care; bones: Bones; stage?: number; at?: number; ats?: number; title?: Record<Lang, string> }
+// `parents`: the store keys of the couple it was born to. `stage` counts evolutions, `ats` the turns together when the last one was spent (`at`: the same in sessions, before turns counted); `title` is the epithet, in both languages.
+type Born = { cared?: Care; bones: Bones; parents?: string[]; stage?: number; at?: number; ats?: number; title?: Record<Lang, string> }
 type Births = Record<string, Born>
 // Until 0.9 the original kept its name and soul in the store, under ''.
 type Kept = Born & { name?: string; personality?: Personality }
@@ -234,6 +234,28 @@ export async function relateUp($: EngineInterface, o: Ctx) {
   if (isWhole) await $.store.set('related', true)
 }
 
+// Children born before hybrids, once (`hybrids` flag): two relations opening with "parent" name the couple; the child takes its hybrid and keeps its parents.
+const PARENT = /^(tuo |your )?(genitore|parent)\b/i
+export async function hybridsUp($: EngineInterface, o: Ctx) {
+  if ((await $.store.get('hybrids')) === true) return
+  const [r, nests] = await Promise.all([rosterOf($, o), nestsOf($)])
+  if (r.book.error || !r.book.path) return
+  const found: Births = {}
+  for (const e of r.roster) {
+    const b = r.born[e.key]
+    if (!b || b.parents) continue
+    const ps = Object.entries(e.relations ?? {}).filter(([, rel]) => PARENT.test(rel.trim())).flatMap(([k]) => r.roster.filter(x => keyOf(x.name) === k && r.born[x.key]))
+    // Relations drift, so a child calling its own parents "genitore" counts only if they are a couple that nested.
+    if (ps.length !== 2 || !(pairOf(ps[0]!.key, ps[1]!.key) in nests)) continue
+    const species = hybridOf(...(ps.map(p => p.species ?? r.born[p.key]!.bones.species) as [string, string]))
+    found[e.key] = { ...b, bones: { ...b.bones, species }, parents: ps.map(p => p.key) }
+  }
+  const kids = r.roster.filter(e => found[e.key])
+  if (kids.length) await writeBook($, r.book, kids.reduce((raw, e) => upsert(raw, e.name, { species: found[e.key]!.bones.species }), r.book.raw))
+  await $.store.set('born', { ...(await bornOf($)), ...found })
+  await $.store.set('hybrids', true)
+}
+
 // A buddy hatched before species lived in the file gets its rolled one written once, so the file can override it.
 async function recordSpecies($: EngineInterface, book: Book, roster: Entry[], born: Births) {
   const missing = book.error ? [] : roster.filter(e => !e.species && born[e.key])
@@ -436,18 +458,24 @@ async function nestsOf($: EngineInterface) {
   return ((await $.store.get('nests')) ?? {}) as Record<string, number>
 }
 
-// Lovers out together lay an egg of their own every sixth of `per` turns they spend together, besides the usual ones: the couples whose egg is ready.
+// A couple's first FIRST_KIDS eggs come every sixth of `per` turns together, every one after LATE times slower.
+const FIRST_KIDS = 2
+const LATE = 10
+const kidsOf = (born: Births, pair: string) => Object.values(born).filter(b => b.parents?.length === 2 && pairOf(b.parents[0]!, b.parents[1]!) === pair).length
+
+// Lovers out together lay eggs of their own, besides the usual ones: the couples whose egg is ready.
 export async function nestsReady($: EngineInterface, o: Ctx, crew: Member[]) {
-  const [together, nests] = await Promise.all([togetherOf($), nestsOf($)])
-  return loversIn(crew).filter(([a, b]) => (together[pairOf(a.key, b.key)] ?? 0) - (nests[pairOf(a.key, b.key)] ?? 0) >= Math.ceil(o.perEgg / 6))
+  const [together, nests, born] = await Promise.all([togetherOf($), nestsOf($), bornOf($)])
+  const due = (pair: string) => Math.ceil(o.perEgg / 6) * (kidsOf(born, pair) < FIRST_KIDS ? 1 : LATE)
+  return loversIn(crew).filter(([a, b]) => (together[pairOf(a.key, b.key)] ?? 0) - (nests[pairOf(a.key, b.key)] ?? 0) >= due(pairOf(a.key, b.key)))
 }
 
-// Spends a couple's egg, only on success: one parent's species and the rest rolled, a name and soul dreamt from both, and the relations written both ways.
+// Spends a couple's egg, only on success: a hybrid of the parents' species (`hybridOf`) and the rest rolled, a name and soul dreamt from both, and the relations written both ways.
 export async function hatchLove($: EngineInterface, o: Ctx, [a, b]: readonly [Member, Member]): Promise<{ name: string; key: string } | { failed: string }> {
   const w = WORDS[o.lang]
   const r = await rosterOf($, o)
   if (r.book.error) return { failed: w.badFile(r.book.error) }
-  const bones = { ...roll(String(Math.random())), species: (Math.random() < 0.5 ? a : b).bones.species }
+  const bones = { ...roll(String(Math.random())), species: hybridOf(a.bones.species, b.bones.species) }
   const dreamt = await dreamUp($, undefined, bones, o.lang, [a, b])
   if (!dreamt) return { failed: w.noChild }
   const { name, soul } = dreamt
@@ -461,7 +489,7 @@ export async function hatchLove($: EngineInterface, o: Ctx, [a, b]: readonly [Me
   await writeBook($, fresh.book, [a, b].reduce((raw, p) => withRelations(raw, p.name, { [name]: w.childRel }), child))
   const [born, together, nests] = await Promise.all([bornOf($), togetherOf($), nestsOf($)])
   const pair = pairOf(a.key, b.key)
-  await Promise.all([$.store.set('born', { ...born, [key]: { bones } }), $.store.set('nests', { ...nests, [pair]: together[pair] ?? 0 })])
+  await Promise.all([$.store.set('born', { ...born, [key]: { bones, parents: [a.key, b.key] } }), $.store.set('nests', { ...nests, [pair]: together[pair] ?? 0 })])
   return { name, key }
 }
 

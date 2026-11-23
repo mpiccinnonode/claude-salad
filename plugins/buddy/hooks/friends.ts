@@ -1,4 +1,4 @@
-import { ALL_SPECIES } from './bones.ts'
+import { ALL_SPECIES, isSpeciesName } from './bones.ts'
 
 export type Soul = { tone?: string; traits?: string[]; quirks?: string[]; backstory?: string; speech?: string; catchphrase?: string; likes?: string[]; dislikes?: string[] }
 export type Personality = string | Soul
@@ -137,7 +137,7 @@ export function parseBook(text: string): { raw: unknown[]; friends: Friend[] } {
   const friends = raw.flatMap(entry => {
     const e = entry as Record<string, unknown> | null
     const name = typeof e?.name === 'string' ? e.name.trim() : ''
-    return name ? [{ name, species: isSpecies(e?.species) ? e.species : undefined, personality: asPersonality(e?.personality), relations: asRelations(e?.relations) }] : []
+    return name ? [{ name, species: isSpeciesName(String(e?.species)) ? e.species : undefined, personality: asPersonality(e?.personality), relations: asRelations(e?.relations) }] : []
   })
   return { raw, friends }
 }

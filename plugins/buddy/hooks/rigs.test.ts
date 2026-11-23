@@ -1,5 +1,6 @@
 import { expect, test } from 'claude-code/testing'
-import { ALL_SPECIES } from './bones.ts'
+import { ALL_SPECIES, hybridOf } from './bones.ts'
+import { HYBRIDS } from './hybrids.ts'
 import { RIGS, rigOf, rigRow } from './rigs.ts'
 import type { Mood } from './rigs.ts'
 
@@ -59,4 +60,10 @@ test('a stage covers its rarity and up until the next one; below every stage, th
 
 test('every species has a legendary stage of its own', async () => {
   for (const species of ALL_SPECIES) expect(`${species}:${RIGS[`${species}:legendary`] !== undefined}`).toBe(`${species}:true`)
+})
+
+test('every pair of species has a hand-drawn hybrid, and nothing else is one', async () => {
+  const pairs = ALL_SPECIES.flatMap((a, i) => ALL_SPECIES.slice(i + 1).map(b => hybridOf(a, b)))
+  expect(pairs.filter(k => !HYBRIDS[k])).toEqual([])
+  expect(Object.keys(HYBRIDS).filter(k => !pairs.includes(k))).toEqual([])
 })

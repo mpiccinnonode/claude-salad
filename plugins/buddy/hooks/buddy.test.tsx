@@ -893,10 +893,11 @@ test('relations: each buddy talks to its mates as what they are to it; a rename 
   await ui.unmount()
 })
 
-test('love: two buddies out who call each other lovers lay an egg of their own every sixth of turnsPerHatch; a bare /buddy hatches their child', { options: { language: 'en', turnsPerHatch: 12 } }, async ($, on) => {
+test('love: two buddies out who call each other lovers lay an egg of their own every sixth of turnsPerHatch, ten times slower after two; a bare /buddy hatches their hybrid child', { options: { language: 'en', turnsPerHatch: 12 } }, async ($, on) => {
   const roster = [{ name: 'Zed', personality: 'Calm.', relations: [{ Ada: 'lover' }] }, { name: 'Ada', personality: 'Sharp.', relations: { zed: 'secret lover' } }, ...ROSTER.slice(2)]
   const prompts: string[] = []
-  on('model.complete', ($, e) => { prompts.push(e.prompt ?? ''); return answer(e.system?.includes('invent personalities') ? JSON.stringify({ name: 'Bimbo', tone: 'tiny' }) : 'Hm.') })
+  const names = ['Bimbo', 'Bimba', 'Bimbi']
+  on('model.complete', ($, e) => { prompts.push(e.prompt ?? ''); return answer(e.system?.includes('invent personalities') ? JSON.stringify({ name: names.shift(), tone: 'tiny' }) : 'Hm.') })
   const { start, run, turns, shows, book } = rig($, on, { [FILE]: JSON.stringify(roster) }, settledStore({ eggAt: 0 }))
   await start()
   await turns(1)
@@ -907,7 +908,7 @@ test('love: two buddies out who call each other lovers lay an egg of their own e
   expect(prompts.at(-1)).toContain('Its parents are Zed (Calm.) and Ada (Sharp.)')
   const [zed, ada, , , bimbo] = book()
   expect(bimbo).toMatchObject({ name: 'Bimbo', personality: { tone: 'tiny' }, relations: [{ Zed: 'your parent' }, { Ada: 'your parent' }] })
-  expect([zed!.species, ada!.species]).toContain(bimbo!.species)
+  expect(bimbo!.species).toBe([zed!.species, ada!.species].sort().join('+'))
   expect(zed!.relations).toEqual([{ Ada: 'lover' }, { Bimbo: 'your child' }])
   expect(ada!.relations).toEqual([{ zed: 'secret lover' }, { Bimbo: 'your child' }])
   // The normal egg was not spent, and the couple starts over.
@@ -915,6 +916,23 @@ test('love: two buddies out who call each other lovers lay an egg of their own e
   expect(await shows(/Egg ready/, WIDE)).toBe(false)
   await turns(2)
   expect(await shows(/♥ Zed\+Ada/, WIDE)).toBe(true)
+  expect(await run('')).toContain('Bimba is born')
+  // Two children, counted from their parents in the store: the next egg takes ten times as long.
+  await turns(19)
+  expect(await shows(/♥/, WIDE)).toBe(false)
+  await turns(1)
+  expect(await shows(/♥ Zed\+Ada/, WIDE)).toBe(true)
+})
+
+test('hybrids: a child born before them takes its parents\' hybrid once at session start; a plain buddy is untouched', { options: { language: 'it' } }, async ($, on) => {
+  // Ada's relations drifted to call her child and Pip "genitore": not a nested couple, so she stays herself.
+  const roster = [ROSTER[0], { ...ROSTER[1], relations: [{ Bimbo: 'Genitore smarrito' }, { Pip: 'genitore' }] }, ROSTER[2], { name: 'Bimbo', species: 'duck', relations: [{ Zed: 'Genitore insonne' }, { Ada: 'tuo genitore' }] }]
+  const { start, book } = rig($, on, { [FILE]: JSON.stringify(roster) }, settledStore({ born: { ...born(), bimbo: { bones: roll('b') } }, nests: { '["ada","zed"]': 1 } }))
+  await start()
+  const [zed, ada, pip, bimbo] = book()
+  expect(bimbo!.species).toBe([zed!.species, ada!.species].sort().join('+'))
+  expect(pip!.species).toBe(roll('p').species)
+  expect(ada!.species).toBe(roll('a').species)
 })
 
 test('love: one-sided love lays no egg', { options: { language: 'en', turnsPerHatch: 2 } }, async ($, on) => {

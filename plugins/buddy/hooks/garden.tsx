@@ -47,7 +47,7 @@ export async function drawGarden($: EngineInterface, e: RenderInput<'Pane'>, o: 
       {compose(sceneFor(sky === 'auto' ? skyAt(new Date().getHours()) : sky, cols, rows), sprites).map((row, y) => (
         <Box key={`row-${y}`} flexDirection="row">
           {runs(row).map((r, j) =>
-            r.who === undefined ? (
+            r.who === undefined || e.surface !== 'terminal' ? (
               <Text key={`bg-${y}-${j}`} mono color={r.color} dimColor={!r.color}>{r.text}</Text>
             ) : (
               <Button key={`b-${y}-${j}`} plain onPress={() => press($, o, live, 'pet', crew, r.who!)}>

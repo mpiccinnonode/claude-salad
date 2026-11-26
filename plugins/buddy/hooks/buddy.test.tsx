@@ -83,6 +83,7 @@ test('speaks every N turns and the band shows the quip', { options: { everyNTurn
   for (const surface of ['terminal', 'desktop'] as const) {
     const ui = await $.ui.mount({ plugin: 'buddy', surface, ...BAND })
     expect(await ui.find({ type: 'Text', text: /Shocking/ })).toBeDefined()
+    expect((await ui.find({ key: 'body-0-2' }))?.type).toBe(surface === 'terminal' ? 'Button' : undefined)
     await ui.unmount()
   }
 

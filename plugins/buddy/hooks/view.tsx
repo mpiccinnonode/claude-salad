@@ -53,11 +53,13 @@ export async function drawBand($: EngineInterface, e: RenderInput<'AbovePrompt'>
           const look = { isWorking: e.props.isWorking, eye: c.bones.eye, hat: c.bones.hat, action, isAsleep, rarity: c.bones.rarity }
           return (
             <Box key={`buddy-${i}`} flexDirection="column" width={SPRITE.columns} flexShrink={0}>
-              {drawBuddy(c.bones.species, frame + i * 7, look, RARITY_COLOR[c.bones.rarity]).map((row, r) => (
-                <Button key={`body-${i}-${r}`} plain onPress={() => press($, o, live, 'pet', crew, i)}>
-                  {row.map(([text, color], j) => <Text key={`p${i}-${r}-${j}`} color={color} mono>{text}</Text>)}
-                </Button>
-              ))}
+              {drawBuddy(c.bones.species, frame + i * 7, look, RARITY_COLOR[c.bones.rarity]).map((row, r) => {
+                const cells = row.map(([text, color], j) => <Text key={`p${i}-${r}-${j}`} color={color} mono>{text}</Text>)
+                // A desktop draws a Button natively, in its own proportional face, so off the terminal the sprite is plain text.
+                return e.surface === 'terminal'
+                  ? <Button key={`body-${i}-${r}`} plain onPress={() => press($, o, live, 'pet', crew, i)}>{cells}</Button>
+                  : <Text key={`body-${i}-${r}`} mono>{cells}</Text>
+              })}
             </Box>
           )
         })}

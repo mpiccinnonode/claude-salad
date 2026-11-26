@@ -1,5 +1,9 @@
 # Changelog
 
+## buddy 0.20.1 → 0.20.2
+
+- fix(buddy): the band's and the garden's sprites stay whole on the desktop app, drawn as plain mono text there (a click on a sprite pets only on the terminal)
+
 ## buddy 0.20.0 → 0.20.1
 
 - fix(buddy): keep stock settings like lighthouses out of dreamt personalities; children take their parents' temperament but a past of their own, evolutions grow the inner life, not the backstory scenery
